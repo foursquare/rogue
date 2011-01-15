@@ -7,6 +7,10 @@ class RogueProject(info: ProjectInfo) extends DefaultProject(info) {
   val liftVer = "2.2"
   val scalaVer = buildScalaVersion
 
+  override def packageSrcJar = defaultJarPath("-sources.jar")
+  val sourceArtifact = Artifact.sources(artifactID)
+  override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageSrc)
+
   // Lift Libraries
   val liftCommon      = "net.liftweb" %% "lift-common"         % liftVer % "compile" withSources()
   val liftJson        = "net.liftweb" %% "lift-json"           % liftVer % "compile" withSources()

@@ -8,7 +8,7 @@ import net.liftweb.json.JsonAST.{JObject, JValue}
 import net.liftweb.mongodb._
 
 sealed case class Degrees(value: Double)
-abstract class LatLong(val lat: Double, val long: Double)
+sealed case class LatLong(lat: Double, long: Double)
 
 object QueryHelpers {
   class DBObjectSerializer extends Serializer[DBObject] {

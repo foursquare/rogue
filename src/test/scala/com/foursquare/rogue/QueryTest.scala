@@ -59,6 +59,16 @@ class QueryTest extends SpecsMatchers {
   }
   object Tip extends Tip with MongoMetaRecord[Tip]
 
+  object ConsumerPrivilege extends Enumeration {
+    val awardBadges = Value("Award badges")
+  }
+
+  class OAuthConsumer extends MongoRecord[OAuthConsumer] with MongoId[OAuthConsumer] {
+    def meta = OAuthConsumer
+    object privileges extends MongoListField[OAuthConsumer, ConsumerPrivilege.Value](this)
+  }
+  object OAuthConsumer extends OAuthConsumer with MongoMetaRecord[OAuthConsumer]
+
   @Test
   def testProduceACorrectJSONQueryString {
     val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0)
@@ -125,6 +135,10 @@ class QueryTest extends SpecsMatchers {
     // Case class list field
     Comment where (_.comments unsafeField "z" eqs 123) toString() must_== """{ "comments.z" : 123}"""
 
+    // Enumeration list
+    OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) toString() must_== """{ "privileges" : "Award badges"}"""
+    OAuthConsumer where (_.privileges at 0 eqs ConsumerPrivilege.awardBadges) toString() must_== """{ "privileges.0" : "Award badges"}"""
+
     // compound queries
     Venue where (_.mayor eqs 1) and (_.tags contains "karaoke") toString() must_== "{ \"mayor\" : 1 , \"tags\" : \"karaoke\"}"
     Venue where (_.mayor eqs 1) and (_.mayor_count eqs 5)       toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : 5}"
@@ -182,6 +196,9 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) modify (_.tags pull "a")                  toString() must_== query + """{ "$pull" : { "tags" : "a"}}"""
     Venue where (_.legacyid eqs 1) modify (_.popularity pullAll List(2, 3))  toString() must_== query + """{ "$pullAll" : { "popularity" : [ 2 , 3]}}"""
     Venue where (_.legacyid eqs 1) modify (_.popularity idx 0 inc 1)         toString() must_== query + """{ "$inc" : { "popularity.0" : 1}}"""
+
+    // Enumeration list
+    OAuthConsumer modify (_.privileges addToSet ConsumerPrivilege.awardBadges) toString() must_== """{ } modify with { "$addToSet" : { "privileges" : "Award badges"}}"""
 
     // Map
     Tip where (_.legacyid eqs 1) modify (_.counts at "foo" setTo 3) toString() must_== query + """{ "$set" : { "counts.foo" : 3}}"""
