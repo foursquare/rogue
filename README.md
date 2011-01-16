@@ -71,6 +71,6 @@ The finished jar will be in `target/`.
 
 ## Maintainers
 
-Jason Liszka jliszka@foursquare.com
-Jorge Ortiz jorge@foursquare.com
+- Jason Liszka jliszka@foursquare.com
+- Jorge Ortiz jorge@foursquare.com
 
