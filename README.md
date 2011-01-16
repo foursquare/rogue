@@ -1,12 +1,14 @@
 # Rogue
 
-Rogue is a type-safe internal DSL for querying and modifying MongoDB records in the Lift web framework.
-It is fully expressive with respect to the basic options provided by MongoDB's native query language,
-but in a type-safe manner, building on the record types specified in your Lift models. An example:
+Rogue is a type-safe internal Scala DSL for constructing and executing find and modify commands against
+MongoDB in the Lift web framework. The DSL is fully expressive with respect to the basic options provided 
+by MongoDB's native query language, but in a type-safe manner, building on the record types specified in 
+your Lift models. An example:
 
     Venue where (_.mayor eqs 1234) and (_.categories contains "Thai") fetch(10)
 
 The type system enforces the following constraints:
+
 - the fields must actually belong to the record (e.g., mayor is a field on the Venue record)
 - the field type must match the operand type (e.g., mayor is an IntField)
 - the operator must make sense for the field type (e.g., categories is a MongoListField)
@@ -43,7 +45,7 @@ For "find" query objects
     query.count()
     query.countDistinct(_.mayor)
     query.fetch()
-    query.fetch(10)
+    query.fetch(n)
     query.get() // equivalent to query.fetch(1).headOption
     query.foreach{v: Venue => ... }
     query.paginate(pageSize)
@@ -71,6 +73,11 @@ The finished jar will be in `target/`.
 
 ## Maintainers
 
+Rogue was initially developed by Foursquare Labs for internal use -- 
+nearly all of the MongoDB queries in foursquare's code base go through this library.
+The current maintainers are:
+
 - Jason Liszka jliszka@foursquare.com
 - Jorge Ortiz jorge@foursquare.com
 
+Contributions welcome!
