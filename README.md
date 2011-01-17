@@ -1,7 +1,7 @@
 # Rogue
 
 Rogue is a type-safe internal Scala DSL for constructing and executing find and modify commands against
-MongoDB in the Lift web framework. The DSL is fully expressive with respect to the basic options provided 
+MongoDB in the Lift web framework. It is fully expressive with respect to the basic options provided
 by MongoDB's native query language, but in a type-safe manner, building on the record types specified in 
 your Lift models. An example:
 
@@ -11,7 +11,7 @@ The type system enforces the following constraints:
 
 - the fields must actually belong to the record (e.g., mayor is a field on the Venue record)
 - the field type must match the operand type (e.g., mayor is an IntField)
-- the operator must make sense for the field type (e.g., categories is a MongoListField)
+- the operator must make sense for the field type (e.g., categories is a MongoListField[String])
 
 In addition, the type system ensures that certain builder methods are only used in certain circumstances.
 For example, take this more complex query:
@@ -28,7 +28,8 @@ Constructions like this:
     ...
     myMayorships.fetch(10)
 
-will also not compile, here because a limit is being specified twice.
+will also not compile, here because a limit is being specified twice. Other similar constraints
+are in place to prevent you from accidentally doing things you don't want to do anyway.
 
 ## More Examples
 

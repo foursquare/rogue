@@ -187,6 +187,7 @@ class NoopModifyQuery[M <: MongoRecord[M]] extends ModifyQuery[M](
 class BasePaginatedQuery[M <: MongoRecord[M], R](q: BaseQuery[M, R, _, _, Unlimited, Unskipped], val countPerPage: Int, val pageNum: Int = 1) {
   def copy() = new BasePaginatedQuery(q, countPerPage, pageNum)
   def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, countPerPage, p)
+  def setCountPerPage(c: Int) = if (c == countPerPage) this else new BasePaginatedQuery(q, c, pageNum)
   lazy val countAll: Long = q.count
   def fetch(): List[R] = q.skip(countPerPage * (pageNum - 1)).limit(countPerPage).fetch()
   def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
