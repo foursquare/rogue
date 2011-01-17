@@ -7,8 +7,8 @@ import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
 import net.liftweb.mongodb._
 
-sealed case class Degrees(value: Double)
-sealed case class LatLong(lat: Double, long: Double)
+case class Degrees(value: Double)
+case class LatLong(lat: Double, long: Double)
 
 object QueryHelpers {
   class DBObjectSerializer extends Serializer[DBObject] {
@@ -40,10 +40,33 @@ object QueryHelpers {
 
   var logger: QueryLogger = NoopQueryLogger
 
+  trait QueryValidator {
+    def validateList[T](xs: Iterable[T]): Unit
+    def validateRadius(d: Degrees): Degrees
+  }
+
+  object NoopQueryValidator extends QueryValidator {
+    override def validateList[T](xs: Iterable[T]) {}
+    override def validateRadius(d: Degrees) = d
+  }
+
+  var validator: QueryValidator = NoopQueryValidator
+
   def makeJavaList[T](sl: Iterable[T]): java.util.List[T] = {
     val list = new java.util.ArrayList[T]()
     for (id <- sl) list.add(id)
     list
+  }
+
+  def list[T](vs: Iterable[T]): java.util.List[T] = {
+    validator.validateList(vs)
+    makeJavaList(vs)
+  }
+
+  def list(vs: Double*): java.util.List[Double] = list(vs)
+
+  def radius(d: Degrees) = {
+    validator.validateRadius(d).value
   }
 
   def makeJavaMap[K, V](m: Map[K, V]): java.util.Map[K, V] = {
@@ -51,30 +74,6 @@ object QueryHelpers {
     for ((k, v) <- m) map.put(k, v)
     map
   }
-
-  private def getStackTrace(t: Throwable) = {
-    import java.io._
-    val sw = new StringWriter
-    val pw = new PrintWriter(sw)
-    t.printStackTrace(pw)
-    sw.toString
-  }
-
-  private def currentStackTrace() = {
-    val e = new Exception()
-    e.fillInStackTrace()
-    getStackTrace(e)
-  }
-
-  def list[T](vs: Iterable[T]): java.util.List[T] = {
-    val jlist = makeJavaList(vs)
-    if (jlist.size() > 2000) {
-      throw new Exception("$in query is too big! (%d items)" format (jlist.size()))
-    }
-    jlist
-  }
-
-  def list(vs: Double*): java.util.List[Double] = list(vs)
 
   def inListClause[V](fieldName: String, vs: Iterable[V]) = {
     if (vs.isEmpty)
@@ -88,25 +87,6 @@ object QueryHelpers {
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
       new QueryClause(fieldName, CondOps.All -> QueryHelpers.list(vs))
-  }
-
-  private val METERS_PER_LAT_DEGREE: Double = 111111.0
-  private val RADIUS_IN_METERS: Int = 6378100
-
-  def degreesFromMeters(geolat: Double, getlong: Double, meters: Int): Degrees = {
-    val latDegrees: Double = meters.toDouble / METERS_PER_LAT_DEGREE
-    val metersPerLongDegree = (math.Pi / 180) * math.cos(math.toRadians(geolat)) * RADIUS_IN_METERS
-    val longDegrees: Double = meters.toDouble / metersPerLongDegree
-
-    Degrees(longDegrees max latDegrees)
-  }
-
-  def radius(d: Degrees) = {
-    if (d.value > .72) {
-      val stack = currentStackTrace()
-      logger.warn("radius parameter too large! (%f) going to max at .72 (80km) from:\n" format (d.value, stack))
-      .72
-    } else d.value
   }
 
   def asDBObject[T](x: T): DBObject = {
