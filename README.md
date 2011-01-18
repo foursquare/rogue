@@ -33,8 +33,9 @@ are in place to prevent you from accidentally doing things you don't want to do 
 
 ## More Examples
 
-QueryTest.scala contains examples of every kind of query supported by Rogue, and also
-indicates what each query translates to in MongoDB's JSON query language.
+[QueryTest.scala](https://github.com/foursquare/rogue/blob/master/src/test/scala/com/foursquare/rogue/QueryTest.scala) contains sample Records and examples of every kind of query supported by Rogue.
+It also indicates what each query translates to in MongoDB's JSON query language.
+It's a good place to look when getting started using Rogue.
 
 NB: The examples in QueryTest only construct query objects; none are actually executed.
 Once you have a query object, the following operations are supported (listed here because
