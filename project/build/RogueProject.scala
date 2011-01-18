@@ -11,6 +11,10 @@ class RogueProject(info: ProjectInfo) extends DefaultProject(info) {
   val sourceArtifact = Artifact.sources(artifactID)
   override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageSrc)
 
+  override def managedStyle = ManagedStyle.Maven
+  val publishTo = "Scala Tools Nexus" at "http://nexus.scala-tools.org/content/repositories/releases/"
+  Credentials(Path.userHome / ".ivy2" / ".credentials", log)
+
   // Lift Libraries
   val liftCommon      = "net.liftweb" %% "lift-common"         % liftVer % "compile" withSources()
   val liftJson        = "net.liftweb" %% "lift-json"           % liftVer % "compile" withSources()
