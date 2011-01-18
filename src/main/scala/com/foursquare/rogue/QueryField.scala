@@ -87,6 +87,7 @@ abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Fie
   def size(s: Int) = new QueryClause(field.name, CondOps.Size -> s)
   def contains(v: V) = new EqClause(field.name, valueToDB(v))
   def at(i: Int): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + i.toString)
+  def idx(i: Int): DummyField[V, M] = at(i)
 }
 
 class ListQueryField[V, M <: MongoRecord[M]](field: Field[List[V], M]) extends AbstractListQueryField[V, V, M](field) {
@@ -96,6 +97,10 @@ class ListQueryField[V, M <: MongoRecord[M]](field: Field[List[V], M]) extends A
 class CaseClassListQueryField[V, M <: MongoRecord[M]](field: MongoCaseClassListField[M, V]) extends AbstractListQueryField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
   def unsafeField(name: String): DummyField[AnyVal, M] = new DummyField[AnyVal, M](field.owner, field.name + "." + name)
+}
+
+class MapQueryField[V, M <: MongoRecord[M]](val field: Field[Map[String, V], M]) {
+  def at(key: String): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + key)
 }
 
 class EnumerationListQueryField[V <: Enumeration#Value, M <: MongoRecord[M]](field: Field[List[V], M]) extends AbstractListQueryField[V, String, M](field) {
@@ -122,7 +127,6 @@ class EnumerationModifyField[E <: Enumeration#Value, M <: MongoRecord[M]](val fi
 
 class MapModifyField[V, T <: Map[String, V], M <: MongoRecord[M]](val field: Field[T, M]) {
   def setTo(map: T) = new ModifyClause(ModOps.Set, field.name -> QueryHelpers.makeJavaMap(map))
-  def at(key: String): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + key)
 }
 
 class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
@@ -142,7 +146,6 @@ abstract class AbstractListModifyField[V, DB, M <: MongoRecord[M]](val field: Fi
   def popLast = new ModifyClause(ModOps.Pop, field.name -> 1)
   def pull(v: V) = new ModifyClause(ModOps.Pull, field.name -> valueToDB(v))
   def pullAll(vs: List[V]) = new ModifyClause(ModOps.PullAll, field.name -> QueryHelpers.list(valuesToDB(vs)))
-  def idx(i: Int): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + i.toString)
 }
 
 class ListModifyField[V, M <: MongoRecord[M]](field: Field[List[V], M]) extends AbstractListModifyField[V, V, M](field) {

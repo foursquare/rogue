@@ -22,6 +22,7 @@ trait Rogue {
   implicit def latLongFieldToGeoQueryField[M <: MongoRecord[M]](f: Field[LatLong, M]) = new GeoQueryField(f)
   implicit def listFieldToListQueryField[M <: MongoRecord[M], F](f: Field[List[F], M]) = new ListQueryField[F, M](f)
   implicit def cclistFieldToListQueryField[M <: MongoRecord[M], F](f: MongoCaseClassListField[M, F]) = new CaseClassListQueryField[F, M](f)
+  implicit def mapFieldToMapQueryField[M <: MongoRecord[M], F](f: Field[Map[String, F], M]) = new MapQueryField[F, M](f)
   implicit def stringFieldToStringQueryField[M <: MongoRecord[M]](f: Field[String, M]) = new StringQueryField(f)
   implicit def objectIdFieldToObjectIdQueryField[M <: MongoRecord[M], F](f: Field[ObjectId, M]) = new ObjectIdQueryField(f)
   implicit def calendarFieldToCalendarQueryField[M <: MongoRecord[M], F](f: Field[java.util.Calendar, M]) = new CalendarQueryField(f)

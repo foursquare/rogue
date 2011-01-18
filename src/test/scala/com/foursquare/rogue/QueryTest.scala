@@ -116,6 +116,11 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.popularity at 0 eqs 3)       toString() must_== """{ "popularity.0" : 3}"""
     Venue where (_.categories at 0 eqs oid)     toString() must_== """{ "categories.0" : { "$oid" : "%s"}}""".format(oid.toString)
     Venue where (_.tags at 0 startsWith "kara") toString() must_== """{ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}}"""
+    // alternative syntax
+    Venue where (_.tags idx 0 startsWith "kara") toString() must_== """{ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}}"""
+
+    // maps
+    Tip where (_.counts at "foo" eqs 3) toString() must_== """{ "counts.foo" : 3}"""
 
     // near
     Venue where (_.geolatlng near (39.0, -74.0, Degrees(0.2)))     toString() must_== """{ "latlng" : { "$near" : [ 39.0 , -74.0 , 0.2]}}"""
@@ -195,6 +200,8 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) modify (_.tags popLast)                   toString() must_== query + """{ "$pop" : { "tags" : 1}}"""
     Venue where (_.legacyid eqs 1) modify (_.tags pull "a")                  toString() must_== query + """{ "$pull" : { "tags" : "a"}}"""
     Venue where (_.legacyid eqs 1) modify (_.popularity pullAll List(2, 3))  toString() must_== query + """{ "$pullAll" : { "popularity" : [ 2 , 3]}}"""
+    Venue where (_.legacyid eqs 1) modify (_.popularity at 0 inc 1)         toString() must_== query + """{ "$inc" : { "popularity.0" : 1}}"""
+    // alternative syntax
     Venue where (_.legacyid eqs 1) modify (_.popularity idx 0 inc 1)         toString() must_== query + """{ "$inc" : { "popularity.0" : 1}}"""
 
     // Enumeration list
