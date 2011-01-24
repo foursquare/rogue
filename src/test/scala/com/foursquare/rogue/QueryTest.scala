@@ -71,8 +71,8 @@ class QueryTest extends SpecsMatchers {
 
   @Test
   def testProduceACorrectJSONQueryString {
-    val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0)
-    val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0)
+    val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC)
+    val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0, DateTimeZone.UTC)
     val oid = new ObjectId
 
     // is
@@ -126,7 +126,7 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.geolatlng near (39.0, -74.0, Degrees(0.2)))     toString() must_== """{ "latlng" : { "$near" : [ 39.0 , -74.0 , 0.2]}}"""
     Venue where (_.geolatlng withinCircle(1.0, 2.0, Degrees(0.3))) toString() must_== """{ "latlng" : { "$within" : { "$center" : [ [ 1.0 , 2.0] , 0.3]}}}"""
     Venue where (_.geolatlng withinBox(1.0, 2.0, 3.0, 4.0))        toString() must_== """{ "latlng" : { "$within" : { "$box" : [ [ 1.0 , 2.0] , [ 3.0 , 4.0]]}}}"""
-    
+
     // ObjectId before, after, between
     Venue where (_._id before d2)        toString() must beMatching("""\{ "_id" : \{ "\$lt" : \{ "\$oid" : "[a-f0-9]+"\}\}\}""")
     Venue where (_._id after d1)         toString() must beMatching("""\{ "_id" : \{ "\$gt" : \{ "\$oid" : "[a-f0-9]+"\}\}\}""")
