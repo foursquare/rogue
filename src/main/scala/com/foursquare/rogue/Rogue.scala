@@ -33,12 +33,11 @@ trait Rogue {
   implicit def doubleFieldtoNumericQueryField[M <: MongoRecord[M], F](f: Field[Double, M]) = new NumericQueryField(f)
 
   implicit def fieldToModifyField[M <: MongoRecord[M], F](f: Field[F, M]) = new ModifyField(f)
+  implicit def latLongFieldToGeoQueryModifyField[M <: MongoRecord[M]](f: Field[LatLong, M]) = new GeoModifyField(f)
   implicit def listFieldToListModifyField[M <: MongoRecord[M], F](f: Field[List[F], M]) = new ListModifyField[F, M](f)
   implicit def cclistFieldToListModifyField[M <: MongoRecord[M], V](f: MongoCaseClassListField[M, V]) = new CaseClassListModifyField[V, M](f)
-  implicit def mapFieldToMapModifyField[M <: MongoRecord[M], F](f: Field[Map[String, F], M]) = new MapModifyField[F, Map[String, F], M](f)
   implicit def intFieldToIntModifyField[M <: MongoRecord[M]](f: Field[Int, M]) = new NumericModifyField(f)
   implicit def longFieldToLongModifyField[M <: MongoRecord[M]](f: Field[Long, M]) = new NumericModifyField(f)
-  implicit def enumerationFieldToEnumerationModifyField[M <: MongoRecord[M], F <: Enumeration#Value](f: Field[F, M]) = new EnumerationModifyField(f)
   implicit def enumerationListFieldToEnumerationListModifyField[M <: MongoRecord[M], F <: Enumeration#Value](f: Field[List[F], M]) = new EnumerationListModifyField[F, M](f)
   implicit def calendarFieldToCalendarModifyField[M <: MongoRecord[M]](f: Field[Calendar, M]) = new CalendarModifyField(f)
 

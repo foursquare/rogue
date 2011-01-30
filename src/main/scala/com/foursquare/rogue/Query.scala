@@ -58,13 +58,13 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   def skip(n: Int)(implicit ev: Sk =:= Unskipped) =
     new BaseQuery[M, R, Ord, Sel, Lim, Skipped](meta, lim, Some(n), condition, order, select)
 
-  private def extract(f: R => Unit): DBObject => Unit = select match {
+  private def extract(fn: R => Unit): DBObject => Unit = select match {
     case Some(MongoSelect(fields, transformer)) => (dbo) => {
       val inst = meta.createRecord
-      f(transformer(fields.map(f => f(inst.fieldByName(f.field.name).open_!.setFromAny(dbo.get(f.field.name))))))
+      fn(transformer(fields.map(f => f(inst.fieldByName(f.field.name).open_!.setFromAny(dbo.get(f.field.name))))))
     }
     case None => 
-      dbo => f(meta.fromDBObject(dbo).asInstanceOf[R])
+      dbo => fn(meta.fromDBObject(dbo).asInstanceOf[R])
   }
 
   private def collect[T](f: (T => Unit) => Unit): List[T] = {

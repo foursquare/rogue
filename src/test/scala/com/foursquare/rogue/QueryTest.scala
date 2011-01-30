@@ -7,6 +7,7 @@ import java.util.regex.Pattern
 import net.liftweb.mongodb.record._
 import net.liftweb.mongodb.record.field._
 import net.liftweb.record.field._
+import net.liftweb.record._
 import org.bson.types._
 import org.joda.time.{DateTime, DateTimeZone}
 
@@ -15,6 +16,11 @@ import org.specs.SpecsMatchers
 
 
 class QueryTest extends SpecsMatchers {
+
+  object VenueStatus extends Enumeration {
+    val open = Value("Open")
+    val closed = Value("Closed")
+  }
 
   class Venue extends MongoRecord[Venue] with MongoId[Venue] {
     def meta = Venue
@@ -29,6 +35,7 @@ class QueryTest extends SpecsMatchers {
     object categories extends MongoListField[Venue, ObjectId](this)
     object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
     object last_updated extends DateTimeField(this)
+    object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
   }
   object Venue extends Venue with MongoMetaRecord[Venue]
 
@@ -178,17 +185,27 @@ class QueryTest extends SpecsMatchers {
 
   @Test
   def testModifyQueryShouldProduceACorrectJSONQueryString {
-    val query = "{ \"legid\" : 1} modify with "
-    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") toString() must_== query + "{ \"$set\" : { \"venuename\" : \"fshq\"}}"
-    Venue where (_.legacyid eqs 1) modify (_.mayor_count setTo 3)    toString() must_== query + "{ \"$set\" : { \"mayor_count\" : 3}}"
-    Venue where (_.legacyid eqs 1) modify (_.mayor_count unset)      toString() must_== query + "{ \"$unset\" : { \"mayor_count\" : 1}}"
+    val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC)
+
+    val query = """{ "legid" : 1} modify with """
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}"""
+    Venue where (_.legacyid eqs 1) modify (_.mayor_count setTo 3)    toString() must_== query + """{ "$set" : { "mayor_count" : 3}}"""
+    Venue where (_.legacyid eqs 1) modify (_.mayor_count unset)      toString() must_== query + """{ "$unset" : { "mayor_count" : 1}}"""
 
     // Numeric
-    Venue where (_.legacyid eqs 1) modify (_.mayor_count inc 3) toString() must_== query + "{ \"$inc\" : { \"mayor_count\" : 3}}"
+    Venue where (_.legacyid eqs 1) modify (_.mayor_count inc 3) toString() must_== query + """{ "$inc" : { "mayor_count" : 3}}"""
 
     // Enumeration
     val query2 = "{ \"uid\" : 1} modify with "
-    VenueClaim where (_.userid eqs 1) modify (_.status setTo ClaimStatus.approved) toString() must_== query2 + "{ \"$set\" : { \"status\" : \"Approved\"}}"
+    VenueClaim where (_.userid eqs 1) modify (_.status setTo ClaimStatus.approved) toString() must_== query2 + """{ "$set" : { "status" : "Approved"}}"""
+
+    // Calendar
+    Venue where (_.legacyid eqs 1) modify (_.last_updated setTo d1) toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00Z"}}}"""
+    Venue where (_.legacyid eqs 1) modify (_.last_updated setTo d1.toGregorianCalendar) toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00Z"}}}"""
+
+    // LatLong
+    val ll = LatLong(37.4, -73.9)
+    Venue where (_.legacyid eqs 1) modify (_.geolatlng setTo ll) toString() must_== query + """{ "$set" : { "latlng" : [ 37.4 , -73.9]}}"""
 
     // Lists
     Venue where (_.legacyid eqs 1) modify (_.popularity setTo List(5))       toString() must_== query + """{ "$set" : { "popularity" : [ 5]}}"""
@@ -208,15 +225,33 @@ class QueryTest extends SpecsMatchers {
     OAuthConsumer modify (_.privileges addToSet ConsumerPrivilege.awardBadges) toString() must_== """{ } modify with { "$addToSet" : { "privileges" : "Award badges"}}"""
 
     // Map
+    val m = Map("foo" -> 1L)
+    Tip where (_.legacyid eqs 1) modify (_.counts setTo m)          toString() must_== query + """{ "$set" : { "counts" : { "foo" : 1}}}"""
     Tip where (_.legacyid eqs 1) modify (_.counts at "foo" setTo 3) toString() must_== query + """{ "$set" : { "counts.foo" : 3}}"""
     Tip where (_.legacyid eqs 1) modify (_.counts at "foo" inc 5)   toString() must_== query + """{ "$inc" : { "counts.foo" : 5}}"""
     Tip where (_.legacyid eqs 1) modify (_.counts at "foo" unset)   toString() must_== query + """{ "$unset" : { "counts.foo" : 1}}"""
     Tip where (_.legacyid eqs 1) modify (_.counts setTo Map("foo" -> 3, "bar" -> 5)) toString() must_== query + """{ "$set" : { "counts" : { "foo" : 3 , "bar" : 5}}}"""
 
     // Multiple updates
-    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count setTo 3) toString() must_== query + "{ \"$set\" : { \"mayor_count\" : 3 , \"venuename\" : \"fshq\"}}"
-    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count inc 1)   toString() must_== query + "{ \"$set\" : { \"venuename\" : \"fshq\"} , \"$inc\" : { \"mayor_count\" : 1}}"
-    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count setTo 3) and (_.mayor_count inc 1) toString() must_== query + "{ \"$set\" : { \"mayor_count\" : 3 , \"venuename\" : \"fshq\"} , \"$inc\" : { \"mayor_count\" : 1}}"
-    Venue where (_.legacyid eqs 1) modify (_.popularity addToSet 3) and (_.tags addToSet List("a", "b")) toString() must_== query + "{ \"$addToSet\" : { \"tags\" : { \"$each\" : [ \"a\" , \"b\"]} , \"popularity\" : 3}}"
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count setTo 3) toString() must_== query + """{ "$set" : { "mayor_count" : 3 , "venuename" : "fshq"}}"""
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count inc 1)   toString() must_== query + """{ "$set" : { "venuename" : "fshq"} , "$inc" : { "mayor_count" : 1}}"""
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count setTo 3) and (_.mayor_count inc 1) toString() must_== query + """{ "$set" : { "mayor_count" : 3 , "venuename" : "fshq"} , "$inc" : { "mayor_count" : 1}}"""
+    Venue where (_.legacyid eqs 1) modify (_.popularity addToSet 3) and (_.tags addToSet List("a", "b")) toString() must_== query + """{ "$addToSet" : { "tags" : { "$each" : [ "a" , "b"]} , "popularity" : 3}}"""
+  }
+
+  @Test
+  def testGenericSetField {
+    def setField[T, M <: MongoRecord[M]](field: Field[T, Venue], value: T) =
+      (v: Venue) => fieldToModifyField(field) setTo value
+
+    val venue = new Venue().geolatlng(LatLong(37.4, -73.9)).legacyid(2).status(VenueStatus.closed)
+    val fields: List[Field[_, Venue]] = List(venue.geolatlng, venue.legacyid, venue.status)
+    val query = Venue where (_.legacyid eqs 1) modify (_.venuename setTo "Starbucks")
+    val query2 = fields.foldLeft(query){ case (q, f) => {
+      val v = f.valueBox.open_!
+      println("%s=%s" format (f.name, v))
+      q and setField(f, v)
+    }}
+    query2 toString() must_== """{ "legid" : 1} modify with { "$set" : { "status" : "Closed" , "legid" : 2 , "latlng" : [ 37.4 , -73.9] , "venuename" : "Starbucks"}}"""
   }
 }

@@ -113,20 +113,26 @@ class EnumerationListQueryField[V <: Enumeration#Value, M <: MongoRecord[M]](fie
 //////////////////////////////////////////////////////////////////////////////////
 
 class ModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
-  def setTo(v: V) = new ModifyClause(ModOps.Set, field.name -> v)
+  def valueToDB(v: Any) = v match {
+    case c: Calendar => c.getTime
+    case e: Enumeration#Value => e.toString
+    case ll: LatLong => QueryHelpers.list(List(ll.lat, ll.long))
+    case m: Map[_, _] => QueryHelpers.makeJavaMap(m)
+    case v => v
+  }
+
+  def setTo(v: V) = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
   def unset = new ModifyClause(ModOps.Unset, field.name -> 1)
 }
 
 class CalendarModifyField[M <: MongoRecord[M]](val field: Field[Calendar, M]) {
   def setTo(c: Calendar) = new ModifyClause(ModOps.Set, field.name -> c.getTime)
+  def setTo(d: DateTime) = new ModifyClause(ModOps.Set, field.name -> d.toDate)
 }
 
-class EnumerationModifyField[E <: Enumeration#Value, M <: MongoRecord[M]](val field: Field[E, M]) {
-  def setTo(e: E) = new ModifyClause(ModOps.Set, field.name -> e.toString)
-}
-
-class MapModifyField[V, T <: Map[String, V], M <: MongoRecord[M]](val field: Field[T, M]) {
-  def setTo(map: T) = new ModifyClause(ModOps.Set, field.name -> QueryHelpers.makeJavaMap(map))
+class GeoModifyField[M <: MongoRecord[M]](val field: Field[LatLong, M]) {
+  def setTo(ll: LatLong) = new ModifyClause(ModOps.Set, field.name -> QueryHelpers.list(List(ll.lat, ll.long)))
+  def setTo(lat: Double, long: Double) = new ModifyClause(ModOps.Set, field.name -> QueryHelpers.list(List(lat, long)))
 }
 
 class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
