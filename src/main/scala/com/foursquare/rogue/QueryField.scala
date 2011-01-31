@@ -50,6 +50,8 @@ class EnumerationQueryField[M <: MongoRecord[M], E <: Enumeration#Value](val fie
 }
 
 class GeoQueryField[M <: MongoRecord[M]](val field: Field[LatLong, M]) {
+  def eqs(lat: Double, lng: Double) = new EqClause(field.name, QueryHelpers.list(List(lat, lng)))
+  def neqs(lat: Double, lng: Double) = new QueryClause(field.name, CondOps.Ne -> QueryHelpers.list(List(lat, lng)))
   def near(lat: Double, lng: Double, radius: Degrees) = new QueryClause(field.name, CondOps.Near -> QueryHelpers.list(List(lat, lng, QueryHelpers.radius(radius))))
   def withinCircle(lat: Double, lng: Double, radius: Degrees) = new WithinCircleClause(field.name, lat, lng, QueryHelpers.radius(radius))
   def withinBox(lat1: Double, lng1: Double, lat2: Double, lng2: Double) = new WithinBoxClause(field.name, lat1, lng1, lat2, lng2)
