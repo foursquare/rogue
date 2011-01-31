@@ -135,6 +135,8 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.geolatlng withinBox(1.0, 2.0, 3.0, 4.0))        toString() must_== """{ "latlng" : { "$within" : { "$box" : [ [ 1.0 , 2.0] , [ 3.0 , 4.0]]}}}"""
     Venue where (_.geolatlng eqs (45.0, 50.0)) toString() must_== """{ "latlng" : [ 45.0 , 50.0]}"""
     Venue where (_.geolatlng neqs (31.0, 23.0)) toString()  must_== """{ "latlng" : { "$ne" : [ 31.0 , 23.0]}}"""
+    Venue where (_.geolatlng eqs LatLong(45.0, 50.0)) toString() must_== """{ "latlng" : [ 45.0 , 50.0]}"""
+    Venue where (_.geolatlng neqs LatLong(31.0, 23.0)) toString()  must_== """{ "latlng" : { "$ne" : [ 31.0 , 23.0]}}"""
 
     // ObjectId before, after, between
     Venue where (_._id before d2)        toString() must beMatching("""\{ "_id" : \{ "\$lt" : \{ "\$oid" : "[a-f0-9]+"\}\}\}""")
