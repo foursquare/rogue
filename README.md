@@ -31,6 +31,19 @@ Constructions like this:
 will also not compile, here because a limit is being specified twice. Other similar constraints
 are in place to prevent you from accidentally doing things you don't want to do anyway.
 
+## Building and Installation
+
+Use sbt (simple-build-tool) to build:
+
+    $ sbt clean update package
+
+The finished jar will be in `target/`.
+
+Or if you prefer, packaged JARs are available on scala-tools.org. Add the following line to your
+sbt project file to pull them in:
+
+   val rogue = "com.foursquare" % "rogue_2.8.0" % "1.0.3" withSources()
+
 ## More Examples
 
 [QueryTest.scala](https://github.com/foursquare/rogue/blob/master/src/test/scala/com/foursquare/rogue/QueryTest.scala) contains sample Records and examples of every kind of query supported by Rogue.
@@ -64,14 +77,6 @@ For "modify" query objects
 ## Dependencies
 
 liftweb-2.2, mongodb, joda-time, junit. These dependencies are managed by the build system.
-
-## Building
-
-Use sbt (simple-build-tool) to build:
-
-    $ sbt clean update package
-
-The finished jar will be in `target/`.
 
 ## Maintainers
 
