@@ -122,6 +122,30 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
   }
   
+  def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val fields = List(f(meta))
+    val transformer = (xs: List[_]) => create(xs.head.asInstanceOf[F1])
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+  }
+  
+  def selectCase[F1, F2, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], create: (F1, F2) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val fields = List(f1(meta), f2(meta))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2])
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], create: (F1, F2, F3) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val fields = List(f1(meta), f2(meta), f3(meta))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3])
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], create: (F1, F2, F3, F4) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val fields = List(f1(meta), f2(meta), f3(meta), f4(meta))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+  }
+
   def fetchBatch[T](batchSize: Int)(f: List[R] => List[T])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): List[T] = {
     val paginatedQuery = paginate(batchSize)
     (1 to paginatedQuery.numPages).toList.flatMap(page => f(paginatedQuery.setPage(page).fetch))
