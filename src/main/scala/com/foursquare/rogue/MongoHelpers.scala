@@ -13,7 +13,7 @@ object MongoHelpers {
 
   sealed case class MongoOrder(terms: List[(String, Boolean)])
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
-  sealed case class MongoSelect[R](fields: List[SelectField[_, _]], transformer: List[_] => R)
+  sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R, inst: M)
 
   object MongoBuilder {
     def buildCondition(q: MongoCondition): DBObject = q match {
@@ -58,13 +58,13 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildSelect[R](s: MongoSelect[R]): DBObject = {
+    def buildSelect[R, M <: MongoRecord[M]](s: MongoSelect[R, M]): DBObject = {
       val builder = BasicDBObjectBuilder.start
       s.fields.foreach(f => builder.add(f.field.name, 1))
       builder.get
     }
 
-    def buildString[R](query: BaseQuery[_, R, _, _, _, _],
+    def buildString[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _],
                        modify: Option[MongoModify]): String = {
       val sb = new StringBuilder
       sb.append(buildCondition(query.condition).toString)
