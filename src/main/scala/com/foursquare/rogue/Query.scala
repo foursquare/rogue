@@ -59,7 +59,8 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     new BaseQuery[M, R, Ord, Sel, Lim, Skipped](meta, lim, Some(n), condition, order, select)
 
   private def extract(fn: R => Unit): DBObject => Unit = select match {
-    case Some(MongoSelect(fields, transformer, inst)) => (dbo) => {
+    case Some(MongoSelect(fields, transformer)) => (dbo) => {
+      val inst = fields.head.field.owner
       def setInstanceFieldFromDbo(fieldName: String) = inst.fieldByName(fieldName).open_!.setFromAny(dbo.get(fieldName))
       setInstanceFieldFromDbo("_id")
       fn(transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field.name)))))
@@ -103,28 +104,28 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     val inst = meta.createRecord
     val fields = List(f(inst))
     val transformer = (xs: List[_]) => xs.head.asInstanceOf[F1]
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer, inst)))
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
   }
   
   def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer, inst)))
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
   }
 
   def select[F1, F2, F3](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer, inst)))
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
   }
 
   def select[F1, F2, F3, F4](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer, inst)))
+    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
   }
   
   def fetchBatch[T](batchSize: Int)(f: List[R] => List[T])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): List[T] = {

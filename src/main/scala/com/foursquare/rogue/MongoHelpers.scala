@@ -13,7 +13,7 @@ object MongoHelpers {
 
   sealed case class MongoOrder(terms: List[(String, Boolean)])
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
-  sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R, inst: M)
+  sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R)
 
   object MongoBuilder {
     def buildCondition(q: MongoCondition): DBObject = q match {

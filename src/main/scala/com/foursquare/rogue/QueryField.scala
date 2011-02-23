@@ -175,7 +175,7 @@ class EnumerationListModifyField[V <: Enumeration#Value, M <: MongoRecord[M]](fi
 /// Select fields
 //////////////////////////////////////////////////////////////////////////////////
 
-abstract class SelectField[V, M <: MongoRecord[M]](val field: Field[_, _]) {
+abstract class SelectField[V, M <: MongoRecord[M]](val field: Field[_, M]) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
   def apply(v: Any): Any
 }
