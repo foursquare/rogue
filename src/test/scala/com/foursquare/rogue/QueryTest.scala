@@ -15,7 +15,7 @@ import org.junit._
 import org.specs.SpecsMatchers
 
 
-class QueryTest extends SpecsMatchers {
+object QueryTest extends SpecsMatchers {
 
   object VenueStatus extends Enumeration {
     val open = Value("Open")
