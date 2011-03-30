@@ -35,6 +35,6 @@ class RogueProject(info: ProjectInfo) extends DefaultProject(info) {
   val junit        = "junit"               % "junit"             % "4.8.2" % "test" withSources()
 
   val bryanjswift = "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/" 
-  val junitInterface = "com.novocode" % "junit-interface" % "0.5" % "test->default"
+  val junitInterface = "com.novocode" % "junit-interface" % "0.6" % "test->default"
   override def testFrameworks = super.testFrameworks ++ List(new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker")) 
 }

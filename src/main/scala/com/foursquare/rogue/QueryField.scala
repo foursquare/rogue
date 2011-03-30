@@ -100,7 +100,7 @@ class ListQueryField[V, M <: MongoRecord[M]](field: Field[List[V], M]) extends A
 
 class CaseClassListQueryField[V, M <: MongoRecord[M]](field: MongoCaseClassListField[M, V]) extends AbstractListQueryField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
-  def unsafeField(name: String): DummyField[AnyVal, M] = new DummyField[AnyVal, M](field.owner, field.name + "." + name)
+  def unsafeField[F](name: String): DummyField[F, M] = new DummyField[F, M](field.owner, field.name + "." + name)
 }
 
 class MapQueryField[V, M <: MongoRecord[M]](val field: Field[Map[String, V], M]) {

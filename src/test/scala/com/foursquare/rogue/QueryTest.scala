@@ -14,67 +14,75 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.junit._
 import org.specs.SpecsMatchers
 
+/////////////////////////////////////////////////
+// Sample records for testing
+/////////////////////////////////////////////////
 
-object QueryTest extends SpecsMatchers {
+object VenueStatus extends Enumeration {
+  val open = Value("Open")
+  val closed = Value("Closed")
+}
 
-  object VenueStatus extends Enumeration {
-    val open = Value("Open")
-    val closed = Value("Closed")
-  }
+class Venue extends MongoRecord[Venue] with MongoId[Venue] {
+  def meta = Venue
+  object legacyid extends LongField(this) { override def name = "legid" }
+  object userid extends LongField(this)
+  object venuename extends StringField(this, 255)
+  object mayor extends LongField(this)
+  object mayor_count extends LongField(this)
+  object closed extends BooleanField(this)
+  object tags extends MongoListField[Venue, String](this)
+  object popularity extends MongoListField[Venue, Long](this)
+  object categories extends MongoListField[Venue, ObjectId](this)
+  object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
+  object last_updated extends DateTimeField(this)
+  object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
+}
+object Venue extends Venue with MongoMetaRecord[Venue]
 
-  class Venue extends MongoRecord[Venue] with MongoId[Venue] {
-    def meta = Venue
-    object legacyid extends LongField(this) { override def name = "legid" }
-    object userid extends LongField(this)
-    object venuename extends StringField(this, 255)
-    object mayor extends LongField(this)
-    object mayor_count extends LongField(this)
-    object closed extends BooleanField(this)
-    object tags extends MongoListField[Venue, String](this)
-    object popularity extends MongoListField[Venue, Long](this)
-    object categories extends MongoListField[Venue, ObjectId](this)
-    object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
-    object last_updated extends DateTimeField(this)
-    object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
-  }
-  object Venue extends Venue with MongoMetaRecord[Venue]
+object ClaimStatus extends Enumeration {
+  val pending = Value("Pending approval")
+  val approved = Value("Approved")
+}
 
-  object ClaimStatus extends Enumeration {
-    val pending = Value("Pending approval")
-    val approved = Value("Approved")
-  }
-
-  class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] {
-    def meta = VenueClaim
-    object userid extends LongField(this) { override def name = "uid" }
-    object status extends EnumNameField(this, ClaimStatus)
-  }
-  object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim]
+class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] {
+  def meta = VenueClaim
+  object userid extends LongField(this) { override def name = "uid" }
+  object status extends EnumNameField(this, ClaimStatus)
+}
+object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim]
 
 
-  case class OneComment(timestamp: String, userid: Long, comment: String)
-  class Comment extends MongoRecord[Comment] with MongoId[Comment] {
-    def meta = Comment
-    object comments extends MongoCaseClassListField[Comment, OneComment](this)
-  }
-  object Comment extends Comment with MongoMetaRecord[Comment]
+case class OneComment(timestamp: String, userid: Long, comment: String)
+class Comment extends MongoRecord[Comment] with MongoId[Comment] {
+  def meta = Comment
+  object comments extends MongoCaseClassListField[Comment, OneComment](this)
+}
+object Comment extends Comment with MongoMetaRecord[Comment]
 
-  class Tip extends MongoRecord[Tip] with MongoId[Tip] {
-    def meta = Tip
-    object legacyid extends LongField(this) { override def name = "legid" }
-    object counts extends MongoMapField[Tip, Long](this)
-  }
-  object Tip extends Tip with MongoMetaRecord[Tip]
+class Tip extends MongoRecord[Tip] with MongoId[Tip] {
+  def meta = Tip
+  object legacyid extends LongField(this) { override def name = "legid" }
+  object counts extends MongoMapField[Tip, Long](this)
+}
+object Tip extends Tip with MongoMetaRecord[Tip]
 
-  object ConsumerPrivilege extends Enumeration {
-    val awardBadges = Value("Award badges")
-  }
+object ConsumerPrivilege extends Enumeration {
+  val awardBadges = Value("Award badges")
+}
 
-  class OAuthConsumer extends MongoRecord[OAuthConsumer] with MongoId[OAuthConsumer] {
-    def meta = OAuthConsumer
-    object privileges extends MongoListField[OAuthConsumer, ConsumerPrivilege.Value](this)
-  }
-  object OAuthConsumer extends OAuthConsumer with MongoMetaRecord[OAuthConsumer]
+class OAuthConsumer extends MongoRecord[OAuthConsumer] with MongoId[OAuthConsumer] {
+  def meta = OAuthConsumer
+  object privileges extends MongoListField[OAuthConsumer, ConsumerPrivilege.Value](this)
+}
+object OAuthConsumer extends OAuthConsumer with MongoMetaRecord[OAuthConsumer]
+
+
+/////////////////////////////////////////////////
+// Actual tests
+/////////////////////////////////////////////////
+
+class QueryTest extends SpecsMatchers {
 
   @Test
   def testProduceACorrectJSONQueryString {
@@ -149,7 +157,8 @@ object QueryTest extends SpecsMatchers {
     Venue where (_.last_updated between (d1, d2)) toString() must_== "{ \"last_updated\" : { \"$gt\" : { \"$date\" : \"2010-05-01T00:00:00Z\"} , \"$lt\" : { \"$date\" : \"2010-05-02T00:00:00Z\"}}}"
 
     // Case class list field
-    Comment where (_.comments unsafeField "z" eqs 123) toString() must_== """{ "comments.z" : 123}"""
+    Comment where (_.comments.unsafeField[Int]("z") eqs 123) toString() must_== """{ "comments.z" : 123}"""
+    Comment where (_.comments.unsafeField[String]("comment") eqs "hi") toString() must_== """{ "comments.comment" : "hi"}"""
 
     // Enumeration list
     OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) toString() must_== """{ "privileges" : "Award badges"}"""
@@ -253,7 +262,6 @@ object QueryTest extends SpecsMatchers {
     val query = Venue where (_.legacyid eqs 1) modify (_.venuename setTo "Starbucks")
     val query2 = fields.foldLeft(query){ case (q, f) => {
       val v = f.valueBox.open_!
-      println("%s=%s" format (f.name, v))
       q and setField(f, v)
     }}
     query2 toString() must_== """{ "legid" : 1} modify with { "$set" : { "status" : "Closed" , "legid" : 2 , "latlng" : [ 37.4 , -73.9] , "venuename" : "Starbucks"}}"""
