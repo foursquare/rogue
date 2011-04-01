@@ -42,7 +42,7 @@ The finished jar will be in `target/`.
 Or if you prefer, packaged JARs are available on scala-tools.org. Add the following line to your
 sbt project file to pull them in:
 
-    val rogue = "com.foursquare" %% "rogue" % "1.0.5" withSources()
+    val rogue = "com.foursquare" %% "rogue" % "1.0.6" withSources()
 
 ## More Examples
 

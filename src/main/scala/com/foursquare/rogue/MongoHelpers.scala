@@ -110,8 +110,9 @@ object MongoHelpers {
     }
 
     def query[M <: MongoRecord[M]](operation: String,
-                                     query: BaseQuery[M, _, _, _, _, _])
-                                    (f: DBObject => Unit): Unit = {
+                                   query: BaseQuery[M, _, _, _, _, _],
+                                   batchSize: Option[Int])
+                                  (f: DBObject => Unit): Unit = {
       val start = System.currentTimeMillis
       MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
         val collection = coll.getName
@@ -122,6 +123,7 @@ object MongoHelpers {
         try {
           val cursor = coll.find(cnd, sel getOrElse empty).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
           ord.foreach(cursor sort _)
+          batchSize.foreach(cursor batchSize _)
           while (cursor.hasNext)
             f(cursor.next)
         } finally {

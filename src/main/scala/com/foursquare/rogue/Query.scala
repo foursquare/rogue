@@ -5,6 +5,7 @@ package com.foursquare.rogue
 import com.foursquare.rogue.MongoHelpers._
 import com.mongodb.DBObject
 import net.liftweb.mongodb.record._
+import scala.collection.mutable.ListBuffer
 
 /////////////////////////////////////////////////////////////////////////////
 // Phantom types
@@ -58,21 +59,20 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   def skip(n: Int)(implicit ev: Sk =:= Unskipped) =
     new BaseQuery[M, R, Ord, Sel, Lim, Skipped](meta, lim, Some(n), condition, order, select)
 
-  private def extract(fn: R => Unit): DBObject => Unit = select match {
-    case Some(MongoSelect(fields, transformer)) => (dbo) => {
+  private def parseDBObject(dbo: DBObject): R = select match {
+    case Some(MongoSelect(fields, transformer)) =>
       val inst = fields.head.field.owner
       def setInstanceFieldFromDbo(fieldName: String) = inst.fieldByName(fieldName).open_!.setFromAny(dbo.get(fieldName))
       setInstanceFieldFromDbo("_id")
-      fn(transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field.name)))))
-    }
-    case None => 
-      dbo => fn(meta.fromDBObject(dbo).asInstanceOf[R])
+      transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field.name))))
+    case None => meta.fromDBObject(dbo).asInstanceOf[R]
   }
 
-  private def collect[T](f: (T => Unit) => Unit): List[T] = {
-    val buf = new scala.collection.mutable.ListBuffer[T]
-    f{ t: T => buf += t }
-    buf.toList
+  private def drainBuffer[A, B](from: ListBuffer[A], to: ListBuffer[B], f: List[A] => List[B], size: Int): Unit = {
+    if (from.size >= size) {
+      to ++= f(from.toList)
+      from.clear
+    }
   }
 
   def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
@@ -80,11 +80,26 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
     QueryExecutor.condition("countDistinct", this)(meta.countDistinct(field(meta).field.name, _))
   def foreach(f: R => Unit): Unit =
-    QueryExecutor.query("find", this)(extract(f))
-  def fetch(): List[R] =
-    collect[R](f => QueryExecutor.query("find", this)(extract(f)))
+    QueryExecutor.query("find", this, None)(dbo => f(parseDBObject(dbo)))
+  def fetch(): List[R] = {
+    val rv = new ListBuffer[R]
+    QueryExecutor.query("find", this, None)(dbo => rv += parseDBObject(dbo))
+    rv.toList
+  }
   def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] =
     this.limit(limit).fetch()
+  def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] = {
+    val rv = new ListBuffer[T]
+    val buf = new ListBuffer[R]
+
+    QueryExecutor.query("find", this, Some(batchSize)) { dbo =>
+      buf += parseDBObject(dbo)
+      drainBuffer(buf, rv, f, batchSize)
+    }
+    drainBuffer(buf, rv, f, 1)
+
+    rv.toList
+  }
   def get()(implicit ev: Lim =:= Unlimited): Option[R] =
     fetch(1).headOption
   def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
@@ -127,11 +142,6 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
     new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
   }
-  
-  def fetchBatch[T](batchSize: Int)(f: List[R] => List[T])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): List[T] = {
-    val paginatedQuery = paginate(batchSize)
-    (1 to paginatedQuery.numPages).toList.flatMap(page => f(paginatedQuery.setPage(page).fetch))
-  }
 }
 
 class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuery[M, R, Ord, Sel, Lim, Sk](null.asInstanceOf[M with MongoMetaRecord[M]], None, None, null.asInstanceOf[AndCondition], None, None) {
@@ -165,7 +175,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuer
   override def select[F1, F2, F3](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk]
   override def select[F1, F2, F3, F4](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk]
 
-  override def fetchBatch[T](batchSize: Int)(f: List[R] => List[T])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): List[T] = Nil
+  override def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] = Nil
 }
 
 class ModifyQuery[M <: MongoRecord[M]](val query: BaseQuery[M, _, _, _, _, _],
