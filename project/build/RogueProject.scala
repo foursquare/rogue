@@ -29,18 +29,14 @@ class RogueProject(info: ProjectInfo) extends DefaultProject(info) {
     case _       => "1.6.8-SNAPSHOT"
   }
 
-  // Scala Libraries
-  val scalaCompiler     = "org.scala-lang"           % "scala-compiler"     % scalaVer % "test"
-  val specs             = "org.scala-tools.testing" %% "specs" % specsVersion % "test" withSources()
-
   // Java Libraries
-  val mongo        = "org.mongodb"         % "mongo-java-driver" % "2.4"
-  val jodaTime     = "joda-time"           % "joda-time"         % "1.6.2" withSources()
-  val commons      = "org.apache.commons"  % "commons-math"      % "2.1"
-  val junit        = "junit"               % "junit"             % "4.8.2" % "test" withSources()
+  val mongo    = "org.mongodb"              % "mongo-java-driver" % "2.4"
+  val jodaTime = "joda-time"                % "joda-time"         % "1.6.2" withSources()
+  val commons  = "org.apache.commons"       % "commons-math"      % "2.1"
+  val junit    = "junit"                    % "junit"             % "4.8.2"      % "test" withSources()
+  val specs    = "org.scala-tools.testing" %% "specs"             % specsVersion % "test" withSources()
 
-  val stsnapshot = ScalaToolsSnapshots
-  val bryanjswift = "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/" 
+  val bryanjswift = "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/"
   val junitInterface = "com.novocode" % "junit-interface" % "0.6" % "test"
-  override def testFrameworks = super.testFrameworks ++ List(new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker")) 
+  override def testFrameworks = super.testFrameworks ++ List(new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker"))
 }
