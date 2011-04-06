@@ -22,6 +22,7 @@ class RogueProject(info: ProjectInfo) extends DefaultProject(info) with Credenti
   val junit = "junit"                    % "junit" % "4.8.2"      % "test" withSources()
   val specs = "org.scala-tools.testing" %% "specs" % specsVersion % "test" withSources()
 
+  val snapshots = "Scala Tools Snapshots" at "http://scala-tools.org/repo-snapshots/"
   val bryanjswift = "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/"
   val junitInterface = "com.novocode" % "junit-interface" % "0.6" % "test"
   override def testFrameworks = super.testFrameworks ++ List(new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker"))
