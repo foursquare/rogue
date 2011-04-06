@@ -12,7 +12,7 @@ class RogueProject(info: ProjectInfo) extends DefaultProject(info) with Credenti
   val publishTo = "Scala Tools Nexus" at "http://nexus.scala-tools.org/content/repositories/" + publishUrlSuffix
 
   // Lift Libraries
-  val liftMongoRecord = "net.liftweb" %% "lift-mongodb-record" % liftVersion.value.toString withSources()
+  val liftMongoRecord = "net.liftweb" %% "lift-mongodb-record" % liftVersion.value.toString
 
   // Java Libraries
   lazy val specsVersion = buildScalaVersion match {
