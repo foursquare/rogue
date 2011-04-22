@@ -250,6 +250,15 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count inc 1)   toString() must_== query + """{ "$set" : { "venuename" : "fshq"} , "$inc" : { "mayor_count" : 1}}"""
     Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count setTo 3) and (_.mayor_count inc 1) toString() must_== query + """{ "$set" : { "mayor_count" : 3 , "venuename" : "fshq"} , "$inc" : { "mayor_count" : 1}}"""
     Venue where (_.legacyid eqs 1) modify (_.popularity addToSet 3) and (_.tags addToSet List("a", "b")) toString() must_== query + """{ "$addToSet" : { "tags" : { "$each" : [ "a" , "b"]} , "popularity" : 3}}"""
+
+    // Empty query
+    Venue where (_.mayor in List()) modify (_.venuename setTo "fshq") toString() must_== "empty modify query"
+
+    // Noop query
+    Venue where (_.legacyid eqs 1) noop() toString() must_== query + "{ }"
+    Venue where (_.legacyid eqs 1) noop() modify (_.venuename setTo "fshq") toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}"""
+    Venue where (_.legacyid eqs 1) noop() and (_.venuename setTo "fshq") toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}"""
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") noop() toString() must_== query + "{ }"
   }
 
   @Test

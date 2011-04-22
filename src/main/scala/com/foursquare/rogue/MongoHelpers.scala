@@ -97,15 +97,17 @@ object MongoHelpers {
 
     def modify[M <: MongoRecord[M], T](operation: String,
                                          mod: ModifyQuery[M])
-                                        (f: (DBObject, DBObject) => T): T = {
-      val start = System.currentTimeMillis
-      val collection = mod.query.meta.collectionName
-      val q = buildCondition(mod.query.condition)
-      val m = buildModify(mod.modify)
-      try {
-        f(q, m)
-      } finally {
-        logger.log("Mongo %s.%s (%s, %s)" format (collection, operation, q, m), System.currentTimeMillis - start)
+                                        (f: (DBObject, DBObject) => T): Unit = {
+      if (!mod.mod.clauses.isEmpty) {
+        val start = System.currentTimeMillis
+        val collection = mod.query.meta.collectionName
+        val q = buildCondition(mod.query.condition)
+        val m = buildModify(mod.mod)
+        try {
+          f(q, m)
+        } finally {
+          logger.log("Mongo %s.%s (%s, %s)" format (collection, operation, q, m), System.currentTimeMillis - start)
+        }
       }
     }
 

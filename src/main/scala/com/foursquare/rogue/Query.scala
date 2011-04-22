@@ -106,8 +106,6 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     val q = new BaseQuery[M, R, Ord, Sel, Unlimited, Unskipped](meta, lim, sk, condition, order, select)
     new BasePaginatedQuery(q, countPerPage)
   }
-  def modify[F](clause: M => ModifyClause[F])(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped) =
-    new ModifyQuery(this, MongoModify(List(clause(meta))))
 
   // Always do modifications against master (not meta, which could point to slave)
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
@@ -166,7 +164,6 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuer
     new BasePaginatedQuery(emptyQuery, countPerPage)
   }
 
-  override def modify[F](clause: M => ModifyClause[F])(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped) = new NoopModifyQuery
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
   override def toString = "empty query"
 
@@ -179,8 +176,15 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuer
 }
 
 class ModifyQuery[M <: MongoRecord[M]](val query: BaseQuery[M, _, _, _, _, _],
-                                       val modify: MongoModify) {
-  def and[F](clause: M => ModifyClause[F]) = new ModifyQuery(query, MongoModify(clause(query.meta) :: modify.clauses))
+                                       val mod: MongoModify) {
+  def modify[F](clause: M => ModifyClause[F]) = {
+    query match {
+      case q: BaseEmptyQuery[_, _, _, _, _, _] => new NoopModifyQuery[M]
+      case _ => new ModifyQuery(query, MongoModify(clause(query.meta) :: mod.clauses))
+    }
+  }
+  def and[F](clause: M => ModifyClause[F]) = modify(clause)
+  def noop() = new ModifyQuery(query, MongoModify(Nil))
 
   // Always do modifications against master (not query.meta, which could point to slave)
   def updateMulti(): Unit = QueryExecutor.modify("updateMulti", this)(query.master.updateMulti(_, _))
@@ -188,7 +192,7 @@ class ModifyQuery[M <: MongoRecord[M]](val query: BaseQuery[M, _, _, _, _, _],
   def upsertOne(): Unit = QueryExecutor.modify("upsertOne", this)(query.master.upsert(_, _))
 
   override def toString =
-    MongoBuilder.buildString(query, Some(modify))
+    MongoBuilder.buildString(query, Some(mod))
 }
 
 class NoopModifyQuery[M <: MongoRecord[M]] extends ModifyQuery[M](
@@ -198,6 +202,7 @@ class NoopModifyQuery[M <: MongoRecord[M]] extends ModifyQuery[M](
   override def updateMulti(): Unit = ()
   override def updateOne(): Unit = ()
   override def upsertOne(): Unit = ()
+  override def toString = "empty modify query"
 }
 
 class BasePaginatedQuery[M <: MongoRecord[M], R](q: BaseQuery[M, R, _, _, Unlimited, Unskipped], val countPerPage: Int, val pageNum: Int = 1) {

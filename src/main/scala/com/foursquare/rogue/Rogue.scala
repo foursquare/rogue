@@ -17,6 +17,8 @@ trait Rogue {
   type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped]
 
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped](rec, None, None, AndCondition(Nil), None, None)
+  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = new ModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
+  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]) = new ModifyQuery(query, MongoModify(Nil))
 
   implicit def fieldToQueryField[M <: MongoRecord[M], F](f: Field[F, M]) = new QueryField(f)
   implicit def latLongFieldToGeoQueryField[M <: MongoRecord[M]](f: Field[LatLong, M]) = new GeoQueryField(f)
