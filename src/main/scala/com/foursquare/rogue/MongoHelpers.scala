@@ -81,17 +81,32 @@ object MongoHelpers {
 
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
+    
+    def runCommand[T](description: => String, id: MongoIdentifier)(f: => T): T = runCommand(description, id.toString)(f)
+    
+    def runCommand[T](description: => String, id: String)(f: => T): T = {
+      val start = System.currentTimeMillis 
+      try {
+        f
+      } catch {
+        case e: Exception =>
+          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(id, description, System.currentTimeMillis - start), e)
+      } finally {
+        logger.log(description, System.currentTimeMillis - start)
+      }
+    }
 
     def condition[M <: MongoRecord[M], T](operation: String,
                                             query: BaseQuery[M, _, _, _, _, _])
                                            (f: DBObject => T): T = {
-      val start = System.currentTimeMillis
+     
       val collection = query.meta.collectionName
       val cnd = buildCondition(query.condition)
-      try {
+      
+      def description = "Mongo %s.%s (%s)" format (collection, operation, cnd)
+      
+      runCommand(description, query.meta.mongoIdentifier){
         f(cnd)
-      } finally {
-        logger.log("Mongo %s.%s (%s)" format (collection, operation, cnd), System.currentTimeMillis - start)
       }
     }
 
@@ -99,14 +114,15 @@ object MongoHelpers {
                                          mod: ModifyQuery[M])
                                         (f: (DBObject, DBObject) => T): Unit = {
       if (!mod.mod.clauses.isEmpty) {
-        val start = System.currentTimeMillis
+
         val collection = mod.query.meta.collectionName
         val q = buildCondition(mod.query.condition)
         val m = buildModify(mod.mod)
-        try {
+        
+        def description = "Mongo %s.%s (%s, %s)" format (collection, operation, q, m)
+        
+        runCommand(description, mod.query.meta.mongoIdentifier){
           f(q, m)
-        } finally {
-          logger.log("Mongo %s.%s (%s, %s)" format (collection, operation, q, m), System.currentTimeMillis - start)
         }
       }
     }
@@ -115,30 +131,33 @@ object MongoHelpers {
                                    query: BaseQuery[M, _, _, _, _, _],
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
-      val start = System.currentTimeMillis
-      MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
-        val collection = coll.getName
-        val cnd = buildCondition(query.condition)
-        val ord = query.order.map(buildOrder)
-        val sel = query.select.map(buildSelect)
-        lazy val empty = BasicDBObjectBuilder.start.get
-        try {
+      
+      val collection = query.meta.collectionName
+      val cnd = buildCondition(query.condition)
+      val ord = query.order.map(buildOrder)
+      val sel = query.select.map(buildSelect)
+      
+      def description = {
+        val str = new StringBuilder("Mongo " + collection +"." + operation)
+        str.append("("+cnd)
+        sel.foreach(s => str.append(", "+s))
+        str.append(")")
+        ord.foreach(o => str.append(".sort("+o+")"))
+        query.sk.foreach(sk => str.append(".skip("+sk+")"))
+        query.lim.foreach(l => str.append(".limit("+l+")"))
+        str.toString
+      }
+      
+      runCommand(description, query.meta.mongoIdentifier){
+        MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
+
+          lazy val empty = BasicDBObjectBuilder.start.get
+
           val cursor = coll.find(cnd, sel getOrElse empty).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
           ord.foreach(cursor sort _)
           batchSize.foreach(cursor batchSize _)
           while (cursor.hasNext)
             f(cursor.next)
-        } finally {
-          logger.log( {
-            val str = new StringBuilder("Mongo " + collection +"." + operation)
-            str.append("("+cnd)
-            sel.foreach(s => str.append(", "+s))
-            str.append(")")
-            ord.foreach(o => str.append(".sort("+o+")"))
-            query.sk.foreach(sk => str.append(".skip("+sk+")"))
-            query.lim.foreach(l => str.append(".limit("+l+")"))
-            str.toString
-          }, System.currentTimeMillis - start)
         }
       }
     }
