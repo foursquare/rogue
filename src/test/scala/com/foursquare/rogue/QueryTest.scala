@@ -165,7 +165,7 @@ class QueryTest extends SpecsMatchers {
     OAuthConsumer where (_.privileges at 0 eqs ConsumerPrivilege.awardBadges) toString() must_== """{ "privileges.0" : "Award badges"}"""
 
     // Field type
-    Venue where (_.legacyid hastype MongoTypes.String) toString() must_== """{ "legid" : { "$type" : 2}}"""
+    Venue where (_.legacyid hastype MongoType.String) toString() must_== """{ "legid" : { "$type" : 2}}"""
 
     // Modulus
     Venue where (_.legacyid mod (5, 1)) toString() must_== """{ "legid" : { "$mod" : [ 5 , 1]}}"""
@@ -200,6 +200,11 @@ class QueryTest extends SpecsMatchers {
     Venue limit(10) where (_.mayor eqs 1) toString() must_== """{ "mayor" : 1} limit 10"""
     Venue orderDesc(_._id) and (_.mayor eqs 1) toString() must_== """{ "mayor" : 1} order by { "_id" : -1}"""
     Venue orderDesc(_._id) skip(3) and (_.mayor eqs 1) toString() must_== """{ "mayor" : 1} order by { "_id" : -1} skip 3"""
+
+    // Scan should be the same as and/where
+    Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") toString() must_== "{ \"mayor\" : 1 , \"tags\" : \"karaoke\"}"
+    Venue scan (_.mayor eqs 1) and (_.mayor_count eqs 5)         toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : 5}"
+    Venue scan (_.mayor eqs 1) scan (_.mayor_count lt 5)         toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : { \"$lt\" : 5}}"
   }
 
   @Test
@@ -333,7 +338,7 @@ class QueryTest extends SpecsMatchers {
     OAuthConsumer where (_.privileges at 0 eqs ConsumerPrivilege.awardBadges) signature() must_== """{ "privileges.0" : 0}"""
 
     // Field type
-    Venue where (_.legacyid hastype MongoTypes.String) signature() must_== """{ "legid" : { "$type" : 0}}"""
+    Venue where (_.legacyid hastype MongoType.String) signature() must_== """{ "legid" : { "$type" : 0}}"""
 
     // Modulus
     Venue where (_.legacyid mod (5, 1)) signature() must_== """{ "legid" : { "$mod" : 0}}"""

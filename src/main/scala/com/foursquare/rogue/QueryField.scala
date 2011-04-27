@@ -24,7 +24,7 @@ object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAl
   val Inc, Set, Unset, Push, PushAll, AddToSet, Pop, Pull, PullAll = Value
 }
 
-object MongoTypes extends Enumeration {
+object MongoType extends Enumeration {
   type MongoType = Value
   val Double = Value(1)
   val String = Value(2)
@@ -55,7 +55,7 @@ class QueryField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def in[L <% List[V]](vs: L) = QueryHelpers.inListClause(field.name, vs)
   def nin[L <% List[V]](vs: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(vs))
   def exists(b: Boolean) = new QueryClause(field.name, CondOps.Exists -> b)
-  def hastype(t: MongoTypes.Value) = new QueryClause(field.name, CondOps.Type -> t.id)
+  def hastype(t: MongoType.Value) = new QueryClause(field.name, CondOps.Type -> t.id)
   def mod(by: Int, eq: Int) = new QueryClause(field.name, CondOps.Mod -> QueryHelpers.list(List(by, eq)))
 }
 

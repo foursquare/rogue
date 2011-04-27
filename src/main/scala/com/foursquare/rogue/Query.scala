@@ -36,13 +36,20 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   // points to the master MongoMetaRecord
   lazy val master = meta.meta
 
-  def where[F](clause: M => QueryClause[F]) = {
+  private def addClause[F](clause: M => QueryClause[F], expectedIndexBehavior: IndexBehavior.Value) = {
     clause(meta) match {
       case cl: EmptyQueryClause[_] => new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk]
-      case cl => new BaseQuery[M, R, Ord, Sel, Lim, Sk](meta, lim, sk, AndCondition(cl :: condition.clauses), order, select)
+      case cl => {
+        new BaseQuery[M, R, Ord, Sel, Lim, Sk](meta, lim, sk, AndCondition(cl.withExpectedIndexBehavior(expectedIndexBehavior) :: condition.clauses), order, select)
+      }
     }
   }
-  def and[F](clause: M => QueryClause[F]) = where(clause)
+
+  def where[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.Index)
+  def and[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.Index)
+  def iscan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
+  def scan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
+
   def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
     new BaseQuery[M, R, Ordered, Sel, Lim, Sk](meta, lim, sk, condition, Some(MongoOrder(List((field(meta).field.name, true)))), select)
   def orderDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
