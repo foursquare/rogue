@@ -14,14 +14,35 @@ import net.liftweb.mongodb.record.field.MongoCaseClassListField
 import org.bson.types.ObjectId
 import org.joda.time._
 
-object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte", "$in", "$nin", "$near", "$all", "$size", "$exists" ) {
+object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte", "$in", "$nin", "$near", "$all", "$size", "$exists", "$type", "$mod") {
   type Op = Value
-  val Ne, Lt, Gt, LtEq, GtEq, In, Nin, Near, All, Size, Exists = Value
+  val Ne, Lt, Gt, LtEq, GtEq, In, Nin, Near, All, Size, Exists, Type, Mod = Value
 }
 
 object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAll", "$addToSet", "$pop", "$pull", "$pullAll") {
   type Op = Value
   val Inc, Set, Unset, Push, PushAll, AddToSet, Pop, Pull, PullAll = Value
+}
+
+object MongoTypes extends Enumeration {
+  type MongoType = Value
+  val Double = Value(1)
+  val String = Value(2)
+  val Object = Value(3)
+  val Array = Value(4)
+  val Binary = Value(5)
+  val ObjectId = Value(7)
+  val Boolean = Value(8)
+  val Date = Value(9)
+  val Null = Value(10)
+  val RegEx = Value(11)
+  val JavaScript = Value(13)
+  val Symbol = Value(15)
+  val Int32 = Value(16)
+  val Timestamp = Value(17)
+  val Int64 = Value(18)
+  val MaxKey = Value(127)
+  val MinKey = Value(255)
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -34,6 +55,8 @@ class QueryField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def in[L <% List[V]](vs: L) = QueryHelpers.inListClause(field.name, vs)
   def nin[L <% List[V]](vs: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(vs))
   def exists(b: Boolean) = new QueryClause(field.name, CondOps.Exists -> b)
+  def hastype(t: MongoTypes.Value) = new QueryClause(field.name, CondOps.Type -> t.id)
+  def mod(by: Int, eq: Int) = new QueryClause(field.name, CondOps.Mod -> QueryHelpers.list(List(by, eq)))
 }
 
 class CalendarQueryField[M <: MongoRecord[M]](val field: Field[java.util.Calendar, M]) {

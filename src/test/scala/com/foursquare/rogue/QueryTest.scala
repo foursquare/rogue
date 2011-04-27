@@ -164,6 +164,12 @@ class QueryTest extends SpecsMatchers {
     OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) toString() must_== """{ "privileges" : "Award badges"}"""
     OAuthConsumer where (_.privileges at 0 eqs ConsumerPrivilege.awardBadges) toString() must_== """{ "privileges.0" : "Award badges"}"""
 
+    // Field type
+    Venue where (_.legacyid hastype MongoTypes.String) toString() must_== """{ "legid" : { "$type" : 2}}"""
+
+    // Modulus
+    Venue where (_.legacyid mod (5, 1)) toString() must_== """{ "legid" : { "$mod" : [ 5 , 1]}}"""
+
     // compound queries
     Venue where (_.mayor eqs 1) and (_.tags contains "karaoke") toString() must_== "{ \"mayor\" : 1 , \"tags\" : \"karaoke\"}"
     Venue where (_.mayor eqs 1) and (_.mayor_count eqs 5)       toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : 5}"
