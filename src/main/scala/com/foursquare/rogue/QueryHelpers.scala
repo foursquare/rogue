@@ -6,6 +6,7 @@ import com.mongodb.DBObject
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
 import net.liftweb.mongodb._
+import net.liftweb.mongodb.record._
 
 case class Degrees(value: Double)
 case class LatLong(lat: Double, long: Double)
@@ -43,11 +44,15 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Iterable[T]): Unit
     def validateRadius(d: Degrees): Degrees
+    def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]): Unit
+    def validateModify[M <: MongoRecord[M]](modify: ModifyQuery[M]): Unit
   }
 
   object NoopQueryValidator extends QueryValidator {
     override def validateList[T](xs: Iterable[T]) {}
     override def validateRadius(d: Degrees) = d
+    override def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]) {}
+    override def validateModify[M <: MongoRecord[M]](modify: ModifyQuery[M]) {}
   }
 
   var validator: QueryValidator = NoopQueryValidator

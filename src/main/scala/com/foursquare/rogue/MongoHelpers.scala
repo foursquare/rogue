@@ -82,9 +82,9 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
     
-    def runCommand[T](description: => String, id: MongoIdentifier)(f: => T): T = runCommand(description, id.toString)(f)
+    private[rogue] def runCommand[T](description: => String, id: MongoIdentifier)(f: => T): T = runCommand(description, id.toString)(f)
     
-    def runCommand[T](description: => String, id: String)(f: => T): T = {
+    private[rogue] def runCommand[T](description: => String, id: String)(f: => T): T = {
       val start = System.currentTimeMillis 
       try {
         f
@@ -99,7 +99,8 @@ object MongoHelpers {
     def condition[M <: MongoRecord[M], T](operation: String,
                                             query: BaseQuery[M, _, _, _, _, _])
                                            (f: DBObject => T): T = {
-     
+
+      validator.validateQuery(query)
       val collection = query.meta.collectionName
       val cnd = buildCondition(query.condition)
       
@@ -113,6 +114,7 @@ object MongoHelpers {
     def modify[M <: MongoRecord[M], T](operation: String,
                                          mod: ModifyQuery[M])
                                         (f: (DBObject, DBObject) => T): Unit = {
+      validator.validateModify(mod)
       if (!mod.mod.clauses.isEmpty) {
 
         val collection = mod.query.meta.collectionName
@@ -132,6 +134,7 @@ object MongoHelpers {
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
       
+      validator.validateQuery(query)
       val collection = query.meta.collectionName
       val cnd = buildCondition(query.condition)
       val ord = query.order.map(buildOrder)
