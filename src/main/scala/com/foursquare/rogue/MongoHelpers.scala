@@ -16,7 +16,7 @@ object MongoHelpers {
   sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R)
 
   object MongoBuilder {
-    def buildCondition(q: MongoCondition): DBObject = q match {
+    def buildCondition(q: MongoCondition, signature: Boolean = false): DBObject = q match {
       case AndCondition(clauses) =>
         val builder = BasicDBObjectBuilder.start
         (clauses.groupBy(_.fieldName)
@@ -28,9 +28,9 @@ object MongoHelpers {
           // and can be chained like { a : { $gt : 2, $lt: 6 }}.
           // So if there is any equality clause, apply it (only) to the builder;
           // otherwise, chain the clauses.
-          cs.filter(_.isInstanceOf[EqClause[_]]).headOption.map(_.extend(builder)).getOrElse {
+          cs.filter(_.isInstanceOf[EqClause[_]]).headOption.map(_.extend(builder, signature)).getOrElse {
             builder.push(name)
-            cs.foreach(_.extend(builder))
+            cs.foreach(_.extend(builder, signature))
             builder.pop
           }
         })
@@ -39,7 +39,7 @@ object MongoHelpers {
       case OrCondition(conditions) => 
         // Room for optimization here by manipulating the AST, e.g.,
         // { $or : [ { a : 1 }, { a : 2 } ] }  ==>  { a : { $in : [ 1, 2 ] }}
-        BasicDBObjectBuilder.start("$or", QueryHelpers.list(conditions.map(buildCondition))).get
+        BasicDBObjectBuilder.start("$or", QueryHelpers.list(conditions.map(buildCondition(_, signature = false)))).get
     }
 
     def buildOrder(o: MongoOrder): DBObject = {
@@ -67,12 +67,19 @@ object MongoHelpers {
     def buildString[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _],
                        modify: Option[MongoModify]): String = {
       val sb = new StringBuilder
-      sb.append(buildCondition(query.condition).toString)
+      sb.append(buildCondition(query.condition, signature = false).toString)
       query.order.foreach(o => sb.append(" order by " + buildOrder(o).toString))
       query.select.foreach(s => sb.append(" select " + buildSelect(s).toString))
       query.lim.foreach(l => sb.append(" limit " + l))
       query.sk.foreach(s => sb.append(" skip " + s))
       modify.foreach(m => sb.append(" modify with " + buildModify(m)))
+      sb.toString
+    }
+
+    def buildSignature[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _]): String = {
+      val sb = new StringBuilder
+      sb.append(buildCondition(query.condition, signature = true).toString)
+      query.order.foreach(o => sb.append(" order by " + buildOrder(o).toString))
       sb.toString
     }
   }

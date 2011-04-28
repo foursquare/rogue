@@ -90,7 +90,7 @@ class QueryTest extends SpecsMatchers {
     val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0, DateTimeZone.UTC)
     val oid = new ObjectId
 
-    // is
+    // eqs
     Venue where (_.mayor eqs 1)               toString() must_== """{ "mayor" : 1}"""
     Venue where (_.venuename eqs "Starbucks") toString() must_== """{ "venuename" : "Starbucks"}"""
     Venue where (_.closed eqs true)           toString() must_== """{ "closed" : true}"""
@@ -111,9 +111,9 @@ class QueryTest extends SpecsMatchers {
 
     // in,nin
     Venue where (_.legacyid in List(123, 456)) toString() must_== """{ "legid" : { "$in" : [ 123 , 456]}}"""
-    Venue where (_.venuename nin List("Starbucks", "Whole Foods")) toString() must_== "{ \"venuename\" : { \"$nin\" : [ \"Starbucks\" , \"Whole Foods\"]}}"
-    VenueClaim where (_.status in List(ClaimStatus.approved, ClaimStatus.pending))  toString() must_== "{ \"status\" : { \"$in\" : [ \"Approved\" , \"Pending approval\"]}}"
-    VenueClaim where (_.status nin List(ClaimStatus.approved, ClaimStatus.pending)) toString() must_== "{ \"status\" : { \"$nin\" : [ \"Approved\" , \"Pending approval\"]}}"
+    Venue where (_.venuename nin List("Starbucks", "Whole Foods")) toString() must_== """{ "venuename" : { "$nin" : [ "Starbucks" , "Whole Foods"]}}"""
+    VenueClaim where (_.status in List(ClaimStatus.approved, ClaimStatus.pending))  toString() must_== """{ "status" : { "$in" : [ "Approved" , "Pending approval"]}}"""
+    VenueClaim where (_.status nin List(ClaimStatus.approved, ClaimStatus.pending)) toString() must_== """{ "status" : { "$nin" : [ "Approved" , "Pending approval"]}}"""
 
     // exists
     Venue where (_._id exists true) toString() must_== """{ "_id" : { "$exists" : true}}"""
@@ -280,5 +280,86 @@ class QueryTest extends SpecsMatchers {
       q and setField(f, v)
     }}
     query2 toString() must_== """{ "legid" : 1} modify with { "$set" : { "status" : "Closed" , "legid" : 2 , "latlng" : [ 37.4 , -73.9] , "venuename" : "Starbucks"}}"""
+  }
+
+  @Test
+  def testProduceACorrectSignatureString {
+    val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC)
+    val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0, DateTimeZone.UTC)
+    val oid = new ObjectId
+
+    // basic ops
+    Venue where (_.mayor eqs 1)               signature() must_== """{ "mayor" : 0}"""
+    Venue where (_.venuename eqs "Starbucks") signature() must_== """{ "venuename" : 0}"""
+    Venue where (_.closed eqs true)           signature() must_== """{ "closed" : 0}"""
+    Venue where (_._id eqs oid)               signature() must_== """{ "_id" : 0}"""
+    VenueClaim where (_.status eqs ClaimStatus.approved) signature() must_== """{ "status" : 0}"""
+    Venue where (_.mayor_count gte 5) signature() must_== """{ "mayor_count" : { "$gte" : 0}}"""
+    VenueClaim where (_.status neqs ClaimStatus.approved) signature() must_== """{ "status" : { "$ne" : 0}}"""
+    Venue where (_.legacyid in List(123, 456)) signature() must_== """{ "legid" : { "$in" : 0}}"""
+    Venue where (_._id exists true) signature() must_== """{ "_id" : { "$exists" : 0}}"""
+    Venue where (_.venuename startsWith "Starbucks") signature() must_== """{ "venuename" : 0}"""
+
+    // list
+    Venue where (_.tags all List("db", "ka"))   signature() must_== """{ "tags" : { "$all" : 0}}"""
+    Venue where (_.tags in  List("db", "ka"))   signature() must_== """{ "tags" : { "$in" : 0}}"""
+    Venue where (_.tags size 3)                 signature() must_== """{ "tags" : { "$size" : 0}}"""
+    Venue where (_.tags contains "karaoke")     signature() must_== """{ "tags" : 0}"""
+    Venue where (_.popularity contains 3)       signature() must_== """{ "popularity" : 0}"""
+    Venue where (_.popularity at 0 eqs 3)       signature() must_== """{ "popularity.0" : 0}"""
+    Venue where (_.categories at 0 eqs oid)     signature() must_== """{ "categories.0" : 0}"""
+    Venue where (_.tags at 0 startsWith "kara") signature() must_== """{ "tags.0" : 0}"""
+    Venue where (_.tags idx 0 startsWith "kara") signature() must_== """{ "tags.0" : 0}"""
+
+    // map
+    Tip where (_.counts at "foo" eqs 3) signature() must_== """{ "counts.foo" : 0}"""
+
+    // near
+    Venue where (_.geolatlng near (39.0, -74.0, Degrees(0.2)))     signature() must_== """{ "latlng" : { "$near" : 0}}"""
+    Venue where (_.geolatlng withinCircle(1.0, 2.0, Degrees(0.3))) signature() must_== """{ "latlng" : { "$within" : { "$center" : 0}}}"""
+    Venue where (_.geolatlng withinBox(1.0, 2.0, 3.0, 4.0))        signature() must_== """{ "latlng" : { "$within" : { "$box" : 0}}}"""
+    Venue where (_.geolatlng eqs (45.0, 50.0)) signature() must_== """{ "latlng" : 0}"""
+
+    // id, date range
+    Venue where (_._id before d2) signature() must_== """{ "_id" : { "$lt" : 0}}"""
+    Venue where (_.last_updated before d2) signature() must_== """{ "last_updated" : { "$lt" : 0}}"""
+
+    // Case class list field
+    Comment where (_.comments.unsafeField[Int]("z") eqs 123) signature() must_== """{ "comments.z" : 0}"""
+    Comment where (_.comments.unsafeField[String]("comment") eqs "hi") signature() must_== """{ "comments.comment" : 0}"""
+
+    // Enumeration list
+    OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) signature() must_== """{ "privileges" : 0}"""
+    OAuthConsumer where (_.privileges at 0 eqs ConsumerPrivilege.awardBadges) signature() must_== """{ "privileges.0" : 0}"""
+
+    // Field type
+    Venue where (_.legacyid hastype MongoTypes.String) signature() must_== """{ "legid" : { "$type" : 0}}"""
+
+    // Modulus
+    Venue where (_.legacyid mod (5, 1)) signature() must_== """{ "legid" : { "$mod" : 0}}"""
+
+    // compound queries
+    Venue where (_.mayor eqs 1) and (_.tags contains "karaoke") signature() must_== """{ "mayor" : 0 , "tags" : 0}"""
+    Venue where (_.mayor eqs 1) and (_.mayor_count gt 3) and (_.mayor_count lt 5) signature() must_== """{ "mayor" : 0 , "mayor_count" : { "$lt" : 0 , "$gt" : 0}}"""
+
+    // queries with no clauses
+    metaRecordToQueryBuilder(Venue) signature() must_== "{ }"
+    Venue orderDesc(_._id) signature() must_== """{ } order by { "_id" : -1}"""
+
+    // ordered queries
+    Venue where (_.mayor eqs 1) orderAsc(_.legacyid) signature() must_== """{ "mayor" : 0} order by { "legid" : 1}"""
+    Venue where (_.mayor eqs 1) orderDesc(_.legacyid) andAsc(_.userid) signature() must_== """{ "mayor" : 0} order by { "legid" : -1 , "userid" : 1}"""
+
+    // select queries
+    Venue where (_.mayor eqs 1) select(_.legacyid) signature() must_== """{ "mayor" : 0}"""
+
+    // empty queries
+    Venue where (_.mayor in List()) signature() must_== "empty query"
+    Venue where (_.tags all List()) signature() must_== "empty query"
+    Venue where (_.tags contains "karaoke") and (_.mayor in List()) signature() must_== "empty query"
+    Venue where (_.mayor in List()) and (_.tags contains "karaoke") signature() must_== "empty query"
+
+    // Scan should be the same as and/where
+    Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") signature() must_== """{ "mayor" : 0 , "tags" : 0}"""
   }
 }

@@ -112,6 +112,8 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     QueryExecutor.condition("bulkDelete", this)(master.bulkDelete_!!(_))
   override def toString: String =
     MongoBuilder.buildString(this, None)
+  def signature(): String =
+    MongoBuilder.buildSignature(this)
 
   def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, F1, Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
@@ -166,6 +168,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuer
 
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
   override def toString = "empty query"
+  override def signature = "empty query"
 
   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, F1, Ord, Selected, Lim, Sk]
   override def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2), Ord, Selected, Lim, Sk]
