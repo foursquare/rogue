@@ -154,6 +154,8 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
 class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuery[M, R, Ord, Sel, Lim, Sk](null.asInstanceOf[M with MongoMetaRecord[M]], None, None, null.asInstanceOf[AndCondition], None, None) {
   override def where[F](clause: M => QueryClause[F]) = this
   override def and[F](clause: M => QueryClause[F]) = this
+  override def iscan[F](clause: M => QueryClause[F]) = this
+  override def scan[F](clause: M => QueryClause[F]) = this
   override def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) = new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk]
   override def orderDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) = new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk]
   override def andAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered) = new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk]

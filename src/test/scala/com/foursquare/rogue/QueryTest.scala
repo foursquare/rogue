@@ -205,6 +205,7 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") toString() must_== "{ \"mayor\" : 1 , \"tags\" : \"karaoke\"}"
     Venue scan (_.mayor eqs 1) and (_.mayor_count eqs 5)         toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : 5}"
     Venue scan (_.mayor eqs 1) scan (_.mayor_count lt 5)         toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : { \"$lt\" : 5}}"
+    Venue where (_.mayor in List()) scan (_.mayor_count eqs 5)   toString() must_== "empty query"
   }
 
   @Test
