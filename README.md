@@ -76,7 +76,11 @@ For "modify" query objects
 
 ## Releases
 
-The latest release is 1.0.9. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.0.10. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+
+New in 1.0.10:
+
+- regression fix for 1.0.9
 
 New in 1.0.9:
 

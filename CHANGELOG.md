@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 1.0.10:
+
+- regression fix for 1.0.9
+
 # 1.0.9
 
 - added hooks for full query validation
