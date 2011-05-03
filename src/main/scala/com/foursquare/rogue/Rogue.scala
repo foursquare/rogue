@@ -21,7 +21,7 @@ trait Rogue {
   implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]) = {
     query match {
       case q: BaseEmptyQuery[_, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[M, _, _, _, _, _] => new ModifyQuery(query.asInstanceOf[BaseQuery[M, _, _, _, _, _]], MongoModify(Nil))
+      case q: BaseQuery[M, _, _, _, _, _] => new ModifyQuery[M](q, MongoModify(Nil))
     }
   }
 
