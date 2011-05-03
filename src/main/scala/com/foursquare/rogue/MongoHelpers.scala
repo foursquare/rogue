@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.mongodb.{BasicDBObjectBuilder, DBObject}
+import com.mongodb.{BasicDBObjectBuilder, DBObject, DBCursor}
 import net.liftweb.mongodb._
 import net.liftweb.mongodb.record._
 
@@ -140,6 +140,26 @@ object MongoHelpers {
                                    query: BaseQuery[M, _, _, _, _, _],
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
+      doQuery(operation, query){(cursor, ord) => 
+        ord.foreach(cursor sort _)
+        batchSize.foreach(cursor batchSize _)
+        while (cursor.hasNext)
+          f(cursor.next)
+      }
+    }
+
+    def explain[M <: MongoRecord[M]](operation: String,
+                                     query: BaseQuery[M, _, _, _, _, _]): String = {
+      var explanation = ""
+      doQuery(operation, query){(cursor, ord) =>
+        explanation += cursor.explain.toString
+      }
+      explanation
+    }
+
+    private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
+                                   query: BaseQuery[M, _, _, _, _, _])
+                                  (f: (DBCursor, Option[DBObject])  => Unit): Unit = {
       
       validator.validateQuery(query)
       val collection = query.meta.collectionName
@@ -164,10 +184,7 @@ object MongoHelpers {
           lazy val empty = BasicDBObjectBuilder.start.get
 
           val cursor = coll.find(cnd, sel getOrElse empty).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
-          ord.foreach(cursor sort _)
-          batchSize.foreach(cursor batchSize _)
-          while (cursor.hasNext)
-            f(cursor.next)
+          f(cursor, ord)
         }
       }
     }
