@@ -149,6 +149,9 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
     new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
   }
+  def explain = {
+    QueryExecutor.explain("find", this)
+  }
 }
 
 class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuery[M, R, Ord, Sel, Lim, Sk](null.asInstanceOf[M with MongoMetaRecord[M]], None, None, null.asInstanceOf[AndCondition], None, None) {
@@ -176,6 +179,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends BaseQuer
   }
 
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
+  override def explain = "{}"
   override def toString = "empty query"
   override def signature = "empty query"
 
