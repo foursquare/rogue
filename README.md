@@ -42,7 +42,7 @@ The finished jar will be in `target/`.
 Or if you prefer, packaged JARs are available on scala-tools.org. Add the following line to your
 sbt project file to pull them in:
 
-    val rogue = "com.foursquare" %% "rogue" % "1.0.6" withSources()
+    val rogue = "com.foursquare" %% "rogue" % "1.0.9" withSources()
 
 ## More Examples
 
@@ -73,6 +73,18 @@ For "modify" query objects
     modify.updateMulti()
     modify.updateOne()
     modify.upsertOne()
+
+## Releases
+
+The latest release is 1.0.9. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+
+New in 1.0.9:
+
+- added hooks for full query validation
+- support for $type and $mod query operators
+- query signatures: string version of a query with all values blanked out
+- support for indicating when a query clause is intended to hit an index (for runtime index checking, if you wish to implement it)
+
 
 ## Dependencies
 
