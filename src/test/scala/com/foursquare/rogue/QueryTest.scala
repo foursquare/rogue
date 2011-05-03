@@ -187,6 +187,10 @@ class QueryTest extends SpecsMatchers {
     // select queries
     Venue where (_.mayor eqs 1) select(_.legacyid) toString() must_== """{ "mayor" : 1} select { "legid" : 1}"""
     Venue where (_.mayor eqs 1) select(_.legacyid, _.userid) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1}"""
+    Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1}"""
+    Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1}"""
+    Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1}"""
+    Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1 , "tags" : 1}"""
 
     // empty queries
     Venue where (_.mayor in List()) toString() must_== "empty query"
@@ -202,9 +206,9 @@ class QueryTest extends SpecsMatchers {
     Venue orderDesc(_._id) skip(3) and (_.mayor eqs 1) toString() must_== """{ "mayor" : 1} order by { "_id" : -1} skip 3"""
 
     // Scan should be the same as and/where
-    Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") toString() must_== "{ \"mayor\" : 1 , \"tags\" : \"karaoke\"}"
-    Venue scan (_.mayor eqs 1) and (_.mayor_count eqs 5)         toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : 5}"
-    Venue scan (_.mayor eqs 1) scan (_.mayor_count lt 5)         toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : { \"$lt\" : 5}}"
+    Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") toString() must_== """{ "mayor" : 1 , "tags" : "karaoke"}"""
+    Venue scan (_.mayor eqs 1) and (_.mayor_count eqs 5)         toString() must_== """{ "mayor" : 1 , "mayor_count" : 5}"""
+    Venue scan (_.mayor eqs 1) scan (_.mayor_count lt 5)         toString() must_== """{ "mayor" : 1 , "mayor_count" : { "$lt" : 5}}"""
     Venue where (_.mayor in List()) scan (_.mayor_count eqs 5)   toString() must_== "empty query"
   }
 
