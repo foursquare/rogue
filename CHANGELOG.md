@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.0.11:
+
+- explain() method on BaseQuery (thanks tjulien!)
+- support for select()ing up to 6 fields
+
 # 1.0.10:
 
 - regression fix for 1.0.9
