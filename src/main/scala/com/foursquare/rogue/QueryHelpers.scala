@@ -45,14 +45,14 @@ object QueryHelpers {
     def validateList[T](xs: Iterable[T]): Unit
     def validateRadius(d: Degrees): Degrees
     def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]): Unit
-    def validateModify[M <: MongoRecord[M]](modify: ModifyQuery[M]): Unit
+    def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]): Unit
   }
 
   object NoopQueryValidator extends QueryValidator {
     override def validateList[T](xs: Iterable[T]) {}
     override def validateRadius(d: Degrees) = d
     override def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]) {}
-    override def validateModify[M <: MongoRecord[M]](modify: ModifyQuery[M]) {}
+    override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {}
   }
 
   var validator: QueryValidator = NoopQueryValidator

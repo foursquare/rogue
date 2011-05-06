@@ -119,7 +119,7 @@ object MongoHelpers {
     }
 
     def modify[M <: MongoRecord[M], T](operation: String,
-                                         mod: ModifyQuery[M])
+                                         mod: BaseModifyQuery[M])
                                         (f: (DBObject, DBObject) => T): Unit = {
       validator.validateModify(mod)
       if (!mod.mod.clauses.isEmpty) {

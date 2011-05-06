@@ -264,16 +264,16 @@ trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def upsertOne(): Unit
 }
 
-class ModifyQuery[M <: MongoRecord[M]](val query: BaseQuery[M, _, _, _, _, _],
+class BaseModifyQuery[M <: MongoRecord[M]](val query: BaseQuery[M, _, _, _, _, _],
                                        val mod: MongoModify) extends AbstractModifyQuery[M] {
 
   private def addClause[F](clause: M => ModifyClause[F]) = {
-    new ModifyQuery(query, MongoModify(clause(query.meta) :: mod.clauses))
+    new BaseModifyQuery(query, MongoModify(clause(query.meta) :: mod.clauses))
   }
 
   override def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
-  override def noop() = new ModifyQuery(query, MongoModify(Nil))
+  override def noop() = new BaseModifyQuery(query, MongoModify(Nil))
 
   // Always do modifications against master (not query.meta, which could point to slave)
   override def updateMulti(): Unit = QueryExecutor.modify("updateMulti", this)(query.master.updateMulti(_, _))

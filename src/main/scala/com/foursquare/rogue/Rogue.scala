@@ -11,17 +11,18 @@ import net.liftweb.mongodb.record.field.MongoCaseClassListField
 import org.bson.types.ObjectId
 
 trait Rogue {
-  type Query[T <: MongoRecord[T]] = BaseQuery[T, T, Unordered, Unselected, Unlimited, Unskipped]
-  type OrderedQuery[T <: MongoRecord[T]] = BaseQuery[T, T, Ordered, Unselected, Unlimited, Unskipped]
+  type Query[T <: MongoRecord[T]] = AbstractQuery[T, T, Unordered, Unselected, Unlimited, Unskipped]
+  type OrderedQuery[T <: MongoRecord[T]] = AbstractQuery[T, T, Ordered, Unselected, Unlimited, Unskipped]
   type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
   type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped]
+  type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
 
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped](rec, None, None, AndCondition(Nil), None, None)
-  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = new ModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
+  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = new BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
   implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]) = {
     query match {
       case q: BaseEmptyQuery[_, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[M, _, _, _, _, _] => new ModifyQuery[M](q, MongoModify(Nil))
+      case q: BaseQuery[M, _, _, _, _, _] => new BaseModifyQuery[M](q, MongoModify(Nil))
     }
   }
 
