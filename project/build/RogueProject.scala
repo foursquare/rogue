@@ -2,7 +2,7 @@ import sbt._
 
 class RogueProject(info: ProjectInfo) extends DefaultProject(info) with Credential {
   val liftVersion = property[Version]
-
+  // override def compileOptions = super.compileOptions ++ Seq(Unchecked)
   override def packageSrcJar = defaultJarPath("-sources.jar")
   val sourceArtifact = Artifact.sources(artifactID)
   override def packageToPublishActions = super.packageToPublishActions ++ Seq(packageSrc)

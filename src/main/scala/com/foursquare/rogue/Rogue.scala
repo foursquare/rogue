@@ -17,12 +17,12 @@ trait Rogue {
   type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped]
   type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
 
-  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped](rec, None, None, AndCondition(Nil), None, None)
-  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = new BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
+  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped](rec, None, None, AndCondition(Nil), None, None)
+  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
   implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]) = {
     query match {
       case q: BaseEmptyQuery[_, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[M, _, _, _, _, _] => new BaseModifyQuery[M](q, MongoModify(Nil))
+      case q: BaseQuery[M, _, _, _, _, _] => BaseModifyQuery[M](q, MongoModify(Nil))
     }
   }
 

@@ -66,13 +66,13 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
   def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk]
 }
 
-class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
+case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     override val meta: M with MongoMetaRecord[M],
-    val lim: Option[Int],
-    val sk: Option[Int],
-    val condition: AndCondition,
-    val order: Option[MongoOrder],
-    val select: Option[MongoSelect[R, M]]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk] {
+    lim: Option[Int],
+    sk: Option[Int],
+    condition: AndCondition,
+    order: Option[MongoOrder],
+    select: Option[MongoSelect[R, M]]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk] {
 
   // The meta field on the MongoMetaRecord (as an instance of MongoRecord)
   // points to the master MongoMetaRecord. This is here in case you have a
@@ -83,7 +83,7 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     clause(meta) match {
       case cl: EmptyQueryClause[_] => new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk]
       case cl => {
-        new BaseQuery[M, R, Ord, Sel, Lim, Sk](meta, lim, sk, AndCondition(cl.withExpectedIndexBehavior(expectedIndexBehavior) :: condition.clauses), order, select)
+        this.copy(condition = AndCondition(cl.withExpectedIndexBehavior(expectedIndexBehavior) :: condition.clauses))
       }
     }
   }
@@ -93,21 +93,21 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   override def iscan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
   override def scan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
 
-  override def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
-    new BaseQuery[M, R, Ordered, Sel, Lim, Sk](meta, lim, sk, condition, Some(MongoOrder(List((field(meta).field.name, true)))), select)
-  override def orderDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
-    new BaseQuery[M, R, Ordered, Sel, Lim, Sk](meta, lim, sk, condition, Some(MongoOrder(List((field(meta).field.name, false)))), select)
-  override def andAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered) =
-    new BaseQuery[M, R, Ordered, Sel, Lim, Sk](meta, lim, sk, condition, Some(MongoOrder((field(meta).field.name, true) :: order.get.terms)), select)
-  override def andDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered) =
-    new BaseQuery[M, R, Ordered, Sel, Lim, Sk](meta, lim, sk, condition, Some(MongoOrder((field(meta).field.name, false) :: order.get.terms)), select)
+  override def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk] =
+    this.copy(order = Some(MongoOrder(List((field(meta).field.name, true)))))
+  override def orderDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk] =
+    this.copy(order = Some(MongoOrder(List((field(meta).field.name, false)))))
+  override def andAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk] =
+    this.copy(order = Some(MongoOrder((field(meta).field.name, true) :: order.get.terms)))
+  override def andDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk] =
+    this.copy(order = Some(MongoOrder((field(meta).field.name, false) :: order.get.terms)))
 
-  override def limit(n: Int)(implicit ev: Lim =:= Unlimited) =
-    new BaseQuery[M, R, Ord, Sel, Limited, Sk](meta, Some(n), sk, condition, order, select)
-  override def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited) =
-    new BaseQuery[M, R, Ord, Sel, Limited, Sk](meta, n, sk, condition, order, select)
-  override def skip(n: Int)(implicit ev: Sk =:= Unskipped) =
-    new BaseQuery[M, R, Ord, Sel, Lim, Skipped](meta, lim, Some(n), condition, order, select)
+  override def limit(n: Int)(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk] =
+    this.copy(lim = Some(n))
+  override def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk] =
+    this.copy(lim = n)
+  override def skip(n: Int)(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped] =
+    this.copy(sk = Some(n))
 
   private def parseDBObject(dbo: DBObject): R = select match {
     case Some(MongoSelect(fields, transformer)) =>
@@ -153,8 +153,7 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   override def get()(implicit ev: Lim =:= Unlimited): Option[R] =
     fetch(1).headOption
   override def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
-    val q = new BaseQuery[M, R, Ord, Sel, Unlimited, Unskipped](meta, lim, sk, condition, order, select)
-    new BasePaginatedQuery(q, countPerPage)
+    new BasePaginatedQuery(this.copy(), countPerPage)
   }
 
   // Always do modifications against master (not meta, which could point to slave)
@@ -171,42 +170,42 @@ class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     val inst = meta.createRecord
     val fields = List(f(inst))
     val transformer = (xs: List[_]) => xs.head.asInstanceOf[F1]
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+    this.copy(select = Some(MongoSelect(fields, transformer)))
   }
   
   override def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+    this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
   override def select[F1, F2, F3](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+    this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
   override def select[F1, F2, F3, F4](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+    this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
   override def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+    this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk] = {
+  override def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst))
     val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6])
-    new BaseQuery(meta, lim, sk, condition, order, Some(MongoSelect(fields, transformer)))
+    this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 }
 
@@ -264,16 +263,16 @@ trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def upsertOne(): Unit
 }
 
-class BaseModifyQuery[M <: MongoRecord[M]](val query: BaseQuery[M, _, _, _, _, _],
-                                       val mod: MongoModify) extends AbstractModifyQuery[M] {
+case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _],
+                                                mod: MongoModify) extends AbstractModifyQuery[M] {
 
   private def addClause[F](clause: M => ModifyClause[F]) = {
-    new BaseModifyQuery(query, MongoModify(clause(query.meta) :: mod.clauses))
+    this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
 
   override def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
-  override def noop() = new BaseModifyQuery(query, MongoModify(Nil))
+  override def noop() = this.copy(mod = MongoModify(Nil))
 
   // Always do modifications against master (not query.meta, which could point to slave)
   override def updateMulti(): Unit = QueryExecutor.modify("updateMulti", this)(query.master.updateMulti(_, _))
