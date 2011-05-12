@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.0.12:
+
+- always specify field names to return in the query; if select() was not specified, use all field names from the model
+- some code cleanup (use case classes and copy() to save some typing)
+
 # 1.0.11:
 
 - explain() method on BaseQuery (thanks tjulien!)

@@ -78,13 +78,14 @@ For "modify" query objects
 
 The latest release is 1.0.11. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.11:
+New in 1.0.12:
 
-- explain() method on BaseQuery (thanks tjulien!)
-- support for select()ing up to 6 fields
+- always specify field names to return in the query; if select() was not specified, use all field names from the model
 
 Other recent notable changes:
 
+- explain() method on BaseQuery (thanks tjulien!)
+- support for select()ing up to 6 fields
 - added hooks for full query validation
 - support for $type and $mod query operators
 - query signatures: string version of a query with all values blanked out
