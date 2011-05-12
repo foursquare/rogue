@@ -59,8 +59,12 @@ object MongoHelpers {
     }
 
     def buildSelect[R, M <: MongoRecord[M]](s: MongoSelect[R, M]): DBObject = {
+      buildSelectFromNames(s.fields.view.map(_.field.name))
+    }
+    
+    def buildSelectFromNames(names: Iterable[String]): DBObject = {
       val builder = BasicDBObjectBuilder.start
-      s.fields.foreach(f => builder.add(f.field.name, 1))
+      names.foreach(n => builder.add(n, 1))
       builder.get
     }
 
@@ -164,12 +168,12 @@ object MongoHelpers {
       val collection = query.meta.collectionName
       val cnd = buildCondition(query.condition)
       val ord = query.order.map(buildOrder)
-      val sel = query.select.map(buildSelect)
+      val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
       
       def description = {
         val str = new StringBuilder("Mongo " + collection +"." + operation)
         str.append("("+cnd)
-        sel.foreach(s => str.append(", "+s))
+        str.append(", "+sel)
         str.append(")")
         ord.foreach(o => str.append(".sort("+o+")"))
         query.sk.foreach(sk => str.append(".skip("+sk+")"))
@@ -182,7 +186,7 @@ object MongoHelpers {
 
           lazy val empty = BasicDBObjectBuilder.start.get
 
-          val cursor = coll.find(cnd, sel getOrElse empty).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
+          val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
           ord.foreach(cursor sort _)
           f(cursor)
         }
