@@ -2,12 +2,14 @@
 
 package com.foursquare.rogue
 
+import collection.immutable.List._
 import com.foursquare.rogue.MongoHelpers._
 import com.mongodb.DBObject
 import net.liftweb.record.Field
+import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.record._
+import net.liftweb.record.Field
 import scala.collection.mutable.ListBuffer
-import collection.immutable.List._
 
 /////////////////////////////////////////////////////////////////////////////
 // Phantom types
@@ -160,9 +162,17 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   private def parseDBObject(dbo: DBObject): R = select match {
     case Some(MongoSelect(fields, transformer)) =>
       val inst = fields.head.field.owner
-      def setInstanceFieldFromDbo(fieldName: String) = inst.fieldByName(fieldName).open_!.setFromAny(dbo.get(fieldName))
-      setInstanceFieldFromDbo("_id")
-      transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field.name))))
+      def setInstanceFieldFromDbo(field: Field[_, M]) = {
+        inst.fieldByName(field.name) match {
+          case Full(fld) => fld.setFromAny(dbo.get(field.name))
+          case _ => {
+            // Subfield select
+            Box !! field.name.split('.').toList.foldLeft(dbo: Object){ case (obj, f) => obj.asInstanceOf[DBObject].get(f) }
+          }
+        }
+      }
+      setInstanceFieldFromDbo(inst.fieldByName("_id").open_!)
+      transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field))))
     case None => meta.fromDBObject(dbo).asInstanceOf[R]
   }
 

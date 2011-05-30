@@ -7,7 +7,7 @@ import java.util.Calendar
 import net.liftweb.common._
 import net.liftweb.mongodb.record._
 import net.liftweb.record._
-import net.liftweb.mongodb.record.field.MongoCaseClassListField
+import net.liftweb.mongodb.record.field.{MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
 
 trait Rogue {
@@ -30,6 +30,7 @@ trait Rogue {
   implicit def fieldToQueryField[M <: MongoRecord[M], F](f: Field[F, M]) = new QueryField(f)
   implicit def latLongFieldToGeoQueryField[M <: MongoRecord[M]](f: Field[LatLong, M]) = new GeoQueryField(f)
   implicit def listFieldToListQueryField[M <: MongoRecord[M], F](f: Field[List[F], M]) = new ListQueryField[F, M](f)
+  implicit def ccFieldToQueryField[M <: MongoRecord[M], F](f: MongoCaseClassField[M, F]) = new CaseClassQueryField[F, M](f)
   implicit def cclistFieldToListQueryField[M <: MongoRecord[M], F](f: MongoCaseClassListField[M, F]) = new CaseClassListQueryField[F, M](f)
   implicit def mapFieldToMapQueryField[M <: MongoRecord[M], F](f: Field[Map[String, F], M]) = new MapQueryField[F, M](f)
   implicit def stringFieldToStringQueryField[M <: MongoRecord[M]](f: Field[String, M]) = new StringQueryField(f)

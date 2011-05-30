@@ -196,6 +196,13 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1}"""
     Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1 , "tags" : 1}"""
 
+    // select subfields
+    Tip where (_.legacyid eqs 1) select (_.counts at "foo") toString() must_== """{ "legid" : 1} select { "counts.foo" : 1}"""
+    Venue where (_.legacyid eqs 1) select (_.geolatlng.unsafeField[Double]("lat")) toString() must_== """{ "legid" : 1} select { "latlng.lat" : 1}"""
+    // TODO: Comment select(_.comments.unsafeField[Long]("userid")) toString() must_== """{ } select { "comments.userid" : 1}"""
+    // won't compile (by design)
+    // Venue where (_.mayor eqs 1) select(_.tags at 0) toString() must_== """{ "mayor" : 1} select { "tags.0" : 1}"""
+
     // empty queries
     Venue where (_.mayor in List()) toString() must_== "empty query"
     Venue where (_.tags in List()) toString() must_== "empty query"

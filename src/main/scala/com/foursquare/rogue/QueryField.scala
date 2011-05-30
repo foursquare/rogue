@@ -10,7 +10,7 @@ import net.liftweb.json.JsonAST.{JInt, JValue}
 import net.liftweb.http.js.JE.Num
 import net.liftweb.mongodb.record._
 import net.liftweb.record._
-import net.liftweb.mongodb.record.field.MongoCaseClassListField
+import net.liftweb.mongodb.record.field.{MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
 import org.joda.time._
 
@@ -121,13 +121,17 @@ class ListQueryField[V, M <: MongoRecord[M]](field: Field[List[V], M]) extends A
   override def valueToDB(v: V) = v
 }
 
+class CaseClassQueryField[V, M <: MongoRecord[M]](val field: MongoCaseClassField[M, V]) {
+  def unsafeField[F](name: String): SelectableDummyField[F, M] = new SelectableDummyField[F, M](field.owner, field.name + "." + name)
+}
+
 class CaseClassListQueryField[V, M <: MongoRecord[M]](field: MongoCaseClassListField[M, V]) extends AbstractListQueryField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
   def unsafeField[F](name: String): DummyField[F, M] = new DummyField[F, M](field.owner, field.name + "." + name)
 }
 
 class MapQueryField[V, M <: MongoRecord[M]](val field: Field[Map[String, V], M]) {
-  def at(key: String): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + key)
+  def at(key: String): SelectableDummyField[V, M] = new SelectableDummyField[V, M](field.owner, field.name + "." + key)
 }
 
 class EnumerationListQueryField[V <: Enumeration#Value, M <: MongoRecord[M]](field: Field[List[V], M]) extends AbstractListQueryField[V, String, M](field) {
@@ -216,7 +220,7 @@ class OptionalSelectField[V, M <: MongoRecord[M]](override val field: Field[V, M
 /// Dummy field
 //////////////////////////////////////////////////////////////////////////////////
 
-class DummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String) extends Field[V, M] {
+trait AbstractDummyField[V, M <: MongoRecord[M]] extends Field[V, M] {
   override val asJValue = JInt(0)
   override val asJs = Num(0)
   override val toForm = Empty
@@ -232,3 +236,6 @@ class DummyField[V, M <: MongoRecord[M]](override val owner: M, override val nam
   override def setFromJValue(jv: JValue) = Empty
   override def liftSetFilterToBox(in: Box[MyType]): Box[MyType] = Empty
 }
+
+class DummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String) extends AbstractDummyField[V, M]
+class SelectableDummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String) extends OptionalTypedField[V] with AbstractDummyField[V, M]
