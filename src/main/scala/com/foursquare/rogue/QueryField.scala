@@ -94,10 +94,9 @@ class NumericQueryField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
 }
 
 class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId, M]) extends NumericQueryField(field) {
-  // TODO(harryh) these are off by 1 second, update when we get a proper ObjectId constructor in the mongo driver
-  def before(d: DateTime) = new QueryClause(field.name, CondOps.Lt -> new ObjectId(d.toDate))
-  def after(d: DateTime) = new QueryClause(field.name, CondOps.Gt -> new ObjectId(d.toDate))
-  def between(d1: DateTime, d2: DateTime) = new QueryClause(field.name, CondOps.Gt -> new ObjectId(d1.toDate), CondOps.Lt -> new ObjectId(d2.toDate))
+  def before(d: DateTime) = new QueryClause(field.name, CondOps.Lt -> new ObjectId(d.toDate, 0, 0))
+  def after(d: DateTime) = new QueryClause(field.name, CondOps.Gt -> new ObjectId(d.toDate, 0, 0))
+  def between(d1: DateTime, d2: DateTime) = new QueryClause(field.name, CondOps.Gt -> new ObjectId(d1.toDate, 0, 0), CondOps.Lt -> new ObjectId(d2.toDate, 0, 0))
 }
 
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {

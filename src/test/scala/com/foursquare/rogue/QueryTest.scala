@@ -88,6 +88,8 @@ class QueryTest extends SpecsMatchers {
   def testProduceACorrectJSONQueryString {
     val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC)
     val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0, DateTimeZone.UTC)
+    val oid1 = new ObjectId(d1.toDate, 0, 0)
+    val oid2 = new ObjectId(d2.toDate, 0, 0)
     val oid = new ObjectId
 
     // eqs
@@ -119,8 +121,8 @@ class QueryTest extends SpecsMatchers {
     Venue where (_._id exists true) toString() must_== """{ "_id" : { "$exists" : true}}"""
 
     // startsWith, regex
-    Venue where (_.venuename startsWith "Starbucks") toString() must_== "{ \"venuename\" : { \"$regex\" : \"^\\\\QStarbucks\\\\E\" , \"$options\" : \"\"}}"
-    Venue where (_.venuename regexWarningNotIndexed Pattern.compile("Star.*")) toString() must_== "{ \"venuename\" : { \"$regex\" : \"Star.*\" , \"$options\" : \"\"}}"
+    Venue where (_.venuename startsWith "Starbucks") toString() must_== """{ "venuename" : { "$regex" : "^\\QStarbucks\\E" , "$options" : ""}}"""
+    Venue where (_.venuename regexWarningNotIndexed Pattern.compile("Star.*")) toString() must_== """{ "venuename" : { "$regex" : "Star.*" , "$options" : ""}}"""
 
     // all, in, size, contains, at
     Venue where (_.tags all List("db", "ka"))   toString() must_== """{ "tags" : { "$all" : [ "db" , "ka"]}}"""
@@ -147,14 +149,14 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.geolatlng neqs LatLong(31.0, 23.0)) toString()  must_== """{ "latlng" : { "$ne" : [ 31.0 , 23.0]}}"""
 
     // ObjectId before, after, between
-    Venue where (_._id before d2)        toString() must beMatching("""\{ "_id" : \{ "\$lt" : \{ "\$oid" : "[a-f0-9]+"\}\}\}""")
-    Venue where (_._id after d1)         toString() must beMatching("""\{ "_id" : \{ "\$gt" : \{ "\$oid" : "[a-f0-9]+"\}\}\}""")
-    Venue where (_._id between (d1, d2)) toString() must beMatching("""\{ "_id" : \{ "\$gt" : \{ "\$oid" : "[a-f0-9]+"\} , "\$lt" : \{ "\$oid" : "[a-f0-9]+"\}\}\}""")
+    Venue where (_._id before d2)        toString() must_== """{ "_id" : { "$lt" : { "$oid" : "%s"}}}""".format(oid2.toString)
+    Venue where (_._id after d1)         toString() must_== """{ "_id" : { "$gt" : { "$oid" : "%s"}}}""".format(oid1.toString)
+    Venue where (_._id between (d1, d2)) toString() must_== """{ "_id" : { "$gt" : { "$oid" : "%s"} , "$lt" : { "$oid" : "%s"}}}""".format(oid1.toString, oid2.toString)
 
     // DateTime before, after, between
-    Venue where (_.last_updated before d2)        toString() must_== "{ \"last_updated\" : { \"$lt\" : { \"$date\" : \"2010-05-02T00:00:00Z\"}}}"
-    Venue where (_.last_updated after d1)         toString() must_== "{ \"last_updated\" : { \"$gt\" : { \"$date\" : \"2010-05-01T00:00:00Z\"}}}"
-    Venue where (_.last_updated between (d1, d2)) toString() must_== "{ \"last_updated\" : { \"$gt\" : { \"$date\" : \"2010-05-01T00:00:00Z\"} , \"$lt\" : { \"$date\" : \"2010-05-02T00:00:00Z\"}}}"
+    Venue where (_.last_updated before d2)        toString() must_== """{ "last_updated" : { "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}}"""
+    Venue where (_.last_updated after d1)         toString() must_== """{ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"}}}"""
+    Venue where (_.last_updated between (d1, d2)) toString() must_== """{ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}}"""
 
     // Case class list field
     Comment where (_.comments.unsafeField[Int]("z") eqs 123) toString() must_== """{ "comments.z" : 123}"""
@@ -171,10 +173,10 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid mod (5, 1)) toString() must_== """{ "legid" : { "$mod" : [ 5 , 1]}}"""
 
     // compound queries
-    Venue where (_.mayor eqs 1) and (_.tags contains "karaoke") toString() must_== "{ \"mayor\" : 1 , \"tags\" : \"karaoke\"}"
-    Venue where (_.mayor eqs 1) and (_.mayor_count eqs 5)       toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : 5}"
-    Venue where (_.mayor eqs 1) and (_.mayor_count lt 5)        toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : { \"$lt\" : 5}}"
-    Venue where (_.mayor eqs 1) and (_.mayor_count gt 3) and (_.mayor_count lt 5) toString() must_== "{ \"mayor\" : 1 , \"mayor_count\" : { \"$lt\" : 5 , \"$gt\" : 3}}"
+    Venue where (_.mayor eqs 1) and (_.tags contains "karaoke") toString() must_== """{ "mayor" : 1 , "tags" : "karaoke"}"""
+    Venue where (_.mayor eqs 1) and (_.mayor_count eqs 5)       toString() must_== """{ "mayor" : 1 , "mayor_count" : 5}"""
+    Venue where (_.mayor eqs 1) and (_.mayor_count lt 5)        toString() must_== """{ "mayor" : 1 , "mayor_count" : { "$lt" : 5}}"""
+    Venue where (_.mayor eqs 1) and (_.mayor_count gt 3) and (_.mayor_count lt 5) toString() must_== """{ "mayor" : 1 , "mayor_count" : { "$lt" : 5 , "$gt" : 3}}"""
 
     // queries with no clauses
     metaRecordToQueryBuilder(Venue) toString() must_== "{ }"
