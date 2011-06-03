@@ -178,6 +178,8 @@ object MongoHelpers {
         ord.foreach(o => str.append(".sort("+o+")"))
         query.sk.foreach(sk => str.append(".skip("+sk+")"))
         query.lim.foreach(l => str.append(".limit("+l+")"))
+        query.maxScan.foreach(m => str.append(".addSpecial(\"$maxScan\", "+m+")"))
+        query.comment.foreach(c => str.append(".addSpecial(\"$comment\", \""+c+"\")"))
         str.toString
       }
       
@@ -188,6 +190,8 @@ object MongoHelpers {
 
           val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
           ord.foreach(cursor sort _)
+          query.maxScan.foreach(cursor addSpecial("$maxScan", _))
+          query.comment.foreach(cursor addSpecial("$comment", _))
           f(cursor)
         }
       }
