@@ -76,14 +76,15 @@ For "modify" query objects
 
 ## Releases
 
-The latest release is 1.0.11. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.0.13. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.12:
+New in 1.0.13:
 
-- always specify field names to return in the query; if select() was not specified, use all field names from the model
+- support for $maxScan and $comment addSpecial parameters on find() queries
 
 Other recent notable changes:
 
+- always specify field names to return in the query; if select() was not specified, use all field names from the model
 - explain() method on BaseQuery (thanks tjulien!)
 - support for select()ing up to 6 fields
 - added hooks for full query validation

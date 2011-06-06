@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.0.13:
+
+- fixed ObjectId construction for date ranges by zeroing out machine, pid and counter fields
+- support for $maxScan and $comment addSpecial parameters on find() queries
+
 # 1.0.12:
 
 - always specify field names to return in the query; if select() was not specified, use all field names from the model
