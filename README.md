@@ -76,14 +76,18 @@ For "modify" query objects
 
 ## Releases
 
-The latest release is 1.0.13. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.0.14. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.13:
+New in 1.0.14:
 
-- support for $maxScan and $comment addSpecial parameters on find() queries
+- index hinting support
+- support for selecting subfields (MongoMapField and MongoCaseClassField only; no support for MongoCaseClassListField)
+- "between" convenience operator (numeric)
+- scala 2.9.0 and 2.9.0-1 build support -- thanks eltimn!
 
 Other recent notable changes:
 
+- support for $maxScan and $comment addSpecial parameters on find() queries
 - always specify field names to return in the query; if select() was not specified, use all field names from the model
 - explain() method on BaseQuery (thanks tjulien!)
 - support for select()ing up to 6 fields

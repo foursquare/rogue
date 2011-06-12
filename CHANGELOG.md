@@ -1,7 +1,11 @@
 ## Release Notes
 
 # 1.0.14:
-- support for hint(indexName)
+
+- index hinting support
+- support for selecting subfields (MongoMapField and MongoCaseClassField only; no support for MongoCaseClassListField)
+- "between" convenience operator (numeric)
+- scala 2.9.0 and 2.9.0-1 build support -- thanks eltimn!
 
 # 1.0.13:
 

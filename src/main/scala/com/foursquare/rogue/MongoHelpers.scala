@@ -22,7 +22,7 @@ object MongoHelpers {
         val builder = BasicDBObjectBuilder.start
         (clauses.groupBy(_.fieldName)
                 .toList
-                .sortBy { case (fieldName, _) => -clauses.findIndexOf(_.fieldName == fieldName) }
+                .sortBy { case (fieldName, _) => -clauses.indexWhere(_.fieldName == fieldName) }
                 .foreach { case (name, cs) =>
           // Equality clauses look like { a : 3 }
           // but all other clauses look like { a : { $op : 3 }}
