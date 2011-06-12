@@ -56,7 +56,6 @@ class QueryField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def nin[L <% List[V]](vs: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(vs))
   def exists(b: Boolean) = new QueryClause(field.name, CondOps.Exists -> b)
   def hastype(t: MongoType.Value) = new QueryClause(field.name, CondOps.Type -> t.id)
-  def mod(by: Int, eq: Int) = new QueryClause(field.name, CondOps.Mod -> QueryHelpers.list(List(by, eq)))
 }
 
 class CalendarQueryField[M <: MongoRecord[M]](val field: Field[java.util.Calendar, M]) {
@@ -91,6 +90,8 @@ class NumericQueryField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def <=(v: V) = lte(v)
   def >(v: V) = gt(v)
   def >=(v: V) = gte(v)
+  def between(v1: V, v2: V) = new QueryClause(field.name, CondOps.GtEq -> v1, CondOps.LtEq -> v2)
+  def mod(by: Int, eq: Int) = new QueryClause(field.name, CondOps.Mod -> QueryHelpers.list(List(by, eq)))
 }
 
 class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId, M]) extends NumericQueryField(field) {

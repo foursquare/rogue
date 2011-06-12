@@ -110,6 +110,7 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor_count gt 5)  toString() must_== """{ "mayor_count" : { "$gt" : 5}}"""
     Venue where (_.mayor_count >= 5)  toString() must_== """{ "mayor_count" : { "$gte" : 5}}"""
     Venue where (_.mayor_count gte 5) toString() must_== """{ "mayor_count" : { "$gte" : 5}}"""
+    Venue where (_.mayor_count between (3, 5)) toString() must_== """{ "mayor_count" : { "$gte" : 3 , "$lte" : 5}}"""
     VenueClaim where (_.status neqs ClaimStatus.approved) toString() must_== """{ "status" : { "$ne" : "Approved"}}"""
 
     // in,nin
