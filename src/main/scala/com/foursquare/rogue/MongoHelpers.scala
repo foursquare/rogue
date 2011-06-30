@@ -5,6 +5,7 @@ package com.foursquare.rogue
 import com.mongodb.{BasicDBObjectBuilder, DBObject, DBCursor}
 import net.liftweb.mongodb._
 import net.liftweb.mongodb.record._
+import scala.collection.immutable.ListMap
 
 object MongoHelpers {
   sealed abstract class MongoCondition
@@ -68,7 +69,7 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildHint[R, M <: MongoRecord[M]](h: List[(String, Any)]): DBObject = {
+    def buildHint[R, M <: MongoRecord[M]](h: ListMap[String, Any]): DBObject = {
       val builder = BasicDBObjectBuilder.start
       h.foreach{ case (field, attr) => {
         builder.add(field, attr)
@@ -84,6 +85,7 @@ object MongoHelpers {
       query.select.foreach(s => sb.append(" select " + buildSelect(s).toString))
       query.lim.foreach(l => sb.append(" limit " + l))
       query.sk.foreach(s => sb.append(" skip " + s))
+      query.hint.foreach(h => sb.append(" hint " + buildHint(h).toString))
       modify.foreach(m => sb.append(" modify with " + buildModify(m)))
       sb.toString
     }
@@ -177,6 +179,7 @@ object MongoHelpers {
       val cnd = buildCondition(query.condition)
       val ord = query.order.map(buildOrder)
       val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
+      val hnt = query.hint.map(buildHint)
       
       def description = {
         val str = new StringBuilder("Mongo " + collection +"." + operation)
@@ -188,20 +191,18 @@ object MongoHelpers {
         query.lim.foreach(l => str.append(".limit("+l+")"))
         query.maxScan.foreach(m => str.append("._addSpecial(\"$maxScan\", "+m+")"))
         query.comment.foreach(c => str.append("._addSpecial(\"$comment\", \""+c+"\")"))
-        query.hint.foreach(h => str.append(".hint("+h+")"))
+        hnt.foreach(h => str.append(".hint("+h.toString+")"))
         str.toString
       }
       
       runCommand(description, query.meta.mongoIdentifier){
         MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
 
-          lazy val empty = BasicDBObjectBuilder.start.get
-
           val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
           ord.foreach(cursor sort _)
           query.maxScan.foreach(cursor addSpecial("$maxScan", _))
           query.comment.foreach(cursor addSpecial("$comment", _))
-          query.hint.foreach(cursor hint(_))
+          hnt.foreach(cursor hint _)
           f(cursor)
         }
       }

@@ -17,6 +17,10 @@ trait Rogue {
   type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped]
   type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
 
+  object Asc extends IndexModifier(1)
+  object Desc extends IndexModifier(-1)
+  object TwoD extends IndexModifier("2d")
+
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped](rec, None, None, None, None, None, AndCondition(Nil), None, None)
   implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = IndexBuilder(rec)

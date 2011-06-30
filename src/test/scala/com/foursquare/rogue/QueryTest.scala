@@ -3,7 +3,6 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
 
-import com.mongodb.{BasicDBObjectBuilder, DBObject}
 import java.util.regex.Pattern
 import net.liftweb.mongodb.record._
 import net.liftweb.mongodb.record.field._
@@ -39,7 +38,13 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] {
   object last_updated extends DateTimeField(this)
   object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
 }
-object Venue extends Venue with MongoMetaRecord[Venue]
+object Venue extends Venue with MongoMetaRecord[Venue] {
+  object CustomIndex extends IndexModifier("custom")
+  val idIdx = Venue.index(_._id, Asc)
+  val legIdx = Venue.index(_.legacyid, Desc)
+  val geoIdx = Venue.index(_.geolatlng, TwoD)
+  val geoCustomIdx = Venue.index(_.geolatlng, CustomIndex, _.tags, Asc)
+}
 
 object ClaimStatus extends Enumeration {
   val pending = Value("Pending approval")
@@ -385,33 +390,9 @@ class QueryTest extends SpecsMatchers {
 
   @Test
   def testHints {
-    def hintForQuery(q: AbstractQuery[_, _, _, _, _, _]): DBObject =
-      q.asInstanceOf[BaseQuery[_, _, _, _, _, _]].hint.getOrElse(BasicDBObjectBuilder.start.get)
-
-    object Indexes {
-      object Asc extends IndexModifier(1)
-      object Desc extends IndexModifier(-1)
-      object TwoD extends IndexModifier("2d")
-      object GeoHaystack extends IndexModifier("geoHaystack")
-
-      implicit val idIdx = Venue.index(_._id, Asc)
-      implicit val legIdx = Venue.index(_.legacyid, Asc)
-      implicit val geoIdx = Venue.index(_.geolatlng, TwoD)
-      implicit val geoHIdx = Venue.index(_.geolatlng, GeoHaystack, _.tags, Asc)
-    }
-
-    import Indexes._
-
-    val q1 = Venue where (_._id eqs new ObjectId()) hint (_._id, Asc)
-    val q2 = Venue where (_.legacyid < 0) hint(_.legacyid, Asc)
-    val q3 = Venue where (_.geolatlng near (39.0, -74.0, Degrees(0.2))) hint (_.geolatlng, TwoD)
-    val q4 = Venue where (_.geolatlng near (39.0, -74.0, Degrees(0.2))) and (_.tags contains "foo") hint (_.geolatlng, GeoHaystack, _.tags, Asc)
-    val q5 = Venue where (_._id eqs new ObjectId())
-
-    hintForQuery(q1).toString must_== """{ "_id" : 1}"""
-    hintForQuery(q2).toString must_== """{ "legid" : 1}"""
-    hintForQuery(q3).toString must_== """{ "latlng" : "2d"}"""
-    hintForQuery(q4).toString must_== """{ "latlng" : "geoHaystack" , "tags" : 1}"""
-    hintForQuery(q5).toString must_== """{ }"""
+    Venue where (_.legacyid eqs 1) hint (Venue.idIdx) toString() must_== """{ "legid" : 1} hint { "_id" : 1}"""
+    Venue where (_.legacyid eqs 1) hint (Venue.legIdx) toString() must_== """{ "legid" : 1} hint { "legid" : -1}"""
+    Venue where (_.legacyid eqs 1) hint (Venue.geoIdx) toString() must_== """{ "legid" : 1} hint { "latlng" : "2d"}"""
+    Venue where (_.legacyid eqs 1) hint (Venue.geoCustomIdx) toString() must_== """{ "legid" : 1} hint { "latlng" : "custom" , "tags" : 1}"""
   }
 }
