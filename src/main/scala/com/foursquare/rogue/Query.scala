@@ -4,6 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers._
 import com.mongodb.DBObject
+import net.liftweb.record.Field
 import net.liftweb.mongodb.record._
 import scala.collection.mutable.ListBuffer
 import collection.immutable.List._
@@ -27,7 +28,7 @@ abstract sealed class Unskipped
 
 
 trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
-  def meta: MongoMetaRecord[M]
+  def meta: M with MongoMetaRecord[M]
   def master: MongoMetaRecord[M]
   def where[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
   def and[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
@@ -60,7 +61,6 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
 
   def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
   def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
-  def hint(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
 
   def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, F1, Ord, Selected, Lim, Sk]
   def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2), Ord, Selected, Lim, Sk]
@@ -68,6 +68,47 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
   def select[F1, F2, F3, F4](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk]
   def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk]
   def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk]
+
+  protected def handleHint(index: List[(Field[_, M], IndexModifier)]): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
+  def hint[F1 <: Field[_, M], M1 <: IndexModifier]
+          (f1: M => F1, m1: M1)
+          (implicit ev: MongoIndex1[M, F1, M1]): AbstractQuery[M, R, Ord, Sel, Lim, Sk] =
+            handleHint(List((f1(meta), m1)))
+  def hint[F1 <: Field[_, M], M1 <: IndexModifier,
+           F2 <: Field[_, M], M2 <: IndexModifier]
+          (f1: M => F1, m1: M1, f2: M => F2, m2: M2)
+          (implicit ev: MongoIndex2[M, F1, M1, F2, M2]): AbstractQuery[M, R, Ord, Sel, Lim, Sk] =
+            handleHint(List((f1(meta), m1), (f2(meta), m2)))
+  def hint[F1 <: Field[_, M], M1 <: IndexModifier,
+           F2 <: Field[_, M], M2 <: IndexModifier,
+           F3 <: Field[_, M], M3 <: IndexModifier]
+          (f1: M => F1, m1: M1, f2: M => F2, m2: M2, f3: M => F3, m3: M3)
+          (implicit ev: MongoIndex3[M, F1, M1, F2, M2, F3, M3]): AbstractQuery[M, R, Ord, Sel, Lim, Sk] =
+            handleHint(List((f1(meta), m1), (f2(meta), m2), (f3(meta), m3)))
+  def hint[F1 <: Field[_, M], M1 <: IndexModifier,
+           F2 <: Field[_, M], M2 <: IndexModifier,
+           F3 <: Field[_, M], M3 <: IndexModifier,
+           F4 <: Field[_, M], M4 <: IndexModifier]
+          (f1: M => F1, m1: M1, f2: M => F2, m2: M2, f3: M => F3, m3: M3, f4: M => F4, m4: M4)
+          (implicit ev: MongoIndex4[M, F1, M1, F2, M2, F3, M3, F4, M4]): AbstractQuery[M, R, Ord, Sel, Lim, Sk] =
+            handleHint(List((f1(meta), m1), (f2(meta), m2), (f3(meta), m3), (f4(meta), m4)))
+  def hint[F1 <: Field[_, M], M1 <: IndexModifier,
+           F2 <: Field[_, M], M2 <: IndexModifier,
+           F3 <: Field[_, M], M3 <: IndexModifier,
+           F4 <: Field[_, M], M4 <: IndexModifier,
+           F5 <: Field[_, M], M5 <: IndexModifier]
+          (f1: M => F1, m1: M1, f2: M => F2, m2: M2, f3: M => F3, m3: M3, f4: M => F4, m4: M4, f5: M => F5, m5: M5)
+          (implicit ev: MongoIndex5[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5]): AbstractQuery[M, R, Ord, Sel, Lim, Sk] =
+            handleHint(List((f1(meta), m1), (f2(meta), m2), (f3(meta), m3), (f4(meta), m4), (f5(meta), m5)))
+  def hint[F1 <: Field[_, M], M1 <: IndexModifier,
+           F2 <: Field[_, M], M2 <: IndexModifier,
+           F3 <: Field[_, M], M3 <: IndexModifier,
+           F4 <: Field[_, M], M4 <: IndexModifier,
+           F5 <: Field[_, M], M5 <: IndexModifier,
+           F6 <: Field[_, M], M6 <: IndexModifier]
+          (f1: M => F1, m1: M1, f2: M => F2, m2: M2, f3: M => F3, m3: M3, f4: M => F4, m4: M4, f5: M => F5, m5: M5, f6: M => F6, m6: M6)
+          (implicit ev: MongoIndex6[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5, F6, M6]): AbstractQuery[M, R, Ord, Sel, Lim, Sk] =
+            handleHint(List((f1(meta), m1), (f2(meta), m2), (f3(meta), m3), (f4(meta), m4), (f5(meta), m5), (f6(meta), m6)))
 }
 
 case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
@@ -76,7 +117,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     sk: Option[Int],
     maxScan: Option[Int],
     comment: Option[String],
-    hint: Option[String],
+    hint: Option[DBObject],
     condition: AndCondition,
     order: Option[MongoOrder],
     select: Option[MongoSelect[R, M]]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk] {
@@ -175,7 +216,8 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
 
   override def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(maxScan = Some(max))
   override def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(comment = Some(c))
-  override def hint(h: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(hint = Some(h))
+  override protected def handleHint(index: List[(Field[_, M], IndexModifier)]) =
+    this.copy(hint = Some(MongoHelpers.MongoBuilder.buildHint(index map { case (field, modifier) => (field.name, modifier.value)})))
 
   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, F1, Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
@@ -258,7 +300,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends Abstract
 
   override def maxScan(max: Int) = this
   override def comment(c: String) = this
-  override def hint(h: String) = this
+  override protected def handleHint(index: List[(Field[_, M], IndexModifier)]) = this
 
   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, F1, Ord, Selected, Lim, Sk]
   override def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2), Ord, Selected, Lim, Sk]

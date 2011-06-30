@@ -3,6 +3,7 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
 
+import com.mongodb.{BasicDBObjectBuilder, DBObject}
 import java.util.regex.Pattern
 import net.liftweb.mongodb.record._
 import net.liftweb.mongodb.record.field._
@@ -373,5 +374,37 @@ class QueryTest extends SpecsMatchers {
 
     // Scan should be the same as and/where
     Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") signature() must_== """{ "mayor" : 0 , "tags" : 0}"""
+  }
+
+  @Test
+  def testHints {
+    def hintForQuery(q: AbstractQuery[_, _, _, _, _, _]): DBObject =
+      q.asInstanceOf[BaseQuery[_, _, _, _, _, _]].hint.getOrElse(BasicDBObjectBuilder.start.get)
+
+    object Indexes {
+      object Asc extends IndexModifier(1)
+      object Desc extends IndexModifier(-1)
+      object TwoD extends IndexModifier("2d")
+      object GeoHaystack extends IndexModifier("geoHaystack")
+
+      implicit val idIdx = Venue.index(_._id, Asc)
+      implicit val legIdx = Venue.index(_.legacyid, Asc)
+      implicit val geoIdx = Venue.index(_.geolatlng, TwoD)
+      implicit val geoHIdx = Venue.index(_.geolatlng, GeoHaystack, _.tags, Asc)
+    }
+
+    import Indexes._
+
+    val q1 = Venue where (_._id eqs new ObjectId()) hint (_._id, Asc)
+    val q2 = Venue where (_.legacyid < 0) hint(_.legacyid, Asc)
+    val q3 = Venue where (_.geolatlng near (39.0, -74.0, Degrees(0.2))) hint (_.geolatlng, TwoD)
+    val q4 = Venue where (_.geolatlng near (39.0, -74.0, Degrees(0.2))) and (_.tags contains "foo") hint (_.geolatlng, GeoHaystack, _.tags, Asc)
+    val q5 = Venue where (_._id eqs new ObjectId())
+
+    hintForQuery(q1).toString must_== """{ "_id" : 1}"""
+    hintForQuery(q2).toString must_== """{ "legid" : 1}"""
+    hintForQuery(q3).toString must_== """{ "latlng" : "2d"}"""
+    hintForQuery(q4).toString must_== """{ "latlng" : "geoHaystack" , "tags" : 1}"""
+    hintForQuery(q5).toString must_== """{ }"""
   }
 }

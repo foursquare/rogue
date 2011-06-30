@@ -68,6 +68,14 @@ object MongoHelpers {
       builder.get
     }
 
+    def buildHint[R, M <: MongoRecord[M]](h: List[(String, Any)]): DBObject = {
+      val builder = BasicDBObjectBuilder.start
+      h.foreach{ case (field, attr) => {
+        builder.add(field, attr)
+      }}
+      builder.get
+    }
+
     def buildString[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _],
                        modify: Option[MongoModify]): String = {
       val sb = new StringBuilder
