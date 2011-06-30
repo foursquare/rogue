@@ -17,7 +17,7 @@ trait Rogue {
   type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped]
   type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
 
-  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped](rec, None, None, None, None, AndCondition(Nil), None, None)
+  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped](rec, None, None, None, None, None, AndCondition(Nil), None, None)
   implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
   implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]) = {
     query match {

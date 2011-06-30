@@ -178,8 +178,9 @@ object MongoHelpers {
         ord.foreach(o => str.append(".sort("+o+")"))
         query.sk.foreach(sk => str.append(".skip("+sk+")"))
         query.lim.foreach(l => str.append(".limit("+l+")"))
-        query.maxScan.foreach(m => str.append(".addSpecial(\"$maxScan\", "+m+")"))
-        query.comment.foreach(c => str.append(".addSpecial(\"$comment\", \""+c+"\")"))
+        query.maxScan.foreach(m => str.append("._addSpecial(\"$maxScan\", "+m+")"))
+        query.comment.foreach(c => str.append("._addSpecial(\"$comment\", \""+c+"\")"))
+        query.hint.foreach(h => str.append(".hint("+h+")"))
         str.toString
       }
       
@@ -192,6 +193,7 @@ object MongoHelpers {
           ord.foreach(cursor sort _)
           query.maxScan.foreach(cursor addSpecial("$maxScan", _))
           query.comment.foreach(cursor addSpecial("$comment", _))
+          query.hint.foreach(cursor hint(_))
           f(cursor)
         }
       }

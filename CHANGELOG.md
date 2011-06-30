@@ -1,5 +1,8 @@
 ## Release Notes
 
+# 1.0.14:
+- support for hint(indexName)
+
 # 1.0.13:
 
 - fixed ObjectId construction for date ranges by zeroing out machine, pid and counter fields

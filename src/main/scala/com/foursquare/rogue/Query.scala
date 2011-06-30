@@ -60,6 +60,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
 
   def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
   def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
+  def hint(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
 
   def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, F1, Ord, Selected, Lim, Sk]
   def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2), Ord, Selected, Lim, Sk]
@@ -75,6 +76,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     sk: Option[Int],
     maxScan: Option[Int],
     comment: Option[String],
+    hint: Option[String],
     condition: AndCondition,
     order: Option[MongoOrder],
     select: Option[MongoSelect[R, M]]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk] {
@@ -173,6 +175,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
 
   override def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(maxScan = Some(max))
   override def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(comment = Some(c))
+  override def hint(h: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(hint = Some(h))
 
   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, F1, Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
@@ -255,6 +258,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends Abstract
 
   override def maxScan(max: Int) = this
   override def comment(c: String) = this
+  override def hint(h: String) = this
 
   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, F1, Ord, Selected, Lim, Sk]
   override def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2), Ord, Selected, Lim, Sk]
