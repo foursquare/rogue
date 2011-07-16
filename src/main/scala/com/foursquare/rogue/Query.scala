@@ -56,6 +56,8 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
   def get()(implicit ev: Lim =:= Unlimited): Option[R]
   def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): BasePaginatedQuery[M, R]
 
+  def noop(): AbstractModifyQuery[M]
+
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
 
   def signature(): String
@@ -214,6 +216,8 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
     new BasePaginatedQuery(this.copy(), countPerPage)
   }
 
+  override def noop() = BaseModifyQuery(this, MongoModify(Nil))
+
   // Always do modifications against master (not meta, which could point to slave)
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
     QueryExecutor.condition("bulkDelete", this)(master.bulkDelete_!!(_))
@@ -302,6 +306,8 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends Abstract
     new BasePaginatedQuery(emptyQuery, countPerPage)
   }
 
+  override def noop() = new EmptyModifyQuery[M]
+
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
 
   override def toString = "empty query"
@@ -323,7 +329,6 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends Abstract
 trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
   def and[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
-  def noop(): AbstractModifyQuery[M]
 
   def updateMulti(): Unit
   def updateOne(): Unit
@@ -339,7 +344,6 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, 
 
   override def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
-  override def noop() = this.copy(mod = MongoModify(Nil))
 
   // Always do modifications against master (not query.meta, which could point to slave)
   override def updateMulti(): Unit = QueryExecutor.modify("updateMulti", this)(query.master.updateMulti(_, _))
@@ -352,7 +356,6 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, 
 class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
   override def modify[F](clause: M => ModifyClause[F]) = this
   override def and[F](clause: M => ModifyClause[F]) = this
-  override def noop() = this
 
   override def updateMulti(): Unit = ()
   override def updateOne(): Unit = ()
