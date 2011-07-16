@@ -144,7 +144,7 @@ object MongoHelpers {
         
         def description = "Mongo %s.%s (%s, %s)" format (collection, operation, q, m)
         
-        runCommand(description, mod.query.meta.mongoIdentifier){
+        runCommand(description, mod.query.meta.mongoIdentifier) {
           f(q, m)
         }
       }
@@ -197,13 +197,17 @@ object MongoHelpers {
       
       runCommand(description, query.meta.mongoIdentifier){
         MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
-
-          val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
-          ord.foreach(cursor sort _)
-          query.maxScan.foreach(cursor addSpecial("$maxScan", _))
-          query.comment.foreach(cursor addSpecial("$comment", _))
-          hnt.foreach(cursor hint _)
-          f(cursor)
+          try {
+            val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
+            ord.foreach(cursor sort _)
+            query.maxScan.foreach(cursor addSpecial("$maxScan", _))
+            query.comment.foreach(cursor addSpecial("$comment", _))
+            hnt.foreach(cursor hint _)
+            f(cursor)
+          } catch {
+            case e: Exception =>
+              throw new RogueException("Mongo query on %s [%s] failed".format(coll.getDB().getMongo().toString(), description), e)
+          }
         }
       }
     }
