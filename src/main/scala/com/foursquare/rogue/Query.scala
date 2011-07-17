@@ -182,9 +182,9 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
 
   // Always do modifications against master (not meta, which could point to slave)
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
-    QueryExecutor.condition("bulkDelete", this)(master.bulkDelete_!!(_))
+    QueryExecutor.condition("remove", this)(master.bulkDelete_!!(_))
   override def toString: String =
-    MongoBuilder.buildString(this, None)
+    MongoBuilder.buildQueryString("find", this)
   override def signature(): String =
     MongoBuilder.buildSignature(this)
   override def explain(): String =
@@ -311,7 +311,7 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, 
   override def updateOne(): Unit = QueryExecutor.modify("updateOne", this)(query.master.update(_, _))
   override def upsertOne(): Unit = QueryExecutor.modify("upsertOne", this)(query.master.upsert(_, _))
 
-  override def toString = MongoBuilder.buildString(query, Some(mod))
+  override def toString = MongoBuilder.buildModifyString(this)
 }
 
 class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {

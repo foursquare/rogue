@@ -77,23 +77,36 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildString[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _],
-                       modify: Option[MongoModify]): String = {
-      val sb = new StringBuilder
+    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: BaseQuery[M, R, _, _, _, _]): String = {
+      val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
-      query.order.foreach(o => sb.append(" order by " + buildOrder(o).toString))
-      query.select.foreach(s => sb.append(" select " + buildSelect(s).toString))
-      query.lim.foreach(l => sb.append(" limit " + l))
-      query.sk.foreach(s => sb.append(" skip " + s))
-      query.hint.foreach(h => sb.append(" hint " + buildHint(h).toString))
-      modify.foreach(m => sb.append(" modify with " + buildModify(m)))
+      query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
+      sb.append(")")
+      query.order.foreach(o => sb.append(".sort(%s)" format buildOrder(o).toString))
+      query.lim.foreach(l => sb.append(".limit(%d)" format l))
+      query.sk.foreach(s => sb.append(".skip(%d)" format s))
+      query.maxScan.foreach(m => sb.append("._addSpecial(\"$maxScan\", %d)" format m))
+      query.comment.foreach(c => sb.append("._addSpecial(\"$comment\", \"%s\")" format c))
+      query.hint.foreach(h => sb.append(".hint(%s)" format buildHint(h).toString))
       sb.toString
     }
 
+    def buildModifyString[R, M <: MongoRecord[M]](modify: BaseModifyQuery[M],
+                                                  upsert: Boolean = false, multi: Boolean = false): String = {
+      "db.%s.update(%s, %s, %s, %s)".format(
+        modify.query.meta.collectionName,
+        buildCondition(modify.query.condition, signature = false).toString,
+        buildModify(modify.mod),
+        upsert,
+        multi
+      )
+    }
+
     def buildSignature[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _]): String = {
-      val sb = new StringBuilder
+      val sb = new StringBuilder("db.%s.find(".format(query.meta.collectionName))
       sb.append(buildCondition(query.condition, signature = true).toString)
-      query.order.foreach(o => sb.append(" order by " + buildOrder(o).toString))
+      sb.append(")")
+      query.order.foreach(o => sb.append(".sort(%s)" format buildOrder(o).toString))
       sb.toString
     }
   }
@@ -118,14 +131,12 @@ object MongoHelpers {
     }
 
     def condition[M <: MongoRecord[M], T](operation: String,
-                                            query: BaseQuery[M, _, _, _, _, _])
-                                           (f: DBObject => T): T = {
+                                          query: BaseQuery[M, _, _, _, _, _])
+                                         (f: DBObject => T): T = {
 
       validator.validateQuery(query)
-      val collection = query.meta.collectionName
       val cnd = buildCondition(query.condition)
-      
-      def description = "Mongo %s.%s (%s)" format (collection, operation, cnd)
+      lazy val description = "Mongo " + query.toString
       
       runCommand(description, query.meta.mongoIdentifier){
         f(cnd)
@@ -133,16 +144,13 @@ object MongoHelpers {
     }
 
     def modify[M <: MongoRecord[M], T](operation: String,
-                                         mod: BaseModifyQuery[M])
-                                        (f: (DBObject, DBObject) => T): Unit = {
+                                       mod: BaseModifyQuery[M])
+                                      (f: (DBObject, DBObject) => T): Unit = {
       validator.validateModify(mod)
       if (!mod.mod.clauses.isEmpty) {
-
-        val collection = mod.query.meta.collectionName
         val q = buildCondition(mod.query.condition)
         val m = buildModify(mod.mod)
-        
-        def description = "Mongo %s.%s (%s, %s)" format (collection, operation, q, m)
+        lazy val description = "Mongo " + buildModifyString(mod, operation == "upsertOne", operation == "updateMulti")
         
         runCommand(description, mod.query.meta.mongoIdentifier) {
           f(q, m)
@@ -175,26 +183,13 @@ object MongoHelpers {
                                   (f: DBCursor  => Unit): Unit = {
       
       validator.validateQuery(query)
-      val collection = query.meta.collectionName
       val cnd = buildCondition(query.condition)
       val ord = query.order.map(buildOrder)
       val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
       val hnt = query.hint.map(buildHint)
       
-      def description = {
-        val str = new StringBuilder("Mongo " + collection +"." + operation)
-        str.append("("+cnd)
-        str.append(", "+sel)
-        str.append(")")
-        ord.foreach(o => str.append(".sort("+o+")"))
-        query.sk.foreach(sk => str.append(".skip("+sk+")"))
-        query.lim.foreach(l => str.append(".limit("+l+")"))
-        query.maxScan.foreach(m => str.append("._addSpecial(\"$maxScan\", "+m+")"))
-        query.comment.foreach(c => str.append("._addSpecial(\"$comment\", \""+c+"\")"))
-        hnt.foreach(h => str.append(".hint("+h.toString+")"))
-        str.toString
-      }
-      
+      lazy val description = buildQueryString(operation, query)
+
       runCommand(description, query.meta.mongoIdentifier){
         MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
           try {
