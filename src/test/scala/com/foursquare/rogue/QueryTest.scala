@@ -206,8 +206,6 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) select (_.geolatlng.unsafeField[Double]("lat")) toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
     // TODO: case class list fields
     // Comment select(_.comments.unsafeField[Long]("userid")) toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
-    // won't compile (by design)
-    // Venue where (_.mayor eqs 1) select(_.tags at 0) toString() must_== """db.venues.find({ "mayor" : 1}, { "tags.0" : 1})"""
 
     // empty queries
     Venue where (_.mayor in List())      toString() must_== "empty query"
@@ -397,5 +395,110 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) hint (Venue.legIdx) toString()       must_== """db.venues.find({ "legid" : 1}).hint({ "legid" : -1})"""
     Venue where (_.legacyid eqs 1) hint (Venue.geoIdx) toString()       must_== """db.venues.find({ "legid" : 1}).hint({ "latlng" : "2d"})"""
     Venue where (_.legacyid eqs 1) hint (Venue.geoCustomIdx) toString() must_== """db.venues.find({ "legid" : 1}).hint({ "latlng" : "custom" , "tags" : 1})"""
+  }
+
+  @Test
+  def thingsThatShouldntCompile {
+    // Sanity
+    check("""Venue where (_.legacyid eqs 3)""", shouldTypeCheck = true)
+
+    // Basic operator and operand type matching
+    check("""Venue where (_.legacyid eqs "hi")""")
+    check("""Venue where (_.legacyid contains 3)""")
+    check("""Venue where (_.tags contains 3)""")
+    check("""Venue where (_.tags all List(3)""")
+    check("""Venue where (_.geolatlng.unsafeField[String]("lat") eqs 3""")
+    check("""Venue where (_.closed eqs "false")""")
+    check("""Venue where (_.tags < 3)""")
+    check("""Venue where (_.tags size < 3)""")
+    check("""Venue where (_.tags size "3")""")
+    check("""Venue where (_.legacyid size 3)""")
+    check("""Venue where (_.popularity at 3 eqs "hi")""")
+    check("""Venue where (_.popularity at "a" eqs 3)""")
+
+    // Can't select array index
+    check("""Venue where (_.legacyid eqs 1) select(_.tags at 0)""")
+
+    // Phantom type stuff
+    check("""Venue orderAsc(_.legacyid) orderAsc(_.closed)""")
+    check("""Venue andAsc(_.legacyid)""")
+    check("""Venue limit(1) limit(5)""")
+    check("""Venue limit(1) fetch(5)""")
+    check("""Venue limit(1) get()""")
+    check("""Venue skip(3) skip(3)""")
+    check("""Venue limit(10) count()""")
+    check("""Venue skip(10) count()""")
+    check("""Venue limit(10) countDistinct(_.legacyid)""")
+    check("""Venue skip(10) countDistinct(_.legacyid)""")
+    check("""Venue limit(1) bulkDelete_!!""")
+    check("""Venue skip(3) bulkDelete_!!""")
+    check("""Venue select(_.legacyid) bulkDelete_!!""")
+    check("""Venue select(_.legacyid) select(_.closed)""")
+
+    // Index hints
+    check("""Venue where (_.legacyid eqs 1) hint (Comment.idx1)""")
+  }
+
+  def check(frag: String, shouldTypeCheck: Boolean = false) = {
+    val p = """
+import com.foursquare.rogue._
+import com.foursquare.rogue.Rogue._
+
+import net.liftweb.mongodb.record._
+import net.liftweb.mongodb.record.field._
+import net.liftweb.record.field._
+import net.liftweb.record._
+import org.bson.types.ObjectId
+
+class Venue extends MongoRecord[Venue] with MongoId[Venue] {
+  def meta = Venue
+  object legacyid extends LongField(this) { override def name = "legid" }
+  object userid extends LongField(this)
+  object venuename extends StringField(this, 255)
+  object closed extends BooleanField(this)
+  object tags extends MongoListField[Venue, String](this)
+  object popularity extends MongoListField[Venue, Long](this)
+  object categories extends MongoListField[Venue, ObjectId](this)
+  object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
+  object last_updated extends DateTimeField(this)
+}
+object Venue extends Venue with MongoMetaRecord[Venue]
+case class OneComment(timestamp: String, userid: Long, comment: String)
+class Comment extends MongoRecord[Comment] with MongoId[Comment] {
+  def meta = Comment
+  object comments extends MongoCaseClassListField[Comment, OneComment](this)
+}
+object Comment extends Comment with MongoMetaRecord[Comment] {
+  val idIdx = Comment.index(_._id, Asc)
+}
+object test { val q = %s }
+""".format(frag)
+    typeCheck(p) aka "'%s' compiles!".format(frag) must_== shouldTypeCheck
+  }
+
+  def typeCheck(p: String) = {
+    import scala.tools.nsc.Settings
+    import scala.tools.nsc.interactive.Global
+    import scala.tools.nsc.reporters.ConsoleReporter
+    import scala.tools.nsc.io.VirtualFile
+
+    val vfile = {
+      val arr = p.getBytes("UTF-8")
+      val vf = new VirtualFile("Script.scala")
+      val os = vf.output
+      os.write(arr,	0, p.size)
+      os.close
+      vf
+    }
+
+    val settings = new Settings
+    settings.embeddedDefaults[Venue]
+    settings.classpath.value += java.io.File.pathSeparator + System.getProperty("java.class.path")
+    val reporter = new ConsoleReporter(settings) { override def printMessage(msg:	String) {} }
+    val compiler = new Global(settings, reporter)
+    val run = new	compiler.TyperRun
+
+    run.compileFiles(vfile :: Nil)
+    !reporter.hasErrors
   }
 }
