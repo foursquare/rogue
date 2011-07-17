@@ -458,9 +458,6 @@ class QueryTest extends SpecsMatchers {
     check("""Venue skip(10) count()""")
     check("""Venue limit(10) countDistinct(_.legacyid)""")
     check("""Venue skip(10) countDistinct(_.legacyid)""")
-    check("""Venue limit(1) bulkDelete_!!""")
-    check("""Venue skip(3) bulkDelete_!!""")
-    check("""Venue select(_.legacyid) bulkDelete_!!""")
     check("""Venue select(_.legacyid) select(_.closed)""")
 
     // select case class
@@ -469,6 +466,21 @@ class QueryTest extends SpecsMatchers {
 
     // Index hints
     check("""Venue where (_.legacyid eqs 1) hint (Comment.idx1)""")
+
+    // Modify
+    check("""Venue limit(1) modify (_.legacyid setTo 1)""")
+    check("""Venue skip(3) modify (_.legacyid setTo 1)""")
+    check("""Venue select(_.legacyid) modify (_.legacyid setTo 1)""")
+
+    // Noop
+    check("""Venue limit(1) noop()""")
+    check("""Venue skip(3) noop()""")
+    check("""Venue select(_.legacyid) noop()""")
+
+    // Delete
+    check("""Venue limit(1) bulkDelete_!!""")
+    check("""Venue skip(3) bulkDelete_!!""")
+    check("""Venue select(_.legacyid) bulkDelete_!!""")
   }
 
   def check(frag: String, shouldTypeCheck: Boolean = false) = {

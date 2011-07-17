@@ -64,7 +64,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def get()(implicit ev: Lim =:= Unlimited): Option[R]
   def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): BasePaginatedQuery[M, R]
 
-  def noop(): AbstractModifyQuery[M]
+  def noop()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): AbstractModifyQuery[M]
 
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
 
@@ -192,7 +192,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     new BasePaginatedQuery(this.copy(), countPerPage)
   }
 
-  override def noop() = BaseModifyQuery(this, MongoModify(Nil))
+  override def noop()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped) = BaseModifyQuery(this, MongoModify(Nil))
 
   // Always do modifications against master (not meta, which could point to slave)
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
@@ -305,7 +305,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     new BasePaginatedQuery(emptyQuery, countPerPage)
   }
 
-  override def noop() = new EmptyModifyQuery[M]
+  override def noop()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped) = new EmptyModifyQuery[M]
 
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
 
