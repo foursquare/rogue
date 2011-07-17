@@ -16,21 +16,28 @@ import scala.collection.immutable.ListMap
 // Phantom types
 /////////////////////////////////////////////////////////////////////////////
 
-abstract sealed class Ordered
-abstract sealed class Unordered
-abstract sealed class Selected
-abstract sealed class Unselected
-abstract sealed class Limited
-abstract sealed class Unlimited
-abstract sealed class Skipped
-abstract sealed class Unskipped
+abstract sealed class MaybeOrdered
+abstract sealed class Ordered extends MaybeOrdered
+abstract sealed class Unordered extends MaybeOrdered
+
+abstract sealed class MaybeSelected
+abstract sealed class Selected extends MaybeSelected
+abstract sealed class Unselected extends MaybeSelected
+
+abstract sealed class MaybeLimited
+abstract sealed class Limited extends MaybeLimited
+abstract sealed class Unlimited extends MaybeLimited
+
+abstract sealed class MaybeSkipped
+abstract sealed class Skipped extends MaybeSkipped
+abstract sealed class Unskipped extends MaybeSkipped
 
 /////////////////////////////////////////////////////////////////////////////
 // Builders
 /////////////////////////////////////////////////////////////////////////////
 
 
-trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
+trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped] {
   def meta: M with MongoMetaRecord[M]
   def master: MongoMetaRecord[M]
   def where[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
@@ -84,7 +91,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
   def hint(h: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
 }
 
-case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
+case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped](
     override val meta: M with MongoMetaRecord[M],
     lim: Option[Int],
     sk: Option[Int],
@@ -268,7 +275,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   }
 }
 
-class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends AbstractQuery[M, R, Ord, Sel, Lim, Sk] {
+class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped] extends AbstractQuery[M, R, Ord, Sel, Lim, Sk] {
   override lazy val meta = throw new Exception("tried to read meta field of an EmptyQuery")
   override lazy val master = throw new Exception("tried to read master field of an EmptyQuery")
   override def where[F](clause: M => QueryClause[F]) = this
@@ -334,7 +341,7 @@ trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def upsertOne(): Unit
 }
 
-case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _],
+case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped],
                                                 mod: MongoModify) extends AbstractModifyQuery[M] {
 
   private def addClause[F](clause: M => ModifyClause[F]) = {

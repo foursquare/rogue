@@ -412,6 +412,19 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testCommonSuperclassForPhantomTypes {
+    def maybeLimit(legid: Long, limitOpt: Option[Int]) = {
+      limitOpt match {
+        case Some(limit) => Venue.where(_.legacyid eqs legid).limit(limit)
+        case None => Venue.where(_.legacyid eqs legid)
+      }
+    }
+
+    maybeLimit(1, None) toString() must_== """db.venues.find({ "legid" : 1})"""
+    maybeLimit(1, Some(5)) toString() must_== """db.venues.find({ "legid" : 1}).limit(5)"""
+  }
+
+  @Test
   def thingsThatShouldntCompile {
     // For sanity
     // TODO: uncomment when I figure out how to get it to not generate artifacts

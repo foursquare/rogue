@@ -26,8 +26,8 @@ trait Rogue {
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) = IndexBuilder(rec)
   implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]) = {
     query match {
-      case q: BaseEmptyQuery[_, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[_, _, _, _, _, _] => BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, _, _, _, _, _]], MongoModify(Nil))
+      case q: BaseEmptyQuery[M, M, Unordered, Unselected, Unlimited, Unskipped] => new EmptyModifyQuery[M]
+      case q: BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped] => BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]], MongoModify(Nil))
     }
   }
 
