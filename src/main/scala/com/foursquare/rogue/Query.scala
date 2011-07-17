@@ -74,6 +74,13 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] {
   def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk]
   def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk]
 
+  def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)(implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk]
+  def selectCase[F1, F2, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], create: (F1, F2) => CC)(implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk]
+  def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], create: (F1, F2, F3) => CC)(implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk]
+  def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], create: (F1, F2, F3, F4) => CC)(implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk]
+  def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], create: (F1, F2, F3, F4, F5) => CC)(implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk]
+  def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], create: (F1, F2, F3, F4, F5, F6) => CC)(implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk]
+
   def hint(h: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk]
 }
 
@@ -195,44 +202,68 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk](
   override def hint(index: MongoIndex[M]) = this.copy(hint = Some(index.asListMap))
 
   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, F1, Ord, Selected, Lim, Sk] = {
-    val inst = meta.createRecord
-    val fields = List(f(inst))
-    val transformer = (xs: List[_]) => xs.head.asInstanceOf[F1]
-    this.copy(select = Some(MongoSelect(fields, transformer)))
+    selectCase(f, (f: F1) => f)
   }
-  
+
   override def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2), Ord, Selected, Lim, Sk] = {
-    val inst = meta.createRecord
-    val fields = List(f1(inst), f2(inst))
-    val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2])
-    this.copy(select = Some(MongoSelect(fields, transformer)))
+    selectCase(f1, f2, (f1: F1, f2: F2) => (f1, f2))
   }
 
   override def select[F1, F2, F3](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk] = {
-    val inst = meta.createRecord
-    val fields = List(f1(inst), f2(inst), f3(inst))
-    val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3])
-    this.copy(select = Some(MongoSelect(fields, transformer)))
+    selectCase(f1, f2, f3, (f1: F1, f2: F2, f3: F3) => (f1, f2, f3))
   }
 
   override def select[F1, F2, F3, F4](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk] = {
-    val inst = meta.createRecord
-    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst))
-    val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
-    this.copy(select = Some(MongoSelect(fields, transformer)))
+    selectCase(f1, f2, f3, f4, (f1: F1, f2: F2, f3: F3, f4: F4) => (f1, f2, f3, f4))
   }
 
   override def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk] = {
-    val inst = meta.createRecord
-    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst))
-    val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5])
-    this.copy(select = Some(MongoSelect(fields, transformer)))
+    selectCase(f1, f2, f3, f4, f5, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5) => (f1, f2, f3, f4, f5))
   }
 
   override def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk] = {
+    selectCase(f1, f2, f3, f4, f5, f6, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6) => (f1, f2, f3, f4, f5, f6))
+  }
+
+  def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val inst = meta.createRecord
+    val fields = List(f(inst))
+    val transformer = (xs: List[_]) => create(xs.head.asInstanceOf[F1])
+    this.copy(select = Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], create: (F1, F2) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val inst = meta.createRecord
+    val fields = List(f1(inst), f2(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2])
+    this.copy(select = Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], create: (F1, F2, F3) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val inst = meta.createRecord
+    val fields = List(f1(inst), f2(inst), f3(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3])
+    this.copy(select = Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], create: (F1, F2, F3, F4) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val inst = meta.createRecord
+    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
+    this.copy(select = Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], create: (F1, F2, F3, F4, F5) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
+    val inst = meta.createRecord
+    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5])
+    this.copy(select = Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], create: (F1, F2, F3, F4, F5, F6) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst))
-    val transformer = (xs: List[_]) => (xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 }
@@ -285,6 +316,13 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord, Sel, Lim, Sk] extends Abstract
   override def select[F1, F2, F3, F4](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk]
   override def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk]
   override def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk]
+
+  override def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
+  override def selectCase[F1, F2, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], create: (F1, F2) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
+  override def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], create: (F1, F2, F3) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
+  override def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], create: (F1, F2, F3, F4) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
+  override def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], create: (F1, F2, F3, F4, F5) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
+  override def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], create: (F1, F2, F3, F4, F5, F6) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
 }
 
 trait AbstractModifyQuery[M <: MongoRecord[M]] {
