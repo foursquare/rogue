@@ -208,12 +208,12 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1 , "tags" : 1})"""
 
     // select case queries
-    Venue where (_.mayor eqs 1) selectCase(_.legacyid, V1) toString() must_== """{ "mayor" : 1} select { "legid" : 1}"""
-    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, V2) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1}"""
-    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, V3) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1}"""
-    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, V4) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1}"""
-    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, V5) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1}"""
-    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags, V6) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1 , "tags" : 1}"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, V1) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1})"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, V2) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1 , "userid" : 1})"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, V3) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1 , "userid" : 1 , "mayor" : 1})"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, V4) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1})"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, V5) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1})"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags, V6) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1 , "tags" : 1})"""
 
     // select subfields
     Tip where (_.legacyid eqs 1) select (_.counts at "foo") toString() must_== """db.tips.find({ "legid" : 1}, { "counts.foo" : 1})"""
@@ -449,6 +449,10 @@ class QueryTest extends SpecsMatchers {
     check("""Venue select(_.legacyid) bulkDelete_!!""")
     check("""Venue select(_.legacyid) select(_.closed)""")
 
+    // select case class
+    check("""Venue selectCase(_.legacyid, CC)""")
+    check("""Venue selectCase(_.legacyid, _.tags, CC)""")
+
     // Index hints
     check("""Venue where (_.legacyid eqs 1) hint (Comment.idx1)""")
   }
@@ -485,6 +489,7 @@ class Comment extends MongoRecord[Comment] with MongoId[Comment] {
 object Comment extends Comment with MongoMetaRecord[Comment] {
   val idIdx = Comment.index(_._id, Asc)
 }
+case class CC(legacyid: Long, closed: Boolean)
 object test { val q = %s }
 """.format(frag)
     typeCheck(p) aka "'%s' compiles!".format(frag) must_== shouldTypeCheck
