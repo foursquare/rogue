@@ -413,8 +413,9 @@ class QueryTest extends SpecsMatchers {
 
   @Test
   def thingsThatShouldntCompile {
-    // Sanity
-    check("""Venue where (_.legacyid eqs 3)""", shouldTypeCheck = true)
+    // For sanity
+    // TODO: uncomment when I figure out how to get it to not generate artifacts
+    // check("""Venue where (_.legacyid eqs 3)""", shouldTypeCheck = true)
 
     // Basic operator and operand type matching
     check("""Venue where (_.legacyid eqs "hi")""")
