@@ -83,6 +83,12 @@ class OAuthConsumer extends MongoRecord[OAuthConsumer] with MongoId[OAuthConsume
 }
 object OAuthConsumer extends OAuthConsumer with MongoMetaRecord[OAuthConsumer]
 
+case class V1(legacyid: Long)
+case class V2(legacyid: Long, userid: Long)
+case class V3(legacyid: Long, userid: Long, mayor: Long)
+case class V4(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long)
+case class V5(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long, closed: Boolean)
+case class V6(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long, closed: Boolean, tags: List[String])
 
 /////////////////////////////////////////////////
 // Actual tests
@@ -200,6 +206,14 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1}"""
     Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1}"""
     Venue where (_.mayor eqs 1) select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1 , "tags" : 1}"""
+
+    // select case queries
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, V1) toString() must_== """{ "mayor" : 1} select { "legid" : 1}"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, V2) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1}"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, V3) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1}"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, V4) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1}"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, V5) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1}"""
+    Venue where (_.mayor eqs 1) selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags, V6) toString() must_== """{ "mayor" : 1} select { "legid" : 1 , "userid" : 1 , "mayor" : 1 , "mayor_count" : 1 , "closed" : 1 , "tags" : 1}"""
 
     // select subfields
     Tip where (_.legacyid eqs 1) select (_.counts at "foo") toString() must_== """{ "legid" : 1} select { "counts.foo" : 1}"""
