@@ -125,7 +125,7 @@ class QueryTest extends SpecsMatchers {
     VenueClaim where (_.status neqs ClaimStatus.approved) toString() must_== """db.venueclaims.find({ "status" : { "$ne" : "Approved"}})"""
 
     // in,nin
-    Venue where (_.legacyid in List(123, 456)) toString() must_== """db.venues.find({ "legid" : { "$in" : [ 123 , 456]}})"""
+    Venue where (_.legacyid in List(123L, 456L)) toString() must_== """db.venues.find({ "legid" : { "$in" : [ 123 , 456]}})"""
     Venue where (_.venuename nin List("Starbucks", "Whole Foods")) toString() must_== """db.venues.find({ "venuename" : { "$nin" : [ "Starbucks" , "Whole Foods"]}})"""
     VenueClaim where (_.status in List(ClaimStatus.approved, ClaimStatus.pending))  toString() must_== """db.venueclaims.find({ "status" : { "$in" : [ "Approved" , "Pending approval"]}})"""
     VenueClaim where (_.status nin List(ClaimStatus.approved, ClaimStatus.pending)) toString() must_== """db.venueclaims.find({ "status" : { "$nin" : [ "Approved" , "Pending approval"]}})"""
@@ -273,11 +273,11 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) modify (_.popularity push 5)              toString() must_== query + """{ "$push" : { "popularity" : 5}}""" + suffix
     Venue where (_.legacyid eqs 1) modify (_.tags pushAll List("a", "b"))    toString() must_== query + """{ "$pushAll" : { "tags" : [ "a" , "b"]}}""" + suffix
     Venue where (_.legacyid eqs 1) modify (_.tags addToSet "a")              toString() must_== query + """{ "$addToSet" : { "tags" : "a"}}""" + suffix
-    Venue where (_.legacyid eqs 1) modify (_.popularity addToSet List(1, 2)) toString() must_== query + """{ "$addToSet" : { "popularity" : { "$each" : [ 1 , 2]}}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.popularity addToSet List(1L, 2L)) toString() must_== query + """{ "$addToSet" : { "popularity" : { "$each" : [ 1 , 2]}}}""" + suffix
     Venue where (_.legacyid eqs 1) modify (_.tags popFirst)                  toString() must_== query + """{ "$pop" : { "tags" : -1}}""" + suffix
     Venue where (_.legacyid eqs 1) modify (_.tags popLast)                   toString() must_== query + """{ "$pop" : { "tags" : 1}}""" + suffix
     Venue where (_.legacyid eqs 1) modify (_.tags pull "a")                  toString() must_== query + """{ "$pull" : { "tags" : "a"}}""" + suffix
-    Venue where (_.legacyid eqs 1) modify (_.popularity pullAll List(2, 3))  toString() must_== query + """{ "$pullAll" : { "popularity" : [ 2 , 3]}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.popularity pullAll List(2L, 3L))  toString() must_== query + """{ "$pullAll" : { "popularity" : [ 2 , 3]}}""" + suffix
     Venue where (_.legacyid eqs 1) modify (_.popularity at 0 inc 1)          toString() must_== query + """{ "$inc" : { "popularity.0" : 1}}""" + suffix
     // alternative syntax
     Venue where (_.legacyid eqs 1) modify (_.popularity idx 0 inc 1)         toString() must_== query + """{ "$inc" : { "popularity.0" : 1}}""" + suffix
@@ -338,7 +338,7 @@ class QueryTest extends SpecsMatchers {
     VenueClaim where (_.status eqs ClaimStatus.approved) signature() must_== """db.venueclaims.find({ "status" : 0})"""
     Venue where (_.mayor_count gte 5) signature() must_== """db.venues.find({ "mayor_count" : { "$gte" : 0}})"""
     VenueClaim where (_.status neqs ClaimStatus.approved) signature() must_== """db.venueclaims.find({ "status" : { "$ne" : 0}})"""
-    Venue where (_.legacyid in List(123, 456)) signature() must_== """db.venues.find({ "legid" : { "$in" : 0}})"""
+    Venue where (_.legacyid in List(123L, 456L)) signature() must_== """db.venues.find({ "legid" : { "$in" : 0}})"""
     Venue where (_._id exists true) signature() must_== """db.venues.find({ "_id" : { "$exists" : 0}})"""
     Venue where (_.venuename startsWith "Starbucks") signature() must_== """db.venues.find({ "venuename" : 0})"""
 

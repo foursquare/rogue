@@ -65,8 +65,6 @@ trait Rogue {
 
   implicit def mandatoryFieldToSelectField[M <: MongoRecord[M], V](f: Field[V, M] with MandatoryTypedField[V]): SelectField[V, M] = new MandatorySelectField(f)
   implicit def optionalFieldToSelectField[M <: MongoRecord[M], V](f: Field[V, M] with OptionalTypedField[V]): SelectField[Box[V], M] = new OptionalSelectField(f)
-
-  implicit def intListToLongList(xs: List[Int]): List[Long] = xs.map(_.toLong)
 }
 
 object Rogue extends Rogue
