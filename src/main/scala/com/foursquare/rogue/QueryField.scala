@@ -111,8 +111,10 @@ abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Fie
 
   def all(vs: Iterable[V]) = QueryHelpers.allListClause(field.name, valuesToDB(vs))
   def in(vs: Iterable[V]) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
+  def nin(vs: Iterable[V]) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(valuesToDB(vs)))
   def size(s: Int) = new QueryClause(field.name, CondOps.Size -> s)
   def contains(v: V) = new EqClause(field.name, valueToDB(v))
+  def notcontains(v: V) = new QueryClause(field.name, CondOps.Ne -> valueToDB(v))
   def at(i: Int): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + i.toString)
   def idx(i: Int): DummyField[V, M] = at(i)
 }
