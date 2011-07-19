@@ -42,7 +42,7 @@ The finished jar will be in `target/`.
 Or if you prefer, packaged JARs are available on scala-tools.org. Add the following line to your
 sbt project file to pull them in:
 
-    val rogue = "com.foursquare" %% "rogue" % "1.0.9" withSources()
+    val rogue = "com.foursquare" %% "rogue" % "1.0.15" withSources()
 
 ## More Examples
 
@@ -76,17 +76,20 @@ For "modify" query objects
 
 ## Releases
 
-The latest release is 1.0.14. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.0.15. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.14:
+New in 1.0.15:
 
-- index hinting support
-- support for selecting subfields (MongoMapField and MongoCaseClassField only; no support for MongoCaseClassListField)
-- "between" convenience operator (numeric)
-- scala 2.9.0 and 2.9.0-1 build support -- thanks eltimn!
+- .toString produces runnable javascript commands for mongodb console
+- added tests for constructions that should not compile
+- selectCase() builder method for select()ing via case class
+- support for $nin (nin) and $ne (notcontains) on list fields
+- unchecked warnings cleanup
 
 Other recent notable changes:
 
+- index hinting support
+- support for selecting subfields
 - support for $maxScan and $comment addSpecial parameters on find() queries
 - always specify field names to return in the query; if select() was not specified, use all field names from the model
 - explain() method on BaseQuery (thanks tjulien!)

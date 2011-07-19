@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 1.0.15
+
+- .toString produces runnable javascript commands for mongodb console
+- added tests for constructions that should not compile
+- selectCase() builder method for select()ing via case class
+- support for $nin (nin) and $ne (notcontains) on list fields
+- unchecked warnings cleanup
+
 # 1.0.14:
 
 - index hinting support
