@@ -20,8 +20,10 @@ class RogueProject(info: ProjectInfo) extends DefaultProject(info) with Credenti
     case "2.8.0" => "1.6.5"
     case _       => "1.6.8"
   }
-  val junit = "junit"                    % "junit" % "4.8.2"      % "test" withSources()
-  val specs = "org.scala-tools.testing" %% "specs" % specsVersion % "test" withSources()
+
+  val junit = "junit"                    % "junit"          % "4.8.2"           % "test" withSources()
+  val specs = "org.scala-tools.testing" %% "specs"          % specsVersion      % "test" withSources()
+  val scalc = "org.scala-lang"           % "scala-compiler" % buildScalaVersion % "test" withSources()
 
   val JavaNet = "Java.net Maven2 Repository" at "http://download.java.net/maven/2/"
   val snapshots = "Scala Tools Snapshots" at "http://scala-tools.org/repo-snapshots/"

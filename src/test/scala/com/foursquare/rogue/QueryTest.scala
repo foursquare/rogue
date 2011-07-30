@@ -64,7 +64,9 @@ class Comment extends MongoRecord[Comment] with MongoId[Comment] {
   def meta = Comment
   object comments extends MongoCaseClassListField[Comment, OneComment](this)
 }
-object Comment extends Comment with MongoMetaRecord[Comment]
+object Comment extends Comment with MongoMetaRecord[Comment] {
+  val idx1 = Comment.index(_._id, Asc)
+}
 
 class Tip extends MongoRecord[Tip] with MongoId[Tip] {
   def meta = Tip
@@ -436,16 +438,21 @@ class QueryTest extends SpecsMatchers {
 
   @Test
   def thingsThatShouldntCompile {
+    val compiler = new Compiler
+    def check(code: String, shouldTypeCheck: Boolean = false): Unit = {
+      compiler.typeCheck(code) aka "'%s' compiles!".format(code) must_== shouldTypeCheck
+    }
+
     // For sanity
-    // TODO: uncomment when I figure out how to get it to not generate artifacts
-    // check("""Venue where (_.legacyid eqs 3)""", shouldTypeCheck = true)
+    // Venue where (_.legacyid eqs 3)
+    check("""Venue where (_.legacyid eqs 3)""", shouldTypeCheck = true)
 
     // Basic operator and operand type matching
     check("""Venue where (_.legacyid eqs "hi")""")
     check("""Venue where (_.legacyid contains 3)""")
     check("""Venue where (_.tags contains 3)""")
-    check("""Venue where (_.tags all List(3)""")
-    check("""Venue where (_.geolatlng.unsafeField[String]("lat") eqs 3""")
+    check("""Venue where (_.tags all List(3))""")
+    check("""Venue where (_.geolatlng.unsafeField[String]("lat") eqs 3)""")
     check("""Venue where (_.closed eqs "false")""")
     check("""Venue where (_.tags < 3)""")
     check("""Venue where (_.tags size < 3)""")
@@ -471,8 +478,8 @@ class QueryTest extends SpecsMatchers {
     check("""Venue select(_.legacyid) select(_.closed)""")
 
     // select case class
-    check("""Venue selectCase(_.legacyid, CC)""")
-    check("""Venue selectCase(_.legacyid, _.tags, CC)""")
+    check("""Venue selectCase(_.legacyid, V2)""")
+    check("""Venue selectCase(_.legacyid, _.tags, V2)""")
 
     // Index hints
     check("""Venue where (_.legacyid eqs 1) hint (Comment.idx1)""")
@@ -493,67 +500,47 @@ class QueryTest extends SpecsMatchers {
     check("""Venue select(_.legacyid) bulkDelete_!!""")
   }
 
-  def check(frag: String, shouldTypeCheck: Boolean = false) = {
-    val p = """
-import com.foursquare.rogue._
-import com.foursquare.rogue.Rogue._
+  class Compiler {
+    import java.io.{PrintWriter, Writer}
+    import scala.io.Source
+    import scala.tools.nsc.{Interpreter, InterpreterResults, Settings}
 
-import net.liftweb.mongodb.record._
-import net.liftweb.mongodb.record.field._
-import net.liftweb.record.field._
-import net.liftweb.record._
-import org.bson.types.ObjectId
-
-class Venue extends MongoRecord[Venue] with MongoId[Venue] {
-  def meta = Venue
-  object legacyid extends LongField(this) { override def name = "legid" }
-  object userid extends LongField(this)
-  object venuename extends StringField(this, 255)
-  object closed extends BooleanField(this)
-  object tags extends MongoListField[Venue, String](this)
-  object popularity extends MongoListField[Venue, Long](this)
-  object categories extends MongoListField[Venue, ObjectId](this)
-  object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
-  object last_updated extends DateTimeField(this)
-}
-object Venue extends Venue with MongoMetaRecord[Venue]
-case class OneComment(timestamp: String, userid: Long, comment: String)
-class Comment extends MongoRecord[Comment] with MongoId[Comment] {
-  def meta = Comment
-  object comments extends MongoCaseClassListField[Comment, OneComment](this)
-}
-object Comment extends Comment with MongoMetaRecord[Comment] {
-  val idIdx = Comment.index(_._id, Asc)
-}
-case class CC(legacyid: Long, closed: Boolean)
-object test { val q = %s }
-""".format(frag)
-    typeCheck(p) aka "'%s' compiles!".format(frag) must_== shouldTypeCheck
-  }
-
-  def typeCheck(p: String) = {
-    import scala.tools.nsc.Settings
-    import scala.tools.nsc.interactive.Global
-    import scala.tools.nsc.reporters.ConsoleReporter
-    import scala.tools.nsc.io.VirtualFile
-
-    val vfile = {
-      val arr = p.getBytes("UTF-8")
-      val vf = new VirtualFile("Script.scala")
-      val os = vf.output
-      os.write(arr,	0, p.size)
-      os.close
-      vf
+    class NullWriter extends Writer {
+      override def close() = ()
+      override def flush() = ()
+      override def write(arr: Array[Char], x: Int, y: Int): Unit = ()
     }
 
-    val settings = new Settings
-    settings.embeddedDefaults[Venue]
-    settings.classpath.value += java.io.File.pathSeparator + System.getProperty("java.class.path")
-    val reporter = new ConsoleReporter(settings) { override def printMessage(msg:	String) {} }
-    val compiler = new Global(settings, reporter)
-    val run = new	compiler.TyperRun
+    private val settings = new Settings
+    val loader = manifest[Venue].erasure.getClassLoader
+    settings.classpath.value = Source.fromURL(loader.getResource("app.class.path")).mkString
+    settings.bootclasspath.append(Source.fromURL(loader.getResource("boot.class.path")).mkString)
+    settings.deprecation.value = true // enable detailed deprecation warnings
+    settings.unchecked.value = true // enable detailed unchecked warnings
 
-    run.compileFiles(vfile :: Nil)
-    !reporter.hasErrors
+    // This is deprecated in 2.9.x, but we need to use it for compatibility with 2.8.x
+    private val interpreter =
+      new Interpreter(
+        settings,
+        /**
+         * It's a good idea to comment out this second parameter when adding or modifying
+         * tests that shouldn't compile, to make sure that the tests don't compile for the
+         * right reason.
+         *
+         * TODO(jorge): Consider comparing string output for each test to ensure the
+         * actual compile error matches the expected compile error.
+         **/
+        new PrintWriter(new NullWriter()))
+
+    interpreter.interpret("""import com.foursquare.rogue._""")
+    interpreter.interpret("""import com.foursquare.rogue.Rogue._""")
+
+    def typeCheck(code: String): Boolean = {
+      interpreter.interpret(code) match {
+        case InterpreterResults.Success => true
+        case InterpreterResults.Error => false
+        case InterpreterResults.Incomplete => throw new Exception("Incomplete code snippet")
+      }
+    }
   }
 }
