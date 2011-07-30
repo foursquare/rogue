@@ -241,6 +241,14 @@ class QueryTest extends SpecsMatchers {
     Venue scan (_.mayor eqs 1) and (_.mayor_count eqs 5)         toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : 5})"""
     Venue scan (_.mayor eqs 1) scan (_.mayor_count lt 5)         toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$lt" : 5}})"""
     Venue where (_.mayor in List()) scan (_.mayor_count eqs 5)   toString() must_== "empty query"
+
+    // limit, limitOpt, skip, skipOpt
+    Venue where (_.mayor eqs 1) limit(10)          toString() must_== """db.venues.find({ "mayor" : 1}).limit(10)"""
+    Venue where (_.mayor eqs 1) limitOpt(Some(10)) toString() must_== """db.venues.find({ "mayor" : 1}).limit(10)"""
+    Venue where (_.mayor eqs 1) limitOpt(None)     toString() must_== """db.venues.find({ "mayor" : 1})"""
+    Venue where (_.mayor eqs 1) skip(10)           toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
+    Venue where (_.mayor eqs 1) skipOpt(Some(10))  toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
+    Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
   }
 
   @Test
