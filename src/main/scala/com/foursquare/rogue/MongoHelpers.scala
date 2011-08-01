@@ -37,7 +37,7 @@ object MongoHelpers {
         })
         builder.get
 
-      case OrCondition(conditions) => 
+      case OrCondition(conditions) =>
         // Room for optimization here by manipulating the AST, e.g.,
         // { $or : [ { a : 1 }, { a : 2 } ] }  ==>  { a : { $in : [ 1, 2 ] }}
         BasicDBObjectBuilder.start("$or", QueryHelpers.list(conditions.map(buildCondition(_, signature = false)))).get
@@ -62,7 +62,7 @@ object MongoHelpers {
     def buildSelect[R, M <: MongoRecord[M]](s: MongoSelect[R, M]): DBObject = {
       buildSelectFromNames(s.fields.view.map(_.field.name))
     }
-    
+
     def buildSelectFromNames(names: Iterable[String]): DBObject = {
       val builder = BasicDBObjectBuilder.start
       names.foreach(n => builder.add(n, 1))
@@ -115,11 +115,11 @@ object MongoHelpers {
 
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
-    
+
     private[rogue] def runCommand[T](description: => String, id: MongoIdentifier)(f: => T): T = runCommand(description, id.toString)(f)
-    
+
     private[rogue] def runCommand[T](description: => String, id: String)(f: => T): T = {
-      val start = System.currentTimeMillis 
+      val start = System.currentTimeMillis
       try {
         f
       } catch {
@@ -136,9 +136,7 @@ object MongoHelpers {
 
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
-      lazy val description = "Mongo " + query.toString
-      
-      runCommand(description, query.meta.mongoIdentifier){
+      runCommand(query.toString, query.meta.mongoIdentifier){
         f(cnd)
       }
     }
@@ -150,8 +148,8 @@ object MongoHelpers {
       if (!mod.mod.clauses.isEmpty) {
         val q = buildCondition(mod.query.condition)
         val m = buildModify(mod.mod)
-        lazy val description = "Mongo " + buildModifyString(mod, operation == "upsertOne", operation == "updateMulti")
-        
+        lazy val description = buildModifyString(mod, operation == "upsertOne", operation == "updateMulti")
+
         runCommand(description, mod.query.meta.mongoIdentifier) {
           f(q, m)
         }
@@ -162,7 +160,7 @@ object MongoHelpers {
                                    query: BaseQuery[M, _, _, _, _, _],
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
-      doQuery(operation, query){cursor => 
+      doQuery(operation, query){cursor =>
         batchSize.foreach(cursor batchSize _)
         while (cursor.hasNext)
           f(cursor.next)
@@ -181,13 +179,13 @@ object MongoHelpers {
     private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
                                    query: BaseQuery[M, _, _, _, _, _])
                                   (f: DBCursor  => Unit): Unit = {
-      
+
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
       val ord = query.order.map(buildOrder)
       val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
       val hnt = query.hint.map(buildHint)
-      
+
       lazy val description = buildQueryString(operation, query)
 
       runCommand(description, query.meta.mongoIdentifier){
