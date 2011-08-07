@@ -4,9 +4,10 @@ package com.foursquare.rogue
 
 import collection.immutable.List._
 import com.foursquare.rogue.MongoHelpers._
-import com.mongodb.DBObject
+import com.mongodb.{DBObject, WriteConcern}
 import net.liftweb.record.Field
 import net.liftweb.common.{Box, Full}
+import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record._
 import net.liftweb.record.Field
 import scala.collection.mutable.ListBuffer
@@ -68,6 +69,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def noop()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): AbstractModifyQuery[M]
 
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
+  def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
 
   def signature(): String
   def explain(): String
@@ -200,6 +202,12 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   // Always do modifications against master (not meta, which could point to slave)
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
     QueryExecutor.condition("remove", this)(master.bulkDelete_!!(_))
+  override def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
+    QueryExecutor.condition("remove", this) { qry =>
+      MongoDB.useCollection(master.mongoIdentifier, master.collectionName) { coll =>
+        coll.remove(qry, concern)
+      }
+    }
   override def toString: String =
     MongoBuilder.buildQueryString("find", this)
   override def signature(): String =
@@ -312,6 +320,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def noop()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped) = new EmptyModifyQuery[M]
 
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
+  override def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
 
   override def toString = "empty query"
   override def signature = "empty query"
