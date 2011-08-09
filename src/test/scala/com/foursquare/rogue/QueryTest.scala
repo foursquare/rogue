@@ -37,6 +37,7 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] {
   object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
   object last_updated extends DateTimeField(this)
   object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
+  object claims extends BsonRecordListField(this, VenueClaim)
 }
 object Venue extends Venue with MongoMetaRecord[Venue] {
   object CustomIndex extends IndexModifier("custom")
@@ -294,6 +295,10 @@ class QueryTest extends SpecsMatchers {
 
     // Enumeration list
     OAuthConsumer modify (_.privileges addToSet ConsumerPrivilege.awardBadges) toString() must_== """db.oauthconsumers.update({ }, { "$addToSet" : { "privileges" : "Award badges"}}""" + suffix
+
+    // List of BsonRecords with nested Enumeration
+    val claims = List(VenueClaim.createRecord.userid(1).status(ClaimStatus.approved))
+    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims)            toString() must_== query + """{ "$set" : { "claims" : [ { "userid" : 1 , "status" : "Approved"}]}}"""
 
     // Map
     val m = Map("foo" -> 1L)
