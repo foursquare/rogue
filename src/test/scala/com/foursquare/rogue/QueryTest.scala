@@ -17,7 +17,6 @@ import org.specs.SpecsMatchers
 /////////////////////////////////////////////////
 // Sample records for testing
 /////////////////////////////////////////////////
-
 object VenueStatus extends Enumeration {
   val open = Value("Open")
   val closed = Value("Closed")
@@ -45,6 +44,13 @@ object Venue extends Venue with MongoMetaRecord[Venue] {
   val legIdx = Venue.index(_.legacyid, Desc)
   val geoIdx = Venue.index(_.geolatlng, TwoD)
   val geoCustomIdx = Venue.index(_.geolatlng, CustomIndex, _.tags, Asc)
+
+  trait FK[T <: FK[T]] extends MongoRecord[T] {
+    self: T=>
+    object venueid extends ObjectIdField[T](this) with HasMongoForeignObjectId[Venue] {
+      override def name = "vid"
+    }
+  }
 }
 
 object ClaimStatus extends Enumeration {
@@ -52,13 +58,12 @@ object ClaimStatus extends Enumeration {
   val approved = Value("Approved")
 }
 
-class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] {
+class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] with Venue.FK[VenueClaim] {
   def meta = VenueClaim
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
 }
 object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim]
-
 
 case class OneComment(timestamp: String, userid: Long, comment: String)
 class Comment extends MongoRecord[Comment] with MongoId[Comment] {
@@ -106,6 +111,7 @@ class QueryTest extends SpecsMatchers {
     val oid1 = new ObjectId(d1.toDate, 0, 0)
     val oid2 = new ObjectId(d2.toDate, 0, 0)
     val oid = new ObjectId
+    val ven1 = Venue.createRecord._id(oid1)
 
     // eqs
     Venue where (_.mayor eqs 1)               toString() must_== """db.venues.find({ "mayor" : 1})"""
@@ -113,6 +119,10 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.closed eqs true)           toString() must_== """db.venues.find({ "closed" : true})"""
     Venue where (_._id eqs oid)               toString() must_== ("""db.venues.find({ "_id" : { "$oid" : "%s"}})""" format oid.toString)
     VenueClaim where (_.status eqs ClaimStatus.approved) toString() must_== """db.venueclaims.find({ "status" : "Approved"})"""
+
+    VenueClaim where (_.venueid eqs oid)      toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid.toString)
+    VenueClaim where (_.venueid eqs ven1.id)  toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid1.toString)
+    VenueClaim where (_.venueid eqs ven1)     toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid1.toString)
 
     // neq,lt,gt
     Venue where (_.mayor_count neqs 5) toString() must_== """db.venues.find({ "mayor_count" : { "$ne" : 5}})"""
@@ -465,6 +475,7 @@ class QueryTest extends SpecsMatchers {
     check("""Venue where (_.legacyid size 3)""")
     check("""Venue where (_.popularity at 3 eqs "hi")""")
     check("""Venue where (_.popularity at "a" eqs 3)""")
+    check("""VenueClaim where (_.venueid eqs Tip.createRecord)""")
 
     // Can't select array index
     check("""Venue where (_.legacyid eqs 1) select(_.tags at 0)""")

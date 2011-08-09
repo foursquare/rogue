@@ -11,6 +11,8 @@ import net.liftweb.mongodb.record._
 case class Degrees(value: Double)
 case class LatLong(lat: Double, long: Double)
 
+trait HasMongoForeignObjectId[RefType <: MongoRecord[RefType] with MongoId[RefType]]
+
 object QueryHelpers {
   class DBObjectSerializer extends Serializer[DBObject] {
     val DBObjectClass = classOf[DBObject]

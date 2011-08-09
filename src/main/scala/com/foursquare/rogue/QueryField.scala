@@ -100,6 +100,15 @@ class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId
   def between(d1: DateTime, d2: DateTime) = new QueryClause(field.name, CondOps.Gt -> new ObjectId(d1.toDate, 0, 0), CondOps.Lt -> new ObjectId(d2.toDate, 0, 0))
 }
 
+class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T] with MongoId[T]](override val field: Field[ObjectId, M] with HasMongoForeignObjectId[T])
+  extends ObjectIdQueryField(field) {
+  def eqs(obj: T) = new EqClause(field.name, obj.id)
+  def neqs(obj: T) = new QueryClause(field.name, CondOps.Ne -> obj.id)
+
+  def eqs(id: ObjectId) = new EqClause(field.name, id)
+  def neqs(id: ObjectId) = new QueryClause(field.name, CondOps.Ne -> id)
+}
+
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
   def startsWith(s: String) = new EqClause(field.name, Pattern.compile("^" + Pattern.quote(s)))
   def regexWarningNotIndexed(p: Pattern) = new EqClause(field.name, p)
