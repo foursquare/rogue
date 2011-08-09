@@ -421,6 +421,16 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testFindAndModifyQueryShouldProduceACorrectJSONQueryString {
+    Venue.where(_.legacyid eqs 1).findAndModify(_.venuename setTo "fshq").toString().must_==(
+      """db.venues.findAndModify({ query: { "legid" : 1}, update: { "$set" : { "venuename" : "fshq"}}, new: false, upsert: false })""")
+    Venue.where(_.legacyid eqs 1).orderAsc(_.popularity).findAndModify(_.venuename setTo "fshq").toString().must_==(
+      """db.venues.findAndModify({ query: { "legid" : 1}, sort: { "popularity" : 1}, update: { "$set" : { "venuename" : "fshq"}}, new: false, upsert: false })""")
+    Venue.where(_.legacyid eqs 1).select(_.mayor, _.closed).findAndModify(_.venuename setTo "fshq").toString().must_==(
+      """db.venues.findAndModify({ query: { "legid" : 1}, update: { "$set" : { "venuename" : "fshq"}}, new: false, fields: { "mayor" : 1 , "closed" : 1}, upsert: false })""")
+  }
+
+  @Test
   def testHints {
     Venue where (_.legacyid eqs 1) hint (Venue.idIdx) toString()        must_== """db.venues.find({ "legid" : 1}).hint({ "_id" : 1})"""
     Venue where (_.legacyid eqs 1) hint (Venue.legIdx) toString()       must_== """db.venues.find({ "legid" : 1}).hint({ "legid" : -1})"""

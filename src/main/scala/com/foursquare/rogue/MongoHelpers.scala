@@ -106,6 +106,19 @@ object MongoHelpers {
       )
     }
 
+    def buildFindAndModifyString[R, M <: MongoRecord[M]](mod: BaseFindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
+      val query = mod.query
+      val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(query.meta.collectionName, buildCondition(query.condition)))
+      query.order.foreach(o => sb.append(", sort: " + buildOrder(o).toString))
+      if (remove) sb.append(", remove: true")
+      sb.append(", update: " + buildModify(mod.mod).toString)
+      sb.append(", new: " + returnNew)
+      query.select.foreach(s => sb.append(", fields: " + buildSelect(s).toString))
+      sb.append(", upsert: " + upsert)
+      sb.append(" })")
+      sb.toString
+    }
+
     def buildSignature[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _]): String = {
       val sb = new StringBuilder("db.%s.find(".format(query.meta.collectionName))
       sb.append(buildCondition(query.condition, signature = true).toString)
@@ -158,6 +171,28 @@ object MongoHelpers {
           f(q, m)
         }
       }
+    }
+
+    def findAndModify[M <: MongoRecord[M], R](mod: BaseFindAndModifyQuery[M, R],
+                                              returnNew: Boolean, upsert: Boolean, remove: Boolean)
+                                             (f: DBObject => R): Option[R] = {
+      validator.validateFindAndModify(mod)
+      if (!mod.mod.clauses.isEmpty || remove) {
+        val query = mod.query
+        val cnd = buildCondition(query.condition)
+        val ord = query.order.map(buildOrder)
+        val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
+        val m = buildModify(mod.mod)
+        lazy val description = buildFindAndModifyString(mod, returnNew, upsert, remove)
+
+        runCommand(description, mod.query.meta.mongoIdentifier) {
+          MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll => {
+            val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), remove, m, returnNew, upsert)
+            Option(dbObj).map(f)
+          }}
+        }
+      }
+      else None
     }
 
     def query[M <: MongoRecord[M]](operation: String,

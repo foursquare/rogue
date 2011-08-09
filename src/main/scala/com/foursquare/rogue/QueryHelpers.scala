@@ -34,10 +34,12 @@ object QueryHelpers {
     def warn(msg: => String): Unit
   }
 
-  object NoopQueryLogger extends QueryLogger {
+  class DefaultQueryLogger extends QueryLogger {
     override def log(msg: => String, timeMillis: Long) {}
     override def warn(msg: => String) {}
   }
+
+  object NoopQueryLogger extends DefaultQueryLogger
 
   var logger: QueryLogger = NoopQueryLogger
 
@@ -46,14 +48,18 @@ object QueryHelpers {
     def validateRadius(d: Degrees): Degrees
     def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]): Unit
     def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]): Unit
+    def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]): Unit
   }
 
-  object NoopQueryValidator extends QueryValidator {
+  class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Iterable[T]) {}
     override def validateRadius(d: Degrees) = d
     override def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]) {}
     override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {}
+    override def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]) {}
   }
+
+  object NoopQueryValidator extends DefaultQueryValidator
 
   var validator: QueryValidator = NoopQueryValidator
 

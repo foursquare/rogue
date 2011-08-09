@@ -33,6 +33,12 @@ trait Rogue {
       case q: BaseQuery[_, _, _, _, _, _] => BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped]], MongoModify(Nil))
     }
   }
+  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped](query: AbstractQuery[M, R, Ord, Sel, Lim, Sk]): AbstractFindAndModifyQuery[M, R] = {
+    query match {
+      case q: BaseEmptyQuery[_, _, _, _, _, _] => new EmptyFindAndModifyQuery[M, R]
+      case q: BaseQuery[_, _, _, _, _, _] => BaseFindAndModifyQuery[M, R](q.asInstanceOf[BaseQuery[M, R, Ord, Sel, Lim, Sk]], MongoModify(Nil))
+    }
+  }
 
   implicit def fieldToQueryField[M <: MongoRecord[M], F](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
   implicit def latLongFieldToGeoQueryField[M <: MongoRecord[M]](f: Field[LatLong, M]): GeoQueryField[M] = new GeoQueryField(f)

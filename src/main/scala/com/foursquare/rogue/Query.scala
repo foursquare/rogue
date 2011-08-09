@@ -71,6 +71,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
 
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
   def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
+  def findAndDeleteOne(): Option[R]
 
   def signature(): String
   def explain(): String
@@ -143,7 +144,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped] =
     this.copy(sk = n)
 
-  private def parseDBObject(dbo: DBObject): R = select match {
+  private[rogue] def parseDBObject(dbo: DBObject): R = select match {
     case Some(MongoSelect(Nil, transformer)) =>
       // A MongoSelect clause exists, but has empty fields. Return null.
       // This is used for .exists(), where we just want to check the number
@@ -216,6 +217,11 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
         coll.remove(qry, concern)
       }
     }
+  override def findAndDeleteOne(): Option[R] = {
+    val mod = BaseFindAndModifyQuery(this, MongoModify(Nil))
+    QueryExecutor.findAndModify(mod, returnNew=false, upsert=false, remove=true)(this.parseDBObject _)
+  }
+
   override def toString: String =
     MongoBuilder.buildQueryString("find", this)
   override def signature(): String =
@@ -330,6 +336,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
 
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
   override def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
+  override def findAndDeleteOne(): Option[R] = None
 
   override def toString = "empty query"
   override def signature = "empty query"
@@ -353,6 +360,10 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], create: (F1, F2, F3, F4, F5) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
   override def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], create: (F1, F2, F3, F4, F5, F6) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
 }
+
+/////////////////////////////////////////////////////////
+/// Modify Queries
+/////////////////////////////////////////////////////////
 
 trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
@@ -390,6 +401,50 @@ class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
   override def upsertOne(): Unit = ()
 
   override def toString = "empty modify query"
+}
+
+
+/////////////////////////////////////////////////////////
+/// FindAndModify Queries
+/////////////////////////////////////////////////////////
+
+trait AbstractFindAndModifyQuery[M <: MongoRecord[M], R] {
+  def findAndModify[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+  def and[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+
+  def updateOne(returnNew: Boolean = false): Option[R]
+  def upsertOne(returnNew: Boolean = false): Option[R]
+}
+
+case class BaseFindAndModifyQuery[M <: MongoRecord[M], R](query: BaseQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped],
+                                                          mod: MongoModify) extends AbstractFindAndModifyQuery[M, R] {
+
+  private def addClause[F](clause: M => ModifyClause[F]) = {
+    this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
+  }
+
+  override def findAndModify[F](clause: M => ModifyClause[F]) = addClause(clause)
+  override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+
+  // Always do modifications against master (not query.meta, which could point to slave)
+  override def updateOne(returnNew: Boolean = false): Option[R] = {
+    QueryExecutor.findAndModify(this, returnNew, upsert=false, remove=false)(query.parseDBObject _)
+  }
+  override def upsertOne(returnNew: Boolean = false): Option[R] = {
+    QueryExecutor.findAndModify(this, returnNew, upsert=true, remove=false)(query.parseDBObject _)
+  }
+
+  override def toString = MongoBuilder.buildFindAndModifyString(this, false, false, false)
+}
+
+class EmptyFindAndModifyQuery[M <: MongoRecord[M], R] extends AbstractFindAndModifyQuery[M, R] {
+  override def findAndModify[F](clause: M => ModifyClause[F]) = this
+  override def and[F](clause: M => ModifyClause[F]) = this
+
+  override def updateOne(returnNew: Boolean = false): Option[Nothing] = None
+  override def upsertOne(returnNew: Boolean = false): Option[Nothing] = None
+
+  override def toString = "empty findAndModify query"
 }
 
 class BasePaginatedQuery[M <: MongoRecord[M], R](q: AbstractQuery[M, R, _, _, Unlimited, Unskipped], val countPerPage: Int, val pageNum: Int = 1) {
