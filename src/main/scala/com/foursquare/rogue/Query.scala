@@ -58,6 +58,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
 
   def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long
   def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long
+  def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean
 
   def foreach(f: R => Unit): Unit
   def fetch(): List[R]
@@ -143,6 +144,11 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     this.copy(sk = n)
 
   private def parseDBObject(dbo: DBObject): R = select match {
+    case Some(MongoSelect(Nil, transformer)) =>
+      // A MongoSelect clause exists, but has empty fields. Return null.
+      // This is used for .exists(), where we just want to check the number
+      // of returned results is > 0.
+      transformer(null)
     case Some(MongoSelect(fields, transformer)) =>
       val inst = fields.head.field.owner
       def setInstanceFieldFromDbo(field: Field[_, M]) = {
@@ -170,6 +176,8 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     QueryExecutor.condition("count", this)(meta.count(_))
   override def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
     QueryExecutor.condition("countDistinct", this)(meta.countDistinct(field(meta).field.name, _))
+  override def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean =
+    this.copy(select = Some(MongoSelect[Null, M](Nil, _ => null))).limit(1).fetch().size > 0
   override def foreach(f: R => Unit): Unit =
     QueryExecutor.query("find", this, None)(dbo => f(parseDBObject(dbo)))
   override def fetch(): List[R] = {
@@ -306,6 +314,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
 
   override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
   override def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
+  override def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean = false
 
   override def foreach(f: R => Unit): Unit = ()
   override def fetch(): List[R] = Nil

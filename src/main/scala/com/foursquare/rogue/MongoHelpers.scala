@@ -63,7 +63,11 @@ object MongoHelpers {
       buildSelectFromNames(s.fields.view.map(_.field.name))
     }
 
-    def buildSelectFromNames(names: Iterable[String]): DBObject = {
+    def buildSelectFromNames(_names: Iterable[String]): DBObject = {
+      // If _names is empty, then a MongoSelect clause exists, but has an empty
+      // list of fields. In this case (used for .exists()), we select just the
+      // _id field.
+      val names = if (_names.isEmpty) List("_id") else _names
       val builder = BasicDBObjectBuilder.start
       names.foreach(n => builder.add(n, 1))
       builder.get
