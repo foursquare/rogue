@@ -7,7 +7,7 @@ import java.util.Calendar
 import net.liftweb.common._
 import net.liftweb.mongodb.record._
 import net.liftweb.record._
-import net.liftweb.mongodb.record.field.{MongoCaseClassField, MongoCaseClassListField}
+import net.liftweb.mongodb.record.field.{BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
 
 trait Rogue {
@@ -57,6 +57,8 @@ trait Rogue {
   implicit def listFieldToListModifyField[M <: MongoRecord[M], F](f: Field[List[F], M]): ListModifyField[F, M] = new ListModifyField[F, M](f)
   implicit def cclistFieldToListModifyField[M <: MongoRecord[M], V](f: MongoCaseClassListField[M, V]): CaseClassListModifyField[V, M] =
     new CaseClassListModifyField[V, M](f)
+  implicit def bsonRecordListFieldToBsonRecordListModifyField[B <: MongoRecord[B], M <: MongoRecord[M]](f: BsonRecordListField[M, B]) =
+    new BsonRecordListModifyField[B, M](f)
   implicit def intFieldToIntModifyField[M <: MongoRecord[M]](f: Field[Int, M]): NumericModifyField[Int, M] = new NumericModifyField(f)
   implicit def longFieldToLongModifyField[M <: MongoRecord[M]](f: Field[Long, M]): NumericModifyField[Long, M] = new NumericModifyField(f)
   implicit def enumerationListFieldToEnumerationListModifyField[M <: MongoRecord[M], F <: Enumeration#Value](f: Field[List[F], M]): EnumerationListModifyField[F, M] =

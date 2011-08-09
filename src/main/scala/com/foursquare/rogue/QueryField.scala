@@ -10,7 +10,7 @@ import net.liftweb.json.JsonAST.{JInt, JValue}
 import net.liftweb.http.js.JE.Num
 import net.liftweb.mongodb.record._
 import net.liftweb.record._
-import net.liftweb.mongodb.record.field.{MongoCaseClassField, MongoCaseClassListField}
+import net.liftweb.mongodb.record.field.{BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
 import org.joda.time._
 
@@ -199,6 +199,9 @@ class EnumerationListModifyField[V <: Enumeration#Value, M <: MongoRecord[M]](fi
   override def valueToDB(v: V) = v.toString
 }
 
+class BsonRecordListModifyField[B <: MongoRecord[B], M <: MongoRecord[M]](field: Field[List[B], M]) extends AbstractListModifyField[B, DBObject, M](field) {
+  override def valueToDB(b: B) = b.asDBObject
+}
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Select fields
