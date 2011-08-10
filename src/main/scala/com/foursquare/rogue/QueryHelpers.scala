@@ -48,7 +48,7 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
-    def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]): Unit
+    def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _, _]): Unit
     def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]): Unit
     def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]): Unit
   }
@@ -56,7 +56,7 @@ object QueryHelpers {
   class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
-    override def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]) {}
+    override def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _, _]) {}
     override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {}
     override def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]) {}
   }
@@ -105,4 +105,14 @@ object QueryHelpers {
   def asDBObject[T](x: T): DBObject = {
     JObjectParser.parse(Extraction.decompose(x).asInstanceOf[JObject])
   }
+
+  def orConditionFromQueries(subqueries: List[AbstractQuery[_, _, _, _, _, _, _]]) = {
+    MongoHelpers.OrCondition(subqueries.flatMap(subquery => {
+      subquery match {
+        case q: BaseQuery[_, _, _, _, _, _, _] => Some(q.condition)
+        case _ => None
+      }
+    }))
+  }
+
 }

@@ -8,39 +8,36 @@ import net.liftweb.mongodb.record._
 import scala.collection.immutable.ListMap
 
 object MongoHelpers {
-  sealed abstract class MongoCondition
-  case class AndCondition(clauses: List[QueryClause[_]]) extends MongoCondition
-  case class OrCondition(conditions: List[MongoCondition]) extends MongoCondition
+  case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition])
+  case class OrCondition(conditions: List[AndCondition])
 
   sealed case class MongoOrder(terms: List[(String, Boolean)])
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
   sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R)
 
-  object MongoBuilder {
-    def buildCondition(q: MongoCondition, signature: Boolean = false): DBObject = q match {
-      case AndCondition(clauses) =>
-        val builder = BasicDBObjectBuilder.start
-        (clauses.groupBy(_.fieldName)
-                .toList
-                .sortBy { case (fieldName, _) => -clauses.indexWhere(_.fieldName == fieldName) }
-                .foreach { case (name, cs) =>
-          // Equality clauses look like { a : 3 }
-          // but all other clauses look like { a : { $op : 3 }}
-          // and can be chained like { a : { $gt : 2, $lt: 6 }}.
-          // So if there is any equality clause, apply it (only) to the builder;
-          // otherwise, chain the clauses.
-          cs.filter(_.isInstanceOf[EqClause[_]]).headOption.map(_.extend(builder, signature)).getOrElse {
-            builder.push(name)
-            cs.foreach(_.extend(builder, signature))
-            builder.pop
-          }
-        })
-        builder.get
+  private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
 
-      case OrCondition(conditions) =>
-        // Room for optimization here by manipulating the AST, e.g.,
-        // { $or : [ { a : 1 }, { a : 2 } ] }  ==>  { a : { $in : [ 1, 2 ] }}
-        BasicDBObjectBuilder.start("$or", QueryHelpers.list(conditions.map(buildCondition(_, signature = false)))).get
+  object MongoBuilder {
+    def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
+      val builder = BasicDBObjectBuilder.start
+      (cond.clauses.groupBy(_.fieldName)
+              .toList
+              .sortBy { case (fieldName, _) => -cond.clauses.indexWhere(_.fieldName == fieldName) }
+              .foreach { case (name, cs) =>
+        // Equality clauses look like { a : 3 }
+        // but all other clauses look like { a : { $op : 3 }}
+        // and can be chained like { a : { $gt : 2, $lt: 6 }}.
+        // So if there is any equality clause, apply it (only) to the builder;
+        // otherwise, chain the clauses.
+        cs.filter(_.isInstanceOf[EqClause[_]]).headOption.map(_.extend(builder, signature)).getOrElse {
+          builder.push(name)
+          cs.foreach(_.extend(builder, signature))
+          builder.pop
+        }
+      })
+      // Optional $or clause (only one per "and" chain)
+      cond.orCondition.foreach(or => builder.add("$or", QueryHelpers.list(or.conditions.map(buildCondition(_, signature = false)))))
+      builder.get
     }
 
     def buildOrder(o: MongoOrder): DBObject = {
@@ -81,7 +78,7 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: BaseQuery[M, R, _, _, _, _]): String = {
+    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: PlainBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
@@ -119,7 +116,7 @@ object MongoHelpers {
       sb.toString
     }
 
-    def buildSignature[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _]): String = {
+    def buildSignature[R, M <: MongoRecord[M]](query: PlainBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.find(".format(query.meta.collectionName))
       sb.append(buildCondition(query.condition, signature = true).toString)
       sb.append(")")
@@ -148,7 +145,7 @@ object MongoHelpers {
     }
 
     def condition[M <: MongoRecord[M], T](operation: String,
-                                          query: BaseQuery[M, _, _, _, _, _])
+                                          query: PlainBaseQuery[M, _])
                                          (f: DBObject => T): T = {
 
       validator.validateQuery(query)
@@ -196,7 +193,7 @@ object MongoHelpers {
     }
 
     def query[M <: MongoRecord[M]](operation: String,
-                                   query: BaseQuery[M, _, _, _, _, _],
+                                   query: PlainBaseQuery[M, _],
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
       doQuery(operation, query){cursor =>
@@ -207,7 +204,7 @@ object MongoHelpers {
     }
 
     def explain[M <: MongoRecord[M]](operation: String,
-                                     query: BaseQuery[M, _, _, _, _, _]): String = {
+                                     query: PlainBaseQuery[M, _]): String = {
       var explanation = ""
       doQuery(operation, query){cursor =>
         explanation += cursor.explain.toString
@@ -216,7 +213,7 @@ object MongoHelpers {
     }
 
     private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
-                                   query: BaseQuery[M, _, _, _, _, _])
+                                   query: PlainBaseQuery[M, _])
                                   (f: DBCursor  => Unit): Unit = {
 
       validator.validateQuery(query)

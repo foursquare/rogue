@@ -64,7 +64,9 @@ class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] with V
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
 }
-object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim]
+object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim] {
+  override def fieldOrder = List(status, _id, userid, venueid)
+}
 
 case class OneComment(timestamp: String, userid: Long, comment: String)
 class Comment extends MongoRecord[Comment] with MongoId[Comment] {
@@ -450,6 +452,48 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testOrQueryShouldProduceACorrectJSONQueryString {
+    // Simple $or
+    Venue.or(
+        _.where(_.legacyid eqs 1),
+        _.where(_.mayor eqs 2))
+      .toString() must_== """db.venues.find({ "$or" : [ { "legid" : 1} , { "mayor" : 2}]})"""
+
+    // Compound $or
+    Venue.where(_.tags size 0)
+         .or(
+           _.where(_.legacyid eqs 1),
+           _.where(_.mayor eqs 2))
+      .toString() must_== """db.venues.find({ "tags" : { "$size" : 0} , "$or" : [ { "legid" : 1} , { "mayor" : 2}]})"""
+
+    // $or with additional "and" clauses
+    Venue.where(_.tags size 0)
+         .or(
+           _.where(_.legacyid eqs 1).and(_.closed eqs true),
+           _.where(_.mayor eqs 2))
+      .toString() must_== """db.venues.find({ "tags" : { "$size" : 0} , "$or" : [ { "legid" : 1 , "closed" : true} , { "mayor" : 2}]})"""
+
+    // Nested $or
+    Venue.or(
+        _.where(_.legacyid eqs 1)
+         .or(
+            _.where(_.closed eqs true),
+            _.where(_.closed exists false)),
+        _.where(_.mayor eqs 2))
+      .toString() must_== """db.venues.find({ "$or" : [ { "legid" : 1 , "$or" : [ { "closed" : true} , { "closed" : { "$exists" : false}}]} , { "mayor" : 2}]})"""
+
+    // OrQuery syntax
+    val q1 = Venue.where(_.legacyid eqs 1)
+    val q2 = Venue.where(_.legacyid eqs 2)
+    OrQuery(q1, q2) toString() must_==
+        """db.venues.find({ "$or" : [ { "legid" : 1} , { "legid" : 2}]})"""
+    OrQuery(q1, q2).and(_.mayor eqs 0) toString() must_==
+        """db.venues.find({ "mayor" : 0 , "$or" : [ { "legid" : 1} , { "legid" : 2}]})"""
+    OrQuery(q1, q2.or(_.where(_.closed eqs true), _.where(_.closed exists false))) toString() must_==
+        """db.venues.find({ "$or" : [ { "legid" : 1} , { "legid" : 2 , "$or" : [ { "closed" : true} , { "closed" : { "$exists" : false}}]}]})"""
+  }
+
+  @Test
   def testHints {
     Venue where (_.legacyid eqs 1) hint (Venue.idIdx) toString()        must_== """db.venues.find({ "legid" : 1}).hint({ "_id" : 1})"""
     Venue where (_.legacyid eqs 1) hint (Venue.legIdx) toString()       must_== """db.venues.find({ "legid" : 1}).hint({ "legid" : -1})"""
@@ -543,6 +587,14 @@ class QueryTest extends SpecsMatchers {
     check("""Venue limit(1) bulkDelete_!!""")
     check("""Venue skip(3) bulkDelete_!!""")
     check("""Venue select(_.legacyid) bulkDelete_!!""")
+
+    // Or
+    check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2)) or (_ where (_.closed eqs true), _ where (_.closed exists false))""")
+    check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) select (_.venuename))""")
+    check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) orderAsc (_.venuename))""")
+    check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) limit 10)""")
+    check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) skip 10)""")
+    check("""OrQuery(Venue.where(_.legacyid eqs 1), Tip.where(_.legacyid eqs 2))""")
   }
 
   class Compiler {
@@ -581,7 +633,8 @@ class QueryTest extends SpecsMatchers {
     interpreter.interpret("""import com.foursquare.rogue.Rogue._""")
 
     def typeCheck(code: String): Boolean = {
-      interpreter.interpret(code) match {
+      val thunked = "() => { %s }".format(code)
+      interpreter.interpret(thunked) match {
         case InterpreterResults.Success => true
         case InterpreterResults.Error => false
         case InterpreterResults.Incomplete => throw new Exception("Incomplete code snippet")
