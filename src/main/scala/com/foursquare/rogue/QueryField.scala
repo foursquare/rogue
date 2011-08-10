@@ -52,8 +52,8 @@ object MongoType extends Enumeration {
 class QueryField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def eqs(v: V) = new EqClause(field.name, v)
   def neqs(v: V) = new QueryClause(field.name, CondOps.Ne -> v)
-  def in[L <% List[V]](vs: L) = QueryHelpers.inListClause(field.name, vs)
-  def nin[L <% List[V]](vs: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(vs))
+  def in[L <% Traversable[V]](vs: L) = QueryHelpers.inListClause(field.name, vs)
+  def nin[L <% Traversable[V]](vs: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(vs))
   def exists(b: Boolean) = new QueryClause(field.name, CondOps.Exists -> b)
   def hastype(t: MongoType.Value) = new QueryClause(field.name, CondOps.Type -> t.id)
 }
@@ -67,8 +67,8 @@ class CalendarQueryField[M <: MongoRecord[M]](val field: Field[java.util.Calenda
 class EnumerationQueryField[M <: MongoRecord[M], E <: Enumeration#Value](val field: Field[E, M]) {
   def eqs(e: E) = new EqClause(field.name, e.toString)
   def neqs(e: E) = new QueryClause(field.name, CondOps.Ne -> e.toString)
-  def in[L <% Iterable[E]](es: L) = QueryHelpers.inListClause(field.name, es.map(_.toString))
-  def nin[L <% Iterable[E]](es: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(es.map(_.toString)))
+  def in[L <% Traversable[E]](es: L) = QueryHelpers.inListClause(field.name, es.map(_.toString))
+  def nin[L <% Traversable[E]](es: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(es.map(_.toString)))
 }
 
 class GeoQueryField[M <: MongoRecord[M]](val field: Field[LatLong, M]) {
@@ -107,11 +107,11 @@ class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
 
 abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Field[List[V], M]) {
   def valueToDB(v: V): DB
-  def valuesToDB(vs: Iterable[V]) = vs.map(valueToDB _)
+  def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
 
-  def all(vs: Iterable[V]) = QueryHelpers.allListClause(field.name, valuesToDB(vs))
-  def in(vs: Iterable[V]) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
-  def nin(vs: Iterable[V]) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(valuesToDB(vs)))
+  def all(vs: Traversable[V]) = QueryHelpers.allListClause(field.name, valuesToDB(vs))
+  def in(vs: Traversable[V]) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
+  def nin(vs: Traversable[V]) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(valuesToDB(vs)))
   def size(s: Int) = new QueryClause(field.name, CondOps.Size -> s)
   def contains(v: V) = new EqClause(field.name, valueToDB(v))
   def notcontains(v: V) = new QueryClause(field.name, CondOps.Ne -> valueToDB(v))
