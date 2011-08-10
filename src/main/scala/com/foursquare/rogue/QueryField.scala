@@ -183,17 +183,17 @@ class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
 
 abstract class AbstractListModifyField[V, DB, M <: MongoRecord[M]](val field: Field[List[V], M]) {
   def valueToDB(v: V): DB
-  def valuesToDB(vs: List[V]) = vs.map(valueToDB _)
+  def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
 
-  def setTo(vs: List[V]) = new ModifyClause(ModOps.Set, field.name -> QueryHelpers.list(valuesToDB(vs)))
+  def setTo(vs: Traversable[V]) = new ModifyClause(ModOps.Set, field.name -> QueryHelpers.list(valuesToDB(vs)))
   def push(v: V) = new ModifyClause(ModOps.Push, field.name -> valueToDB(v))
-  def pushAll(vs: List[V]) = new ModifyClause(ModOps.PushAll, field.name -> QueryHelpers.list(valuesToDB(vs)))
+  def pushAll(vs: Traversable[V]) = new ModifyClause(ModOps.PushAll, field.name -> QueryHelpers.list(valuesToDB(vs)))
   def addToSet(v: V) = new ModifyClause(ModOps.AddToSet, field.name -> valueToDB(v))
-  def addToSet(vs: List[V]) = new ModifyAddEachClause(field.name, valuesToDB(vs))
+  def addToSet(vs: Traversable[V]) = new ModifyAddEachClause(field.name, valuesToDB(vs))
   def popFirst = new ModifyClause(ModOps.Pop, field.name -> -1)
   def popLast = new ModifyClause(ModOps.Pop, field.name -> 1)
   def pull(v: V) = new ModifyClause(ModOps.Pull, field.name -> valueToDB(v))
-  def pullAll(vs: List[V]) = new ModifyClause(ModOps.PullAll, field.name -> QueryHelpers.list(valuesToDB(vs)))
+  def pullAll(vs: Traversable[V]) = new ModifyClause(ModOps.PullAll, field.name -> QueryHelpers.list(valuesToDB(vs)))
 }
 
 class ListModifyField[V, M <: MongoRecord[M]](field: Field[List[V], M]) extends AbstractListModifyField[V, V, M](field) {

@@ -68,7 +68,7 @@ class ModifyClause[V](val operator: ModOps.Value, fields: (String, V)*) {
   }
 }
 
-class ModifyAddEachClause[V](fieldName: String, values: List[V]) extends ModifyClause[V](ModOps.AddToSet) {
+class ModifyAddEachClause[V](fieldName: String, values: Traversable[V]) extends ModifyClause[V](ModOps.AddToSet) {
   override def extend(q: BasicDBObjectBuilder): BasicDBObjectBuilder = {
     q.push(fieldName).add("$each", QueryHelpers.list(values)).pop
   }

@@ -308,7 +308,7 @@ class QueryTest extends SpecsMatchers {
 
     // List of BsonRecords with nested Enumeration
     val claims = List(VenueClaim.createRecord.userid(1).status(ClaimStatus.approved))
-    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims) toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "_id" : { "$oid" : "%s"} , "uid" : 1}]}}""".format(claims.head.id) + suffix
+    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims) toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "_id" : { "$oid" : "%s"} , "uid" : 1 , "vid" : { "$oid" : "%s"}}]}}""".format(claims.head.id, claims.head.venueid.value) + suffix
 
     // Map
     val m = Map("foo" -> 1L)
