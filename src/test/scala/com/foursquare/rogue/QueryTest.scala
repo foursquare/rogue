@@ -143,6 +143,13 @@ class QueryTest extends SpecsMatchers {
     VenueClaim where (_.status in List(ClaimStatus.approved, ClaimStatus.pending))  toString() must_== """db.venueclaims.find({ "status" : { "$in" : [ "Approved" , "Pending approval"]}})"""
     VenueClaim where (_.status nin List(ClaimStatus.approved, ClaimStatus.pending)) toString() must_== """db.venueclaims.find({ "status" : { "$nin" : [ "Approved" , "Pending approval"]}})"""
 
+    VenueClaim where (_.venueid in List(ven1.id))  toString() must_== ("""db.venueclaims.find({ "vid" : { "$in" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
+    VenueClaim where (_.venueid in List(ven1))     toString() must_== ("""db.venueclaims.find({ "vid" : { "$in" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
+
+    VenueClaim where (_.venueid nin List(ven1.id))   toString() must_== ("""db.venueclaims.find({ "vid" : { "$nin" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
+    VenueClaim where (_.venueid nin List(ven1))      toString() must_== ("""db.venueclaims.find({ "vid" : { "$nin" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
+
+
     // exists
     Venue where (_._id exists true) toString() must_== """db.venues.find({ "_id" : { "$exists" : true}})"""
 
@@ -485,7 +492,17 @@ class QueryTest extends SpecsMatchers {
     check("""Venue where (_.legacyid size 3)""")
     check("""Venue where (_.popularity at 3 eqs "hi")""")
     check("""Venue where (_.popularity at "a" eqs 3)""")
+
+    // first make sure that each type-safe foreign key works as expected
+    check("""VenueClaim where (_.venueid eqs Venue.createRecord)""", true)
+    check("""VenueClaim where (_.venueid neqs Venue.createRecord)""", true)
+    check("""VenueClaim where (_.venueid in List(Venue.createRecord))""", true)
+    check("""VenueClaim where (_.venueid nin List(Venue.createRecord))""", true)
+    // now check that they reject invalid args
     check("""VenueClaim where (_.venueid eqs Tip.createRecord)""")
+    check("""VenueClaim where (_.venueid neqs Tip.createRecord)""")
+    check("""VenueClaim where (_.venueid in List(Tip.createRecord))""")
+    check("""VenueClaim where (_.venueid nin List(Tip.createRecord))""")
 
     // Can't select array index
     check("""Venue where (_.legacyid eqs 1) select(_.tags at 0)""")

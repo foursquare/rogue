@@ -102,11 +102,17 @@ class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId
 
 class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T] with MongoId[T]](override val field: Field[ObjectId, M] with HasMongoForeignObjectId[T])
   extends ObjectIdQueryField(field) {
-  def eqs(obj: T) = new EqClause(field.name, obj.id)
-  def neqs(obj: T) = new QueryClause(field.name, CondOps.Ne -> obj.id)
+
+  def eqs[S](obj: S)(implicit ev: S =:= T) = new EqClause(field.name, obj.id)
+  def neqs[S](obj: S)(implicit ev: S =:= T) = new QueryClause(field.name, CondOps.Ne -> obj.id)
+
+  def in[L,S](objs: L)(implicit view: L => Traversable[S], ev: S =:= T) = QueryHelpers.inListClause(field.name, objs.map(_.id))
+  def nin[L,S](objs: L)(implicit view: L => Traversable[S], ev: S =:= T) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(objs.map(_.id)))
 
   def eqs(id: ObjectId) = new EqClause(field.name, id)
   def neqs(id: ObjectId) = new QueryClause(field.name, CondOps.Ne -> id)
+  def in[L <: Traversable[ObjectId]](ids: L) = QueryHelpers.inListClause(field.name, ids)
+  def nin[L <: Traversable[ObjectId]](ids: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(ids))
 }
 
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
