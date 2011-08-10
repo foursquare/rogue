@@ -251,6 +251,13 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skip(10)           toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(Some(10))  toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
+
+
+    // Other operations.
+    Venue where (_.mayor eqs 1) buildString(QueryOperations.Find) must_== """db.venues.find({ "mayor" : 1})"""
+    Venue where (_.mayor eqs 1) buildString(QueryOperations.Count) must_== """db.venues.count({ "mayor" : 1})"""
+    Venue where (_.mayor eqs 1) buildString(QueryOperations.CountDistinct) must_== """db.venues.distinct({ "mayor" : 1}).length"""
+    Venue where (_.mayor eqs 1) buildString(QueryOperations.Remove) must_== """db.venues.remove({ "mayor" : 1})"""
   }
 
   @Test
@@ -317,6 +324,11 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) noop() toString() must_== query + "{ }" + suffix
     Venue where (_.legacyid eqs 1) noop() modify (_.venuename setTo "fshq") toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
     Venue where (_.legacyid eqs 1) noop() and (_.venuename setTo "fshq")    toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
+
+    // Other operations
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") buildString(ModifyQueryOperations.UpdateOne) must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") buildString(ModifyQueryOperations.UpdateMulti) must_== query + """{ "$set" : { "venuename" : "fshq"}}, false, true)"""
+    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") buildString(ModifyQueryOperations.UpsertOne) must_== query + """{ "$set" : { "venuename" : "fshq"}}, true, false)"""
   }
 
   @Test
