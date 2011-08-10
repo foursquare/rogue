@@ -37,12 +37,45 @@ abstract sealed class Unskipped extends MaybeSkipped
 // Builders
 /////////////////////////////////////////////////////////////////////////////
 
-object QueryOperations extends Enumeration(0) {
-  val Find = Value("Find")
-  val Count = Value("Count")
-  val CountDistinct = Value("CountDistinct")
-  val Remove = Value("Remove")
+// A mongo command consists of a query (a set of criteria) and an operation (what to do for those criteria).
+trait QueryCommand[T, M <: MongoRecord[M], R] {
+  def query: BaseQuery[M, R, _, _, _, _]
+  def execute(f: DBObject => T): T
+  def functionPrefix: String
+  def functionSuffix: String = ""
+
+  override def toString(): String = MongoBuilder.buildQueryCommandString(this)
+  def signature: String = MongoBuilder.buildQueryCommandSignature(this)
 }
+
+case class FindQueryCommand[M <: MongoRecord[M], R](
+    query: BaseQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped], batchSize: Option[Int])
+        extends QueryCommand[Unit, M, R] {
+  def execute(f: DBObject => Unit): Unit = QueryExecutor.query(this, batchSize)(f)
+  def functionPrefix: String = "find("
+}
+
+trait ConditionQueryCommand[T, M <: MongoRecord[M], R] extends QueryCommand[T, M, R] {
+  def execute(f: DBObject => T): T = QueryExecutor.condition(this)(f)
+}
+
+case class RemoveQueryCommand[M <: MongoRecord[M], R](
+    query: BaseQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped]) extends ConditionQueryCommand[Unit, M, R] {
+  def functionPrefix: String = "remove("
+}
+
+case class CountQueryCommand[M <: MongoRecord[M], R](
+    query: BaseQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped]) extends ConditionQueryCommand[Long, M, R] {
+  def functionPrefix: String = "count("
+}
+
+case class CountDistinctQueryCommand[M <: MongoRecord[M], R](
+    query: BaseQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped], fieldName: String)
+        extends ConditionQueryCommand[Long, M, R] {
+  def functionPrefix: String = """distinct("%s", """.format(fieldName)
+  override def functionSuffix = ".length"
+}
+
 
 trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped] {
   def meta: M with MongoMetaRecord[M]
@@ -77,7 +110,6 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
   def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit
 
-  def buildString(operation: QueryOperations.Value): String
   def signature(): String
   def explain(): String
 
@@ -174,14 +206,16 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   }
 
   override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    QueryExecutor.condition(QueryOperations.Count, this)(meta.count(_))
-  override def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    QueryExecutor.condition(QueryOperations.CountDistinct, this)(meta.countDistinct(field(meta).field.name, _))
+    CountQueryCommand(this).execute(meta.count(_))
+  override def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = {
+    val fieldName: String = field(meta).field.name
+    CountDistinctQueryCommand(this, fieldName).execute(meta.countDistinct(fieldName, _))
+  }
   override def foreach(f: R => Unit): Unit =
-    QueryExecutor.query(QueryOperations.Find, this, None)(dbo => f(parseDBObject(dbo)))
+    FindQueryCommand(this, None).execute(dbo => f(parseDBObject(dbo)))
   override def fetch(): List[R] = {
     val rv = new ListBuffer[R]
-    QueryExecutor.query(QueryOperations.Find, this, None)(dbo => rv += parseDBObject(dbo))
+    FindQueryCommand(this, None).execute(dbo => rv += parseDBObject(dbo))
     rv.toList
   }
   override def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] =
@@ -190,7 +224,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     val rv = new ListBuffer[T]
     val buf = new ListBuffer[R]
 
-    QueryExecutor.query(QueryOperations.Find, this, Some(batchSize)) { dbo =>
+    FindQueryCommand(this, Some(batchSize)).execute { dbo =>
       buf += parseDBObject(dbo)
       drainBuffer(buf, rv, f, batchSize)
     }
@@ -208,22 +242,18 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
 
   // Always do modifications against master (not meta, which could point to slave)
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
-    QueryExecutor.condition(QueryOperations.Remove, this)(master.bulkDelete_!!(_))
+    RemoveQueryCommand(this).execute(master.bulkDelete_!!(_))
   override def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
-    QueryExecutor.condition(QueryOperations.Remove, this) { qry =>
+    RemoveQueryCommand(this).execute { qry =>
       MongoDB.useCollection(master.mongoIdentifier, master.collectionName) { coll =>
         coll.remove(qry, concern)
       }
     }
 
-  override def buildString(operation: QueryOperations.Value): String = MongoBuilder.buildQueryString(operation, this)
-
-  // Since we don't know which operation will be called, we hard-code Find here.
-  override def toString: String = MongoBuilder.buildQueryString(QueryOperations.Find, this)
-
-  override def signature(): String = MongoBuilder.buildSignature(this)
-
-  override def explain(): String = QueryExecutor.explain(QueryOperations.Find, this)
+  // Since we don't know which command will be called on this query, we hard-code Find here.
+  override def toString: String = FindQueryCommand(this, None).toString
+  override def signature(): String = FindQueryCommand(this, None).signature
+  override def explain(): String = QueryExecutor.explain(FindQueryCommand(this, None))
 
   override def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(maxScan = Some(max))
   override def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(comment = Some(c))
@@ -332,7 +362,6 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
   override def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit = ()
 
-  override def buildString(operation: QueryOperations.Value) = "empty query"
   override def toString = "empty query"
   override def signature = "empty query"
   override def explain = "{}"

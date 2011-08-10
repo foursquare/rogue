@@ -13,6 +13,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import org.junit._
 import org.specs.SpecsMatchers
+import com.foursquare.rogue.MongoHelpers.AndCondition
 
 /////////////////////////////////////////////////
 // Sample records for testing
@@ -252,12 +253,16 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skipOpt(Some(10))  toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
 
-
     // Other operations.
-    Venue where (_.mayor eqs 1) buildString(QueryOperations.Find) must_== """db.venues.find({ "mayor" : 1})"""
-    Venue where (_.mayor eqs 1) buildString(QueryOperations.Count) must_== """db.venues.count({ "mayor" : 1})"""
-    Venue where (_.mayor eqs 1) buildString(QueryOperations.CountDistinct) must_== """db.venues.distinct({ "mayor" : 1}).length"""
-    Venue where (_.mayor eqs 1) buildString(QueryOperations.Remove) must_== """db.venues.remove({ "mayor" : 1})"""
+
+    // For these tests we need a BaseQuery, while the DSL methods return an AbstractQuery.
+    val baseQuery = BaseQuery[Venue, Venue, Unordered, Unselected, Unlimited, Unskipped](
+      Venue, None, None, None, None, None, AndCondition(List(new EqClause[Long]("mayor", 1L))) , None, None)
+
+    FindQueryCommand(baseQuery, None) toString() must_== """db.venues.find({ "mayor" : 1})"""
+    CountQueryCommand(baseQuery) toString() must_== """db.venues.count({ "mayor" : 1})"""
+    RemoveQueryCommand(baseQuery) toString() must_== """db.venues.remove({ "mayor" : 1})"""
+    CountDistinctQueryCommand(baseQuery, "tags") toString() must_== """db.venues.distinct("tags", { "mayor" : 1}).length"""
   }
 
   @Test

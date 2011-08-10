@@ -77,15 +77,9 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildQueryString[R, M <: MongoRecord[M]](operation: QueryOperations.Value,
-                                                 query: BaseQuery[M, R, _, _, _, _]): String = {
-      val functionName: String = operation match {
-        case QueryOperations.Find => "find"
-        case QueryOperations.Count => "count"
-        case QueryOperations.CountDistinct => "distinct"
-        case QueryOperations.Remove => "remove"
-      }
-      val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, functionName))
+    def buildQueryCommandString[M <: MongoRecord[M], R](command: QueryCommand[_, M, R]): String = {
+      val query = command.query
+      val sb = new StringBuilder("db.%s.%s".format(command.query.meta.collectionName, command.functionPrefix))
       sb.append(buildCondition(query.condition, signature = false).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
       sb.append(")")
@@ -95,17 +89,17 @@ object MongoHelpers {
       query.maxScan.foreach(m => sb.append("._addSpecial(\"$maxScan\", %d)" format m))
       query.comment.foreach(c => sb.append("._addSpecial(\"$comment\", \"%s\")" format c))
       query.hint.foreach(h => sb.append(".hint(%s)" format buildHint(h).toString))
-      if (operation == QueryOperations.CountDistinct) {
-        sb.append(".length")
-      }
+      sb.append(command.functionSuffix)
       sb.toString
     }
 
-    def buildSignature[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _]): String = {
-      val sb = new StringBuilder("db.%s.find(".format(query.meta.collectionName))
+    def buildQueryCommandSignature[M <: MongoRecord[M], R](command: QueryCommand[_, M, R]): String = {
+      val query = command.query
+      val sb = new StringBuilder("db.%s.%s".format(command.query.meta.collectionName, command.functionPrefix))
       sb.append(buildCondition(query.condition, signature = true).toString)
       sb.append(")")
       query.order.foreach(o => sb.append(".sort(%s)" format buildOrder(o).toString))
+      sb.append(command.functionSuffix)
       sb.toString
     }
 
@@ -126,17 +120,16 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[M <: MongoRecord[M], T](operation: QueryOperations.Value,
-                                                          query: BaseQuery[M, _, _, _, _, _])(f: => T): T = {
+    private[rogue] def runCommand[M <: MongoRecord[M], T](command: QueryCommand[_, M, _])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
       } catch {
         case e: Exception =>
-          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(query.meta.mongoIdentifier,
-            buildQueryString(operation, query), System.currentTimeMillis - start), e)
+          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(command.query.meta.mongoIdentifier,
+            command.toString, System.currentTimeMillis - start), e)
       } finally {
-        logger.log(operation, query, System.currentTimeMillis - start)
+        logger.log(command, System.currentTimeMillis - start)
       }
     }
 
@@ -154,13 +147,11 @@ object MongoHelpers {
       }
     }
 
-    def condition[M <: MongoRecord[M], T](operation: QueryOperations.Value,
-                                          query: BaseQuery[M, _, _, _, _, _])
-                                         (f: DBObject => T): T = {
-
+    def condition[M <: MongoRecord[M], T](command: QueryCommand[_, M, _])(f: DBObject => T): T = {
+      val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
-      runCommand(operation, query) {
+      runCommand(command) {
         f(cnd)
       }
     }
@@ -180,37 +171,31 @@ object MongoHelpers {
       }
     }
 
-    def query[M <: MongoRecord[M]](operation: QueryOperations.Value,
-                                   query: BaseQuery[M, _, _, _, _, _],
-                                   batchSize: Option[Int])
-                                  (f: DBObject => Unit): Unit = {
-      doQuery(operation, query){cursor =>
+    def query[M <: MongoRecord[M]](command: QueryCommand[_, M, _], batchSize: Option[Int])(f: DBObject => Unit): Unit = {
+      doQuery(command) { cursor =>
         batchSize.foreach(cursor batchSize _)
         while (cursor.hasNext)
           f(cursor.next)
       }
     }
 
-    def explain[M <: MongoRecord[M]](operation: QueryOperations.Value,
-                                     query: BaseQuery[M, _, _, _, _, _]): String = {
+    def explain[M <: MongoRecord[M]](command: QueryCommand[_, M, _]): String = {
       var explanation = ""
-      doQuery(operation, query) { cursor =>
+      doQuery(command) { cursor =>
         explanation += cursor.explain.toString
       }
       explanation
     }
 
-    private[rogue] def doQuery[M <: MongoRecord[M]](operation: QueryOperations.Value,
-                                   query: BaseQuery[M, _, _, _, _, _])
-                                  (f: DBCursor  => Unit): Unit = {
-
+    private[rogue] def doQuery[M <: MongoRecord[M]](command: QueryCommand[_, M, _])(f: DBCursor  => Unit): Unit = {
+      val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
       val ord = query.order.map(buildOrder)
       val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
       val hnt = query.hint.map(buildHint)
 
-      runCommand(operation, query) {
+      runCommand(command) {
         MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
           try {
             val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
@@ -222,7 +207,7 @@ object MongoHelpers {
           } catch {
             case e: Exception =>
               throw new RogueException("Mongo query on %s [%s] failed".format(coll.getDB().getMongo().toString(),
-                buildQueryString(operation, query)), e)
+                command.toString), e)
           }
         }
       }

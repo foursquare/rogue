@@ -30,12 +30,12 @@ object QueryHelpers {
     (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
-    def log(operation: QueryOperations.Value, query: BaseQuery[_, _, _, _, _, _], timeMillis: Long): Unit = {
+    def log(command: QueryCommand[_, _, _], timeMillis: Long) {
       // Default implementation, for backwards compatibility until we remove the deprecated log() method.
-      log(query.buildString(operation), timeMillis)
+      log(command.toString, timeMillis)
     }
 
-    def log(operation: ModifyQueryOperations.Value, query: BaseModifyQuery[_], timeMillis: Long): Unit = {
+    def log(operation: ModifyQueryOperations.Value, query: BaseModifyQuery[_], timeMillis: Long) {
       log(query.buildString(operation), timeMillis)
     }
 
@@ -44,6 +44,7 @@ object QueryHelpers {
   }
 
   object NoopQueryLogger extends QueryLogger {
+    override def log(command: QueryCommand[_, _, _], timeMillis: Long) {}
     @deprecated("Replaced by structured logging") override def log(msg: => String, timeMillis: Long) {}
     @deprecated("Unused") override def warn(msg: => String) {}
   }
