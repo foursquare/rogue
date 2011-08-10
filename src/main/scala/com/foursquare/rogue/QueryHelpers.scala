@@ -30,13 +30,22 @@ object QueryHelpers {
     (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
-    def log(msg: => String, timeMillis: Long): Unit
-    def warn(msg: => String): Unit
+    def log(operation: QueryOperations.Value, query: BaseQuery[_, _, _, _, _, _], timeMillis: Long): Unit = {
+      // Default implementation, for backwards compatibility until we remove the deprecated log() method.
+      log(query.buildString(operation), timeMillis)
+    }
+
+    def log(operation: ModifyQueryOperations.Value, query: BaseModifyQuery[_], timeMillis: Long): Unit = {
+      log(query.buildString(operation), timeMillis)
+    }
+
+    @deprecated("Replaced by structured logging") def log(msg: => String, timeMillis: Long): Unit
+    @deprecated("Unused") def warn(msg: => String): Unit
   }
 
   object NoopQueryLogger extends QueryLogger {
-    override def log(msg: => String, timeMillis: Long) {}
-    override def warn(msg: => String) {}
+    @deprecated("Replaced by structured logging") override def log(msg: => String, timeMillis: Long) {}
+    @deprecated("Unused") override def warn(msg: => String) {}
   }
 
   var logger: QueryLogger = NoopQueryLogger

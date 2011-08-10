@@ -37,6 +37,12 @@ abstract sealed class Unskipped extends MaybeSkipped
 // Builders
 /////////////////////////////////////////////////////////////////////////////
 
+object QueryOperations extends Enumeration(0) {
+  val Find = Value("Find")
+  val Count = Value("Count")
+  val CountDistinct = Value("CountDistinct")
+  val Remove = Value("Remove")
+}
 
 trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped] {
   def meta: M with MongoMetaRecord[M]
@@ -167,14 +173,14 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   }
 
   override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    QueryExecutor.condition("count", this)(meta.count(_))
+    QueryExecutor.condition(QueryOperations.Count, this)(meta.count(_))
   override def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    QueryExecutor.condition("countDistinct", this)(meta.countDistinct(field(meta).field.name, _))
+    QueryExecutor.condition(QueryOperations.CountDistinct, this)(meta.countDistinct(field(meta).field.name, _))
   override def foreach(f: R => Unit): Unit =
-    QueryExecutor.query("find", this, None)(dbo => f(parseDBObject(dbo)))
+    QueryExecutor.query(QueryOperations.Find, this, None)(dbo => f(parseDBObject(dbo)))
   override def fetch(): List[R] = {
     val rv = new ListBuffer[R]
-    QueryExecutor.query("find", this, None)(dbo => rv += parseDBObject(dbo))
+    QueryExecutor.query(QueryOperations.Find, this, None)(dbo => rv += parseDBObject(dbo))
     rv.toList
   }
   override def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] =
@@ -183,7 +189,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     val rv = new ListBuffer[T]
     val buf = new ListBuffer[R]
 
-    QueryExecutor.query("find", this, Some(batchSize)) { dbo =>
+    QueryExecutor.query(QueryOperations.Find, this, Some(batchSize)) { dbo =>
       buf += parseDBObject(dbo)
       drainBuffer(buf, rv, f, batchSize)
     }
@@ -201,19 +207,20 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
 
   // Always do modifications against master (not meta, which could point to slave)
   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
-    QueryExecutor.condition("remove", this)(master.bulkDelete_!!(_))
+    QueryExecutor.condition(QueryOperations.Remove, this)(master.bulkDelete_!!(_))
   override def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
-    QueryExecutor.condition("remove", this) { qry =>
+    QueryExecutor.condition(QueryOperations.Remove, this) { qry =>
       MongoDB.useCollection(master.mongoIdentifier, master.collectionName) { coll =>
         coll.remove(qry, concern)
       }
     }
-  override def toString: String =
-    MongoBuilder.buildQueryString("find", this)
-  override def signature(): String =
-    MongoBuilder.buildSignature(this)
-  override def explain(): String =
-    QueryExecutor.explain("find", this)
+
+  // Since we don't know which operation will be called, we hard-code Find here.
+  override def toString: String = MongoBuilder.buildQueryString(QueryOperations.Find, this)
+
+  override def signature(): String = MongoBuilder.buildSignature(this)
+
+  override def explain(): String = QueryExecutor.explain(QueryOperations.Find, this)
 
   override def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(maxScan = Some(max))
   override def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk] = this.copy(comment = Some(c))
@@ -242,6 +249,8 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])(implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk] = {
     selectCase(f1, f2, f3, f4, f5, f6, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6) => (f1, f2, f3, f4, f5, f6))
   }
+
+  def buildString(operation: QueryOperations.Value): String = MongoBuilder.buildQueryString(operation, this)
 
   def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk] = {
     val inst = meta.createRecord
@@ -345,6 +354,12 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], create: (F1, F2, F3, F4, F5, F6) => CC)(implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk]
 }
 
+object ModifyQueryOperations extends Enumeration(0) {
+  val UpdateMulti = Value("UpdateMulti")
+  val UpdateOne = Value("UpdateOne")
+  val UpsertOne = Value("UpsertOne")
+}
+
 trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
   def and[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
@@ -356,7 +371,6 @@ trait AbstractModifyQuery[M <: MongoRecord[M]] {
 
 case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped],
                                                 mod: MongoModify) extends AbstractModifyQuery[M] {
-
   private def addClause[F](clause: M => ModifyClause[F]) = {
     this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
@@ -365,11 +379,14 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
 
   // Always do modifications against master (not query.meta, which could point to slave)
-  override def updateMulti(): Unit = QueryExecutor.modify("updateMulti", this)(query.master.updateMulti(_, _))
-  override def updateOne(): Unit = QueryExecutor.modify("updateOne", this)(query.master.update(_, _))
-  override def upsertOne(): Unit = QueryExecutor.modify("upsertOne", this)(query.master.upsert(_, _))
+  override def updateMulti(): Unit = QueryExecutor.modify(ModifyQueryOperations.UpdateMulti, this)(query.master.updateMulti(_, _))
+  override def updateOne(): Unit = QueryExecutor.modify(ModifyQueryOperations.UpdateOne, this)(query.master.update(_, _))
+  override def upsertOne(): Unit = QueryExecutor.modify(ModifyQueryOperations.UpsertOne, this)(query.master.upsert(_, _))
 
-  override def toString = MongoBuilder.buildModifyString(this)
+  // Since we don't know which operation will be called, we hard-code UpdateOne here.
+  override def toString = buildString(ModifyQueryOperations.UpdateOne)
+
+  def buildString(operation: ModifyQueryOperations.Value): String = MongoBuilder.buildModifyQueryString(operation, this)
 }
 
 class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {

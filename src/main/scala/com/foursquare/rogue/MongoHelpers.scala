@@ -77,8 +77,15 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: BaseQuery[M, R, _, _, _, _]): String = {
-      val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
+    def buildQueryString[R, M <: MongoRecord[M]](operation: QueryOperations.Value,
+                                                 query: BaseQuery[M, R, _, _, _, _]): String = {
+      val functionName: String = operation match {
+        case QueryOperations.Find => "find"
+        case QueryOperations.Count => "count"
+        case QueryOperations.CountDistinct => "distinct"
+        case QueryOperations.Remove => "remove"
+      }
+      val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, functionName))
       sb.append(buildCondition(query.condition, signature = false).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
       sb.append(")")
@@ -88,18 +95,10 @@ object MongoHelpers {
       query.maxScan.foreach(m => sb.append("._addSpecial(\"$maxScan\", %d)" format m))
       query.comment.foreach(c => sb.append("._addSpecial(\"$comment\", \"%s\")" format c))
       query.hint.foreach(h => sb.append(".hint(%s)" format buildHint(h).toString))
+      if (operation == QueryOperations.CountDistinct) {
+        sb.append(".length")
+      }
       sb.toString
-    }
-
-    def buildModifyString[R, M <: MongoRecord[M]](modify: BaseModifyQuery[M],
-                                                  upsert: Boolean = false, multi: Boolean = false): String = {
-      "db.%s.update(%s, %s, %s, %s)".format(
-        modify.query.meta.collectionName,
-        buildCondition(modify.query.condition, signature = false).toString,
-        buildModify(modify.mod),
-        upsert,
-        multi
-      )
     }
 
     def buildSignature[R, M <: MongoRecord[M]](query: BaseQuery[M, R, _, _, _, _]): String = {
@@ -109,6 +108,17 @@ object MongoHelpers {
       query.order.foreach(o => sb.append(".sort(%s)" format buildOrder(o).toString))
       sb.toString
     }
+
+    def buildModifyQueryString(operation: ModifyQueryOperations.Value,
+                               modify: BaseModifyQuery[_]): String = {
+      "db.%s.update(%s, %s, %s, %s)".format(
+        modify.query.meta.collectionName,
+        buildCondition(modify.query.condition, signature = false).toString,
+        buildModify(modify.mod),
+        operation == ModifyQueryOperations.UpsertOne,
+        operation == ModifyQueryOperations.UpdateMulti
+      )
+    }
   }
 
   object QueryExecutor {
@@ -116,47 +126,61 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[T](description: => String, id: MongoIdentifier)(f: => T): T = runCommand(description, id.toString)(f)
-
-    private[rogue] def runCommand[T](description: => String, id: String)(f: => T): T = {
+    private[rogue] def runCommand[M <: MongoRecord[M], T](operation: QueryOperations.Value,
+                                                          query: BaseQuery[M, _, _, _, _, _])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
       } catch {
         case e: Exception =>
-          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(id, description, System.currentTimeMillis - start), e)
+          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(query.meta.mongoIdentifier,
+            buildQueryString(operation, query), System.currentTimeMillis - start), e)
       } finally {
-        logger.log(description, System.currentTimeMillis - start)
+        logger.log(operation, query, System.currentTimeMillis - start)
       }
     }
 
-    def condition[M <: MongoRecord[M], T](operation: String,
+    private[rogue] def runCommand[M <: MongoRecord[M], T](operation: ModifyQueryOperations.Value,
+                                                          query: BaseModifyQuery[M])(f: => T): T = {
+      val start = System.currentTimeMillis
+      try {
+        f
+      } catch {
+        case e: Exception =>
+          throw new RogueException("Mongo modify query on %s [%s] failed after %d ms".format(query.query.meta.mongoIdentifier,
+            buildModifyQueryString(operation, query), System.currentTimeMillis - start), e)
+      } finally {
+        logger.log(operation, query, System.currentTimeMillis - start)
+      }
+    }
+
+    def condition[M <: MongoRecord[M], T](operation: QueryOperations.Value,
                                           query: BaseQuery[M, _, _, _, _, _])
                                          (f: DBObject => T): T = {
 
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
-      runCommand(query.toString, query.meta.mongoIdentifier){
+      runCommand(operation, query) {
         f(cnd)
       }
     }
 
-    def modify[M <: MongoRecord[M], T](operation: String,
+    def modify[M <: MongoRecord[M], T](operation: ModifyQueryOperations.Value,
                                        mod: BaseModifyQuery[M])
                                       (f: (DBObject, DBObject) => T): Unit = {
       validator.validateModify(mod)
       if (!mod.mod.clauses.isEmpty) {
         val q = buildCondition(mod.query.condition)
         val m = buildModify(mod.mod)
-        lazy val description = buildModifyString(mod, operation == "upsertOne", operation == "updateMulti")
+        lazy val description = buildModifyQueryString(operation, mod)
 
-        runCommand(description, mod.query.meta.mongoIdentifier) {
+        runCommand(operation, mod) {
           f(q, m)
         }
       }
     }
 
-    def query[M <: MongoRecord[M]](operation: String,
+    def query[M <: MongoRecord[M]](operation: QueryOperations.Value,
                                    query: BaseQuery[M, _, _, _, _, _],
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
@@ -167,16 +191,16 @@ object MongoHelpers {
       }
     }
 
-    def explain[M <: MongoRecord[M]](operation: String,
+    def explain[M <: MongoRecord[M]](operation: QueryOperations.Value,
                                      query: BaseQuery[M, _, _, _, _, _]): String = {
       var explanation = ""
-      doQuery(operation, query){cursor =>
+      doQuery(operation, query) { cursor =>
         explanation += cursor.explain.toString
       }
       explanation
     }
 
-    private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
+    private[rogue] def doQuery[M <: MongoRecord[M]](operation: QueryOperations.Value,
                                    query: BaseQuery[M, _, _, _, _, _])
                                   (f: DBCursor  => Unit): Unit = {
 
@@ -186,9 +210,7 @@ object MongoHelpers {
       val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
       val hnt = query.hint.map(buildHint)
 
-      lazy val description = buildQueryString(operation, query)
-
-      runCommand(description, query.meta.mongoIdentifier){
+      runCommand(operation, query) {
         MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
           try {
             val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
@@ -199,7 +221,8 @@ object MongoHelpers {
             f(cursor)
           } catch {
             case e: Exception =>
-              throw new RogueException("Mongo query on %s [%s] failed".format(coll.getDB().getMongo().toString(), description), e)
+              throw new RogueException("Mongo query on %s [%s] failed".format(coll.getDB().getMongo().toString(),
+                buildQueryString(operation, query)), e)
           }
         }
       }
