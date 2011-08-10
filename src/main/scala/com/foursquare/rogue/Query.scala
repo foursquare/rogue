@@ -51,7 +51,7 @@ trait QueryCommand[T, M <: MongoRecord[M], R] {
 case class FindQueryCommand[M <: MongoRecord[M], R](
     query: BaseQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped], batchSize: Option[Int])
         extends QueryCommand[Unit, M, R] {
-  def execute(f: DBObject => Unit): Unit = QueryExecutor.query(this, batchSize)(f)
+  def execute(f: DBObject => Unit): Unit = QueryExecutor.query(this)(f)
   def functionPrefix: String = "find("
 }
 
@@ -391,6 +391,25 @@ object ModifyQueryOperations extends Enumeration(0) {
   val UpsertOne = Value("UpsertOne")
 }
 
+trait ModifyQueryCommand[T, M <: MongoRecord[M]] {
+  def modify: BaseModifyQuery[M]
+  def execute(f: (DBObject, DBObject) => T): Unit = QueryExecutor.modify(this)(f)
+  val upsert: Boolean = false
+  val multi: Boolean = false
+
+  override def toString(): String = MongoBuilder.buildModifyQueryCommandString(this)
+  def signature: String = MongoBuilder.buildModifyQueryCommandSignature(this)
+}
+
+case class UpdateOneCommand[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) extends ModifyQueryCommand[Unit, M]
+case class UpsertOneCommand[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) extends ModifyQueryCommand[Unit, M] {
+  override val upsert = true
+}
+case class UpdateMultiCommand[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) extends ModifyQueryCommand[Unit, M] {
+  override val multi = true
+}
+
+
 trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
   def and[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
@@ -398,8 +417,6 @@ trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def updateMulti(): Unit
   def updateOne(): Unit
   def upsertOne(): Unit
-
-  def buildString(operation: ModifyQueryOperations.Value): String
 }
 
 case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped],
@@ -412,14 +429,12 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
 
   // Always do modifications against master (not query.meta, which could point to slave)
-  override def updateMulti(): Unit = QueryExecutor.modify(ModifyQueryOperations.UpdateMulti, this)(query.master.updateMulti(_, _))
-  override def updateOne(): Unit = QueryExecutor.modify(ModifyQueryOperations.UpdateOne, this)(query.master.update(_, _))
-  override def upsertOne(): Unit = QueryExecutor.modify(ModifyQueryOperations.UpsertOne, this)(query.master.upsert(_, _))
-
-  override def buildString(operation: ModifyQueryOperations.Value): String = MongoBuilder.buildModifyQueryString(operation, this)
+  override def updateMulti(): Unit = UpdateMultiCommand(this).execute(query.master.updateMulti(_, _))
+  override def updateOne(): Unit = UpdateOneCommand(this).execute(query.master.update(_, _))
+  override def upsertOne(): Unit = UpsertOneCommand(this).execute(query.master.upsert(_, _))
 
   // Since we don't know which operation will be called, we hard-code UpdateOne here.
-  override def toString = buildString(ModifyQueryOperations.UpdateOne)
+  override def toString = UpdateOneCommand(this).toString
 }
 
 class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
@@ -430,7 +445,6 @@ class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
   override def updateOne(): Unit = ()
   override def upsertOne(): Unit = ()
 
-  override def buildString(operation: ModifyQueryOperations.Value) = "empty modify query"
   override def toString = "empty modify query"
 }
 

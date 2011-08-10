@@ -34,9 +34,9 @@ object QueryHelpers {
       // Default implementation, for backwards compatibility until we remove the deprecated log() method.
       log(command.toString, timeMillis)
     }
-
-    def log(operation: ModifyQueryOperations.Value, query: BaseModifyQuery[_], timeMillis: Long) {
-      log(query.buildString(operation), timeMillis)
+    def log(command: ModifyQueryCommand[_, _], timeMillis: Long) {
+      // Default implementation, for backwards compatibility until we remove the deprecated log() method.
+      log(command.toString, timeMillis)
     }
 
     @deprecated("Replaced by structured logging") def log(msg: => String, timeMillis: Long): Unit

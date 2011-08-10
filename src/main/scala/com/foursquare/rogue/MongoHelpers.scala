@@ -103,14 +103,20 @@ object MongoHelpers {
       sb.toString
     }
 
-    def buildModifyQueryString(operation: ModifyQueryOperations.Value,
-                               modify: BaseModifyQuery[_]): String = {
+    def buildModifyQueryCommandString[M <: MongoRecord[M]](command: ModifyQueryCommand[_, M]): String =
+      doBuildModifyQueryCommandString(command, false)
+
+    def buildModifyQueryCommandSignature[M <: MongoRecord[M]](command: ModifyQueryCommand[_, M]): String =
+      doBuildModifyQueryCommandString(command, true)
+
+    private def doBuildModifyQueryCommandString[M <: MongoRecord[M]](command: ModifyQueryCommand[_, M], signature: Boolean): String = {
+      val modify = command.modify
       "db.%s.update(%s, %s, %s, %s)".format(
         modify.query.meta.collectionName,
-        buildCondition(modify.query.condition, signature = false).toString,
+        buildCondition(modify.query.condition, signature).toString,
         buildModify(modify.mod),
-        operation == ModifyQueryOperations.UpsertOne,
-        operation == ModifyQueryOperations.UpdateMulti
+        command.upsert,
+        command.multi
       )
     }
   }
@@ -120,7 +126,7 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[M <: MongoRecord[M], T](command: QueryCommand[_, M, _])(f: => T): T = {
+    private[rogue] def runCommand[T, M <: MongoRecord[M]](command: QueryCommand[_, M, _])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
@@ -133,21 +139,20 @@ object MongoHelpers {
       }
     }
 
-    private[rogue] def runCommand[M <: MongoRecord[M], T](operation: ModifyQueryOperations.Value,
-                                                          query: BaseModifyQuery[M])(f: => T): T = {
+    private[rogue] def runModifyCommand[T, M <: MongoRecord[M]](command: ModifyQueryCommand[_, M])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
       } catch {
         case e: Exception =>
-          throw new RogueException("Mongo modify query on %s [%s] failed after %d ms".format(query.query.meta.mongoIdentifier,
-            buildModifyQueryString(operation, query), System.currentTimeMillis - start), e)
+          throw new RogueException("Mongo modify query on %s [%s] failed after %d ms".format(command.modify.query.meta.mongoIdentifier,
+            command.toString, System.currentTimeMillis - start), e)
       } finally {
-        logger.log(operation, query, System.currentTimeMillis - start)
+        logger.log(command, System.currentTimeMillis - start)
       }
     }
 
-    def condition[M <: MongoRecord[M], T](command: QueryCommand[_, M, _])(f: DBObject => T): T = {
+    def condition[M <: MongoRecord[M], T](command: ConditionQueryCommand[_, M, _])(f: DBObject => T): T = {
       val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
@@ -156,22 +161,22 @@ object MongoHelpers {
       }
     }
 
-    def modify[M <: MongoRecord[M], T](operation: ModifyQueryOperations.Value,
-                                       mod: BaseModifyQuery[M])
+    def modify[M <: MongoRecord[M], T](command: ModifyQueryCommand[T, M])
                                       (f: (DBObject, DBObject) => T): Unit = {
-      validator.validateModify(mod)
-      if (!mod.mod.clauses.isEmpty) {
-        val q = buildCondition(mod.query.condition)
-        val m = buildModify(mod.mod)
-        lazy val description = buildModifyQueryString(operation, mod)
+      val modify = command.modify
+      validator.validateModify(modify)
+      if (!modify.mod.clauses.isEmpty) {
+        val q = buildCondition(modify.query.condition)
+        val m = buildModify(modify.mod)
 
-        runCommand(operation, mod) {
+        runModifyCommand(command) {
           f(q, m)
         }
       }
     }
 
-    def query[M <: MongoRecord[M]](command: QueryCommand[_, M, _], batchSize: Option[Int])(f: DBObject => Unit): Unit = {
+    def query[M <: MongoRecord[M]](command: FindQueryCommand[M, _])(f: DBObject => Unit): Unit = {
+      val batchSize = command.batchSize
       doQuery(command) { cursor =>
         batchSize.foreach(cursor batchSize _)
         while (cursor.hasNext)
@@ -179,7 +184,7 @@ object MongoHelpers {
       }
     }
 
-    def explain[M <: MongoRecord[M]](command: QueryCommand[_, M, _]): String = {
+    def explain[M <: MongoRecord[M]](command: FindQueryCommand[M, _]): String = {
       var explanation = ""
       doQuery(command) { cursor =>
         explanation += cursor.explain.toString
@@ -187,7 +192,7 @@ object MongoHelpers {
       explanation
     }
 
-    private[rogue] def doQuery[M <: MongoRecord[M]](command: QueryCommand[_, M, _])(f: DBCursor  => Unit): Unit = {
+    private[rogue] def doQuery[M <: MongoRecord[M]](command: FindQueryCommand[M, _])(f: DBCursor  => Unit): Unit = {
       val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)

@@ -13,7 +13,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import org.junit._
 import org.specs.SpecsMatchers
-import com.foursquare.rogue.MongoHelpers.AndCondition
+import com.foursquare.rogue.MongoHelpers.{MongoModify, AndCondition}
 
 /////////////////////////////////////////////////
 // Sample records for testing
@@ -331,9 +331,15 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) noop() and (_.venuename setTo "fshq")    toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
 
     // Other operations
-    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") buildString(ModifyQueryOperations.UpdateOne) must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
-    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") buildString(ModifyQueryOperations.UpdateMulti) must_== query + """{ "$set" : { "venuename" : "fshq"}}, false, true)"""
-    Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") buildString(ModifyQueryOperations.UpsertOne) must_== query + """{ "$set" : { "venuename" : "fshq"}}, true, false)"""
+
+    // For these tests we need a BaseModifyQuery, while the DSL methods return an AbstractModifyQuery.
+    val baseQuery = BaseQuery[Venue, Venue, Unordered, Unselected, Unlimited, Unskipped](
+      Venue, None, None, None, None, None, AndCondition(List(new EqClause[Long]("legid", 1L))) , None, None)
+    val baseModifyQuery = BaseModifyQuery[Venue](baseQuery, MongoModify(List(new ModifyClause[String](ModOps.Set, ("venuename", "fshq") ))))
+
+    UpdateOneCommand(baseModifyQuery).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
+    UpsertOneCommand(baseModifyQuery).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, true, false)"""
+    UpdateMultiCommand(baseModifyQuery).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, false, true)"""
   }
 
   @Test
