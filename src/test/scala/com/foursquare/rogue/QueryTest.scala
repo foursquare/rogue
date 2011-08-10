@@ -37,6 +37,7 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] {
   object last_updated extends DateTimeField(this)
   object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
   object claims extends BsonRecordListField(this, VenueClaim)
+  object lastClaim extends BsonRecordField(this, VenueClaim)
 }
 object Venue extends Venue with MongoMetaRecord[Venue] {
   object CustomIndex extends IndexModifier("custom")
@@ -306,9 +307,10 @@ class QueryTest extends SpecsMatchers {
     // Enumeration list
     OAuthConsumer modify (_.privileges addToSet ConsumerPrivilege.awardBadges) toString() must_== """db.oauthconsumers.update({ }, { "$addToSet" : { "privileges" : "Award badges"}}""" + suffix
 
-    // List of BsonRecords with nested Enumeration
+    // BsonRecordField and BsonRecordListField with nested Enumeration
     val claims = List(VenueClaim.createRecord.userid(1).status(ClaimStatus.approved))
-    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims) toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "_id" : { "$oid" : "%s"} , "uid" : 1 , "vid" : { "$oid" : "%s"}}]}}""".format(claims.head.id, claims.head.venueid.value) + suffix
+    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims)         toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "_id" : { "$oid" : "%s"} , "uid" : 1 , "vid" : { "$oid" : "%s"}}]}}""".format(claims.head.id, claims.head.venueid.value) + suffix
+    Venue where (_.legacyid eqs 1) modify (_.lastClaim setTo claims.head) toString() must_== query + """{ "$set" : { "lastClaim" : { "status" : "Approved" , "_id" : { "$oid" : "%s"} , "uid" : 1 , "vid" : { "$oid" : "%s"}}}}""".format(claims.head.id, claims.head.venueid.value) + suffix
 
     // Map
     val m = Map("foo" -> 1L)

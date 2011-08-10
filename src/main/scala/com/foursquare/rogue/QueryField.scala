@@ -10,7 +10,7 @@ import net.liftweb.json.JsonAST.{JInt, JValue}
 import net.liftweb.http.js.JE.Num
 import net.liftweb.mongodb.record._
 import net.liftweb.record._
-import net.liftweb.mongodb.record.field.{BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
+import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
 import org.joda.time._
 
@@ -179,6 +179,10 @@ class GeoModifyField[M <: MongoRecord[M]](val field: Field[LatLong, M]) {
 
 class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
+}
+
+class BsonRecordModifyField[B <: MongoRecord[B], M <: MongoRecord[M]](field: Field[B, M]) {
+  def setTo(b: B) = new ModifyClause(ModOps.Set, field.name -> b.asDBObject)
 }
 
 abstract class AbstractListModifyField[V, DB, M <: MongoRecord[M]](val field: Field[List[V], M]) {
