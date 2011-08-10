@@ -46,7 +46,7 @@ object QueryHelpers {
   var logger: QueryLogger = NoopQueryLogger
 
   trait QueryValidator {
-    def validateList[T](xs: Iterable[T]): Unit
+    def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
     def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]): Unit
     def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]): Unit
@@ -54,7 +54,7 @@ object QueryHelpers {
   }
 
   class DefaultQueryValidator extends QueryValidator {
-    override def validateList[T](xs: Iterable[T]) {}
+    override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
     override def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _]) {}
     override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {}
@@ -65,13 +65,13 @@ object QueryHelpers {
 
   var validator: QueryValidator = NoopQueryValidator
 
-  def makeJavaList[T](sl: Iterable[T]): java.util.List[T] = {
+  def makeJavaList[T](sl: Traversable[T]): java.util.List[T] = {
     val list = new java.util.ArrayList[T]()
     for (id <- sl) list.add(id)
     list
   }
 
-  def list[T](vs: Iterable[T]): java.util.List[T] = {
+  def list[T](vs: Traversable[T]): java.util.List[T] = {
     validator.validateList(vs)
     makeJavaList(vs)
   }
@@ -88,14 +88,14 @@ object QueryHelpers {
     map
   }
 
-  def inListClause[V](fieldName: String, vs: Iterable[V]) = {
+  def inListClause[V](fieldName: String, vs: Traversable[V]) = {
     if (vs.isEmpty)
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
       new QueryClause(fieldName, CondOps.In -> QueryHelpers.list(vs))
   }
 
-  def allListClause[V](fieldName: String, vs: Iterable[V]) = {
+  def allListClause[V](fieldName: String, vs: Traversable[V]) = {
     if (vs.isEmpty)
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
