@@ -1,5 +1,23 @@
 ## Release Notes
 
+# 1.0.18
+
+- findAndModify support
+- $or query support
+- efficient .exists query method (thanks Jorge!)
+- support for BsonRecordField and BsonRecordListField (thanks Marc!)
+- type-safe foreign key condtions, e.g., Tip.where(_.venueid eqs venueObj) (thanks dtaylor!)
+
+# 1.0.17
+
+- blockingBulkDelete_!! which takes a WriteConcern
+- more uniform query logging
+
+# 1.0.16
+
+- skipOpt query modifier
+- use built-in interpreter for type checking tests
+
 # 1.0.15
 
 - .toString produces runnable javascript commands for mongodb console

@@ -76,26 +76,28 @@ For "modify" query objects
 
 ## Releases
 
-The latest release is 1.0.15. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.0.18. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.15:
+Lots of new features in 1.0.18:
+
+- findAndModify support
+- $or query support
+- efficient .exists query method (thanks Jorge!)
+- support for BsonRecordField and BsonRecordListField (thanks Marc!)
+- type-safe foreign key condtions, e.g., Tip.where(_.venueid eqs venueObj) (thanks dtaylor!)
+
+Please see [QueryTest.scala](https://github.com/foursquare/rogue/blob/master/src/test/scala/com/foursquare/rogue/QueryTest.scala) for examples of these new features.
+
+Other recent notable changes:
 
 - .toString produces runnable javascript commands for mongodb console
 - added tests for constructions that should not compile
 - selectCase() builder method for select()ing via case class
-- support for $nin (nin) and $ne (notcontains) on list fields
-- unchecked warnings cleanup
-
-Other recent notable changes:
-
+- added blockingBulkDelete_!! method which takes a WriteConcern
 - index hinting support
 - support for selecting subfields
 - support for $maxScan and $comment addSpecial parameters on find() queries
-- always specify field names to return in the query; if select() was not specified, use all field names from the model
 - explain() method on BaseQuery (thanks tjulien!)
-- support for select()ing up to 6 fields
-- added hooks for full query validation
-- support for $type and $mod query operators
 - query signatures: string version of a query with all values blanked out
 - support for indicating when a query clause is intended to hit an index (for runtime index checking, if you wish to implement it)
 
