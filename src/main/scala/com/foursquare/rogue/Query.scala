@@ -10,7 +10,7 @@ import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record._
 import net.liftweb.record.Field
 import scala.collection.mutable.ListBuffer
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{ListMap, StringOps}
 
 /////////////////////////////////////////////////////////////////////////////
 // Phantom types
@@ -45,6 +45,8 @@ trait MongoCommand[T] {
   def query: Rogue.PlainQuery[_, _]
   def execute(): T
   def signature: String
+
+  lazy val name = this.getClass.getSimpleName.stripSuffix("Command").toLowerCase
 }
 
 // A query + simple operations such as find, count, remove.
@@ -58,32 +60,30 @@ trait QueryCommand[T, M <: MongoRecord[M], R] extends MongoCommand[T] {
   override def toString: String = MongoBuilder.buildQueryCommandString(this)
 }
 
-case class FindQueryCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R],
-                                                    batchSize: Option[Int])
-                                                   (f: DBObject => Unit) extends QueryCommand[Unit, M, R] {
+case class FindCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R], batchSize: Option[Int])
+                                              (f: DBObject => Unit) extends QueryCommand[Unit, M, R] {
   def execute(): Unit = QueryExecutor.query(this)(f)
   def functionPrefix: String = "find("
 }
 
-trait ConditionQueryCommand[T, M <: MongoRecord[M], R] extends QueryCommand[T, M, R] {
+trait ConditionCommand[T, M <: MongoRecord[M], R] extends QueryCommand[T, M, R] {
   val f: DBObject => T
 
   def execute(): T = QueryExecutor.condition(this)(f)
 }
 
-case class RemoveQueryCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R])
-                                                     (val f: DBObject => Unit) extends ConditionQueryCommand[Unit, M, R] {
+case class RemoveCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R])
+                                                (val f: DBObject => Unit) extends ConditionCommand[Unit, M, R] {
   def functionPrefix: String = "remove("
 }
 
-case class CountQueryCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R])
-                                                    (val f: DBObject => Long) extends ConditionQueryCommand[Long, M, R] {
+case class CountCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R])
+                                               (val f: DBObject => Long) extends ConditionCommand[Long, M, R] {
   def functionPrefix: String = "count("
 }
 
-case class CountDistinctQueryCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R],
-                                                             fieldName: String)
-                                                            (val f: DBObject => Long) extends ConditionQueryCommand[Long, M, R] {
+case class CountDistinctCommand[M <: MongoRecord[M], R](query: Rogue.PlainQuery[M, R], fieldName: String)
+                                                       (val f: DBObject => Long) extends ConditionCommand[Long, M, R] {
   def functionPrefix: String = """distinct("%s", """.format(fieldName)
   override def functionSuffix = ".length"
 }
@@ -180,23 +180,23 @@ case class BasicQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeS
   }
 
   def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    if (isEmpty) 0 else CountQueryCommand(this)(meta.count(_)).execute()
+    if (isEmpty) 0 else CountCommand(this)(meta.count(_)).execute()
 
   def countDistinct[V](field: M => QueryField[V, M])(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
   if (isEmpty) 0 else {
     val fieldName: String = field(meta).field.name
-    CountDistinctQueryCommand(this, fieldName)(meta.countDistinct(fieldName, _)).execute()
+    CountDistinctCommand(this, fieldName)(meta.countDistinct(fieldName, _)).execute()
   }
 
   def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean =
     if (isEmpty) false else (this.copy(select = Some(MongoSelect[M, Null](Nil, _ => null))).limit(1).fetch().size > 0)
 
   def foreach(f: R => Unit): Unit =
-    if (!isEmpty) FindQueryCommand(this, None)(dbo => f(parseDBObject(dbo))).execute()
+    if (!isEmpty) FindCommand(this, None)(dbo => f(parseDBObject(dbo))).execute()
 
   def fetch(): List[R] = if (isEmpty) Nil else {
     val rv = new ListBuffer[R]
-    FindQueryCommand(this, None)(dbo => rv += parseDBObject(dbo)).execute()
+    FindCommand(this, None)(dbo => rv += parseDBObject(dbo)).execute()
     rv.toList
   }
 
@@ -207,7 +207,7 @@ case class BasicQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeS
     val rv = new ListBuffer[T]
     val buf = new ListBuffer[R]
 
-    FindQueryCommand(this, Some(batchSize))({ dbo =>
+    FindCommand(this, Some(batchSize))({ dbo =>
       buf += parseDBObject(dbo)
       drainBuffer(buf, rv, f, batchSize)
     }).execute()
@@ -227,11 +227,11 @@ case class BasicQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeS
 
   // Always do modifications against master (not meta, which could point to slave)
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
-    if (!isEmpty) RemoveQueryCommand(this)(master.bulkDelete_!!(_)).execute()
+    if (!isEmpty) RemoveCommand(this)(master.bulkDelete_!!(_)).execute()
 
   def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected, ev2: Lim =:= Unlimited, ev3: Sk =:= Unskipped): Unit =
     if (!isEmpty) {
-      RemoveQueryCommand(this)({ qry =>
+      RemoveCommand(this)({ qry =>
         MongoDB.useCollection(master.mongoIdentifier, master.collectionName) { coll =>
           coll.remove(qry, concern)
         }
@@ -239,9 +239,9 @@ case class BasicQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeS
     }
 
   // Since we don't know which command will be called on this query, we hard-code Find here.
-  override def toString: String = FindQueryCommand(this, None)( _ => ()).toString
-  def signature(): String = FindQueryCommand(this, None)( _ => ()).signature
-  def explain(): String = if (isEmpty) "{}" else QueryExecutor.explain(FindQueryCommand(this, None)( _ => ()))
+  override def toString: String = FindCommand(this, None)( _ => ()).toString
+  def signature(): String = FindCommand(this, None)( _ => ()).signature
+  def explain(): String = if (isEmpty) "{}" else QueryExecutor.explain(FindCommand(this, None)( _ => ()))
 
   def findAndDeleteOne(): Option[R] = if (isEmpty) None else {
     val mod = FindAndModifyQuery(this, MongoModify(Nil))

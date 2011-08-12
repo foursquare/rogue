@@ -158,7 +158,7 @@ object MongoHelpers {
       }
     }
 
-    def condition[M <: MongoRecord[M], T](command: ConditionQueryCommand[T, M, _])(f: DBObject => T): T = {
+    def condition[M <: MongoRecord[M], T](command: ConditionCommand[T, M, _])(f: DBObject => T): T = {
       val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
@@ -203,7 +203,7 @@ object MongoHelpers {
       else None
     }
 
-    def query[M <: MongoRecord[M]](command: FindQueryCommand[M, _])(f: DBObject => Unit): Unit = {
+    def query[M <: MongoRecord[M]](command: FindCommand[M, _])(f: DBObject => Unit): Unit = {
       val batchSize = command.batchSize
       doQuery(command) { cursor =>
         batchSize.foreach(cursor batchSize _)
@@ -212,7 +212,7 @@ object MongoHelpers {
       }
     }
 
-    def explain[M <: MongoRecord[M]](command: FindQueryCommand[M, _]): String = {
+    def explain[M <: MongoRecord[M]](command: FindCommand[M, _]): String = {
       var explanation = ""
       doQuery(command) { cursor =>
         explanation += cursor.explain.toString
@@ -220,7 +220,7 @@ object MongoHelpers {
       explanation
     }
 
-    private[rogue] def doQuery[M <: MongoRecord[M]](command: FindQueryCommand[M, _])(f: DBCursor  => Unit): Unit = {
+    private[rogue] def doQuery[M <: MongoRecord[M]](command: FindCommand[M, _])(f: DBCursor  => Unit): Unit = {
       val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)

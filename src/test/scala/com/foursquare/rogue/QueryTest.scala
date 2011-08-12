@@ -266,10 +266,10 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
 
     // Other operations.
-    FindQueryCommand(Venue where (_.mayor eqs 1), None)(_ => ()) toString() must_== """db.venues.find({ "mayor" : 1})"""
-    CountQueryCommand(Venue where (_.mayor eqs 1))(_ => 0) toString() must_== """db.venues.count({ "mayor" : 1})"""
-    RemoveQueryCommand(Venue where (_.mayor eqs 1))(_ => ()) toString() must_== """db.venues.remove({ "mayor" : 1})"""
-    CountDistinctQueryCommand(Venue where (_.mayor eqs 1), "tags")(_ => 0) toString() must_== """db.venues.distinct("tags", { "mayor" : 1}).length"""
+    FindCommand(Venue where (_.mayor eqs 1), None)(_ => ()) toString() must_== """db.venues.find({ "mayor" : 1})"""
+    CountCommand(Venue where (_.mayor eqs 1))(_ => 0) toString() must_== """db.venues.count({ "mayor" : 1})"""
+    RemoveCommand(Venue where (_.mayor eqs 1))(_ => ()) toString() must_== """db.venues.remove({ "mayor" : 1})"""
+    CountDistinctCommand(Venue where (_.mayor eqs 1), "tags")(_ => 0) toString() must_== """db.venues.distinct("tags", { "mayor" : 1}).length"""
   }
 
   @Test
@@ -518,6 +518,18 @@ class QueryTest extends SpecsMatchers {
 
     maybeLimit(1, None) toString() must_== """db.venues.find({ "legid" : 1})"""
     maybeLimit(1, Some(5)) toString() must_== """db.venues.find({ "legid" : 1}).limit(5)"""
+  }
+
+  @Test
+  def testCommandNamesShouldBeAsExpected {
+    FindCommand(Venue where (_.legacyid eqs 1), None)(_ => ()).name must_== "find"
+    RemoveCommand(Venue where (_.legacyid eqs 1))(_ => ()).name must_== "remove"
+    CountCommand(Venue where (_.legacyid eqs 1))(_ => 0L).name must_== "count"
+    CountDistinctCommand(Venue where (_.legacyid eqs 1), "mayor")(_ => 0L).name must_== "countdistinct"
+    UpdateOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).name must_== "updateone"
+    UpsertOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).name must_== "upsertone"
+    UpdateMultiCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).name must_== "updatemulti"
+    FindAndModifyCommand(Venue.where(_.legacyid eqs 1) findAndModify (_.venuename setTo "fshq"), false, false).name must_== "findandmodify"
   }
 
   @Test

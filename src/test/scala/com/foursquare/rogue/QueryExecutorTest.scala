@@ -19,7 +19,7 @@ class QueryExecutorTest extends SpecsMatchers {
   def testExeptionInRunCommandIsDecorated {
     val query = BasicQuery[Dummy, Dummy, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
       Dummy, None, None, None, None, None, AndCondition(Nil, None), None, None)
-    (QueryExecutor.runCommand(FindQueryCommand(query, None)(_ => ())) {
+    (QueryExecutor.runCommand(FindCommand(query, None)(_ => ())) {
       throw new RuntimeException("bang")
       "hi"
     }) must throwA[RogueException]
