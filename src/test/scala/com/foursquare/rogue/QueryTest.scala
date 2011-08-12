@@ -13,6 +13,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import org.junit._
 import org.specs.SpecsMatchers
+import com.foursquare.rogue.MongoHelpers.{MongoModify, AndCondition}
 
 /////////////////////////////////////////////////
 // Sample records for testing
@@ -246,14 +247,6 @@ class QueryTest extends SpecsMatchers {
     // TODO: case class list fields
     // Comment select(_.comments.unsafeField[Long]("userid")) toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
 
-    // empty queries
-    Venue where (_.mayor in List())      toString() must_== "empty query"
-    Venue where (_.tags in List())       toString() must_== "empty query"
-    Venue where (_.tags all List())      toString() must_== "empty query"
-    Comment where (_.comments in List()) toString() must_== "empty query"
-    Venue where (_.tags contains "karaoke") and (_.mayor in List()) toString() must_== "empty query"
-    Venue where (_.mayor in List()) and (_.tags contains "karaoke") toString() must_== "empty query"
-
     // out of order and doesn't screw up earlier params
     Venue limit(10) where (_.mayor eqs 1) toString() must_== """db.venues.find({ "mayor" : 1}).limit(10)"""
     Venue orderDesc(_._id) and (_.mayor eqs 1) toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "_id" : -1})"""
@@ -263,7 +256,6 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") toString() must_== """db.venues.find({ "mayor" : 1 , "tags" : "karaoke"})"""
     Venue scan (_.mayor eqs 1) and (_.mayor_count eqs 5)         toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : 5})"""
     Venue scan (_.mayor eqs 1) scan (_.mayor_count lt 5)         toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$lt" : 5}})"""
-    Venue where (_.mayor in List()) scan (_.mayor_count eqs 5)   toString() must_== "empty query"
 
     // limit, limitOpt, skip, skipOpt
     Venue where (_.mayor eqs 1) limit(10)          toString() must_== """db.venues.find({ "mayor" : 1}).limit(10)"""
@@ -272,6 +264,12 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skip(10)           toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(Some(10))  toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
+
+    // Other operations.
+    FindCommand(Venue where (_.mayor eqs 1), None)(_ => ()) toString() must_== """db.venues.find({ "mayor" : 1})"""
+    CountCommand(Venue where (_.mayor eqs 1))(_ => 0) toString() must_== """db.venues.count({ "mayor" : 1})"""
+    RemoveCommand(Venue where (_.mayor eqs 1))(_ => ()) toString() must_== """db.venues.remove({ "mayor" : 1})"""
+    CountDistinctCommand(Venue where (_.mayor eqs 1), "tags")(_ => 0) toString() must_== """db.venues.distinct("tags", { "mayor" : 1}).length"""
   }
 
   @Test
@@ -336,13 +334,27 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq") and (_.mayor_count setTo 3) and (_.mayor_count inc 1) toString() must_== query + """{ "$set" : { "mayor_count" : 3 , "venuename" : "fshq"} , "$inc" : { "mayor_count" : 1}}""" + suffix
     Venue where (_.legacyid eqs 1) modify (_.popularity addToSet 3) and (_.tags addToSet List("a", "b")) toString() must_== query + """{ "$addToSet" : { "tags" : { "$each" : [ "a" , "b"]} , "popularity" : 3}}""" + suffix
 
-    // Empty query
-    Venue where (_.mayor in List()) modify (_.venuename setTo "fshq") toString() must_== "empty modify query"
-
     // Noop query
     Venue where (_.legacyid eqs 1) noop() toString() must_== query + "{ }" + suffix
     Venue where (_.legacyid eqs 1) noop() modify (_.venuename setTo "fshq") toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
     Venue where (_.legacyid eqs 1) noop() and (_.venuename setTo "fshq")    toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
+
+    // Other operations
+    UpdateOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
+    UpsertOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, true, false)"""
+    UpdateMultiCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, false, true)"""
+  }
+
+  @Test
+  def testEmptyQueriesDetectedAsSuch {
+    (Venue where (_.mayor in List())).isEmpty must beTrue
+    (Venue where (_.tags in List())).isEmpty must beTrue
+    (Venue where (_.tags all List())).isEmpty must beTrue
+    (Comment where (_.comments in List())).isEmpty must beTrue
+    (Venue where (_.mayor in List()) scan (_.mayor_count eqs 5)).isEmpty must beTrue
+    (Venue where (_.tags contains "karaoke") and (_.mayor in List())).isEmpty must beTrue
+    (Venue where (_.mayor in List()) and (_.tags contains "karaoke")).isEmpty must beTrue
+    (Venue where (_.mayor in List()) modify (_.venuename setTo "fshq")).isEmpty must beTrue
   }
 
   @Test
@@ -431,12 +443,6 @@ class QueryTest extends SpecsMatchers {
     // select queries
     Venue where (_.mayor eqs 1) select(_.legacyid) signature() must_== """db.venues.find({ "mayor" : 0})"""
 
-    // empty queries
-    Venue where (_.mayor in List()) signature() must_== "empty query"
-    Venue where (_.tags all List()) signature() must_== "empty query"
-    Venue where (_.tags contains "karaoke") and (_.mayor in List()) signature() must_== "empty query"
-    Venue where (_.mayor in List()) and (_.tags contains "karaoke") signature() must_== "empty query"
-
     // Scan should be the same as and/where
     Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") signature() must_== """db.venues.find({ "mayor" : 0 , "tags" : 0})"""
   }
@@ -512,6 +518,18 @@ class QueryTest extends SpecsMatchers {
 
     maybeLimit(1, None) toString() must_== """db.venues.find({ "legid" : 1})"""
     maybeLimit(1, Some(5)) toString() must_== """db.venues.find({ "legid" : 1}).limit(5)"""
+  }
+
+  @Test
+  def testCommandNamesShouldBeAsExpected {
+    FindCommand(Venue where (_.legacyid eqs 1), None)(_ => ()).name must_== "find"
+    RemoveCommand(Venue where (_.legacyid eqs 1))(_ => ()).name must_== "remove"
+    CountCommand(Venue where (_.legacyid eqs 1))(_ => 0L).name must_== "count"
+    CountDistinctCommand(Venue where (_.legacyid eqs 1), "mayor")(_ => 0L).name must_== "countdistinct"
+    UpdateOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).name must_== "updateone"
+    UpsertOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).name must_== "upsertone"
+    UpdateMultiCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).name must_== "updatemulti"
+    FindAndModifyCommand(Venue.where(_.legacyid eqs 1) findAndModify (_.venuename setTo "fshq"), false, false).name must_== "findandmodify"
   }
 
   @Test

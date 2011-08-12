@@ -11,18 +11,24 @@ import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, M
 import org.bson.types.ObjectId
 
 trait Rogue {
-  type Query[T <: MongoRecord[T]] = AbstractQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
-  type OrderedQuery[T <: MongoRecord[T]] = AbstractQuery[T, T, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
-  type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
-  type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
-  type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
+  type MongoCommand[T] = com.foursquare.rogue.MongoCommand[T]
 
-  def OrQuery[M <: MongoRecord[M]](subqueries: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _]*): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause] = {
+  type Query[M <: MongoRecord[M]] = BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+  type OrderedQuery[M <: MongoRecord[M]] = BasicQuery[M, M, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+  type PaginatedQuery[M <: MongoRecord[M]] = com.foursquare.rogue.PaginatedQuery[M, M]
+  type ModifyQuery[M <: MongoRecord[M]] = com.foursquare.rogue.ModifyQuery[M]
+
+
+  // Convenient shorthand.
+  type PlainQuery[M <: MongoRecord[M], R] =
+    BasicQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped, _ <: MaybeHasOrClause]
+
+  def OrQuery[M <: MongoRecord[M]](subqueries: BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _]*): BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause] = {
     subqueries.toList match {
       case Nil => throw new RogueException("No subqueries supplied to OrQuery", null)
       case q :: qs => {
         val orCondition = QueryHelpers.orConditionFromQueries(q :: qs)
-        BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](q.meta, None, None, None, None, None, AndCondition(Nil, Some(orCondition)), None, None)
+        BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](q.meta, None, None, None, None, None, AndCondition(Nil, Some(orCondition)), None, None)
       }
     }
   }
@@ -31,25 +37,20 @@ trait Rogue {
   object Desc extends IndexModifier(-1)
   object TwoD extends IndexModifier("2d")
 
-  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
-    BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](rec, None, None, None, None, None, AndCondition(Nil, None), None, None)
-  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): AbstractModifyQuery[M] =
-    BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
+  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
+    BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](rec, None, None, None, None, None, AndCondition(Nil, None), None, None)
+
+  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): ModifyQuery[M] =
+    ModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
+
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
     IndexBuilder(rec)
 
-  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]): AbstractModifyQuery[M] = {
-    query match {
-      case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[_, _, _, _, _, _, _] => BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]], MongoModify(Nil))
-    }
-  }
-  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected](query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause]): AbstractFindAndModifyQuery[M, R] = {
-    query match {
-      case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyFindAndModifyQuery[M, R]
-      case q: BaseQuery[_, _, _, _, _, _, _] => BaseFindAndModifyQuery[M, R](q.asInstanceOf[BaseQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause]], MongoModify(Nil))
-    }
-  }
+  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]): ModifyQuery[M] =
+    ModifyQuery[M](query, MongoModify(Nil))
+
+  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected](query: BasicQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause]): FindAndModifyQuery[M, R] =
+    FindAndModifyQuery[M, R](query, MongoModify(Nil))
 
   implicit def fieldToQueryField[M <: MongoRecord[M], F](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
   implicit def latLongFieldToGeoQueryField[M <: MongoRecord[M]](f: Field[LatLong, M]): GeoQueryField[M] = new GeoQueryField(f)
