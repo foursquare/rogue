@@ -32,7 +32,7 @@ object QueryHelpers {
     (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
-    def log(command: Command[_], timeMillis: Long) {
+    def log(command: MongoCommand[_], timeMillis: Long) {
       // Default implementation, for backwards compatibility until we remove the deprecated log() method.
       log(command.toString, timeMillis)
     }
@@ -42,7 +42,7 @@ object QueryHelpers {
   }
 
   class DefaultQueryLogger extends QueryLogger {
-    override def log(command: Command[_], timeMillis: Long) {}
+    override def log(command: MongoCommand[_], timeMillis: Long) {}
     @deprecated("Replaced by structured logging") override def log(msg: => String, timeMillis: Long) {}
     @deprecated("Unused") override def warn(msg: => String) {}
   }

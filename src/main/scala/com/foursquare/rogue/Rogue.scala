@@ -11,7 +11,7 @@ import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, M
 import org.bson.types.ObjectId
 
 trait Rogue {
-  type Command[T] = com.foursquare.rogue.Command[T]
+  type MongoCommand[T] = com.foursquare.rogue.MongoCommand[T]
 
   type Query[M <: MongoRecord[M]] = BasicQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
   type OrderedQuery[M <: MongoRecord[M]] = BasicQuery[M, M, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause]

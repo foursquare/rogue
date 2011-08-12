@@ -145,13 +145,13 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[T](command: Command[T])(f: => T): T = {
+    private[rogue] def runCommand[T](command: MongoCommand[T])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
       } catch {
         case e: Exception =>
-          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(command.id,
+          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(command.query.meta.mongoIdentifier,
             command.toString, System.currentTimeMillis - start), e)
       } finally {
         logger.log(command, System.currentTimeMillis - start)

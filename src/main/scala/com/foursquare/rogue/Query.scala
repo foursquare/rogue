@@ -40,19 +40,19 @@ abstract sealed class HasNoOrClause extends MaybeHasOrClause
 // Commands and Query Builders
 /////////////////////////////////////////////////////////////////////////////
 
-trait Command[T] {
-  val id: String
+// A mongo command consists of a query (a set of criteria) and an operation (what to do for those criteria).
+trait MongoCommand[T] {
+  def query: Rogue.PlainQuery[_, _]
   def execute(): T
   def signature: String
 }
 
-// A mongo command consists of a query (a set of criteria) and an operation (what to do for those criteria).
-trait QueryCommand[T, M <: MongoRecord[M], R] extends Command[T] {
+// A query + simple operations such as find, count, remove.
+trait QueryCommand[T, M <: MongoRecord[M], R] extends MongoCommand[T] {
   def query: Rogue.PlainQuery[M, R]
   def functionPrefix: String
   def functionSuffix: String = ""
 
-  val id = query.meta.mongoIdentifier.toString
   def signature: String = MongoBuilder.buildQueryCommandSignature(this)
 
   override def toString: String = MongoBuilder.buildQueryCommandString(this)
@@ -324,17 +324,19 @@ case class BasicQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeS
 /// Modify Queries
 /////////////////////////////////////////////////////////
 
-trait ModifyCommand[M <: MongoRecord[M]] extends Command[Unit] {
+
+// A query + a modification operation on the result set.
+trait ModifyCommand[M <: MongoRecord[M]] extends MongoCommand[Unit] {
   def modify: ModifyQuery[M]
   val f: (DBObject, DBObject) => Unit
   val upsert: Boolean = false
   val multi: Boolean = false
 
-  val id = modify.query.meta.mongoIdentifier.toString
+  def query: Rogue.PlainQuery[_, _] = modify.query
   def execute(): Unit = QueryExecutor.modify(this)(f)
   def signature: String = MongoBuilder.buildModifyCommandSignature(this)
 
-  override def toString(): String = MongoBuilder.buildModifyCommandString(this)
+  override def toString: String = MongoBuilder.buildModifyCommandString(this)
 }
 
 case class UpdateOneCommand[M <: MongoRecord[M]](modify: ModifyQuery[M]) extends ModifyCommand[M] {
@@ -375,15 +377,16 @@ case class ModifyQuery[M <: MongoRecord[M]](query: Rogue.PlainQuery[M, _], mod: 
 /// FindAndModify Queries
 /////////////////////////////////////////////////////////
 
+// A query + modification that also returns the result record.
 case class FindAndModifyCommand[M <: MongoRecord[M], R](modify: FindAndModifyQuery[M, R],
                                                         returnNew: Boolean,
                                                         upsert: Boolean,
-                                                        remove: Boolean=false) extends Command[Option[R]] {
-  val id = modify.query.meta.mongoIdentifier.toString
+                                                        remove: Boolean=false) extends MongoCommand[Option[R]] {
+  def query: Rogue.PlainQuery[_, _] = modify.query
   def execute(): Option[R] = QueryExecutor.findAndModify(this)(modify.query.parseDBObject _)
   def signature: String = MongoBuilder.buildFindAndModifyCommandSignature(this)
 
-  override def toString(): String = MongoBuilder.buildFindAndModifyCommandString(this)
+  override def toString: String = MongoBuilder.buildFindAndModifyCommandString(this)
 }
 
 
