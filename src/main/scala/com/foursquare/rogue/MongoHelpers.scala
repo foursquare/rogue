@@ -13,9 +13,7 @@ object MongoHelpers {
 
   sealed case class MongoOrder(terms: List[(String, Boolean)])
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
-  sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R)
-
-  private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
+  sealed case class MongoSelect[M <: MongoRecord[M], R](fields: List[SelectField[_, M]], transformer: List[_] => R)
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
@@ -56,7 +54,7 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildSelect[R, M <: MongoRecord[M]](s: MongoSelect[R, M]): DBObject = {
+    def buildSelect[M <: MongoRecord[M], R](s: MongoSelect[M, R]): DBObject = {
       buildSelectFromNames(s.fields.view.map(_.field.name))
     }
 
@@ -78,8 +76,9 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: PlainBaseQuery[M, R]): String = {
-      val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
+    def buildQueryCommandString[M <: MongoRecord[M], R](command: QueryCommand[_, M, R]): String = {
+      val query = command.query
+      val sb = new StringBuilder("db.%s.%s".format(command.query.meta.collectionName, command.functionPrefix))
       sb.append(buildCondition(query.condition, signature = false).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
       sb.append(")")
@@ -89,38 +88,54 @@ object MongoHelpers {
       query.maxScan.foreach(m => sb.append("._addSpecial(\"$maxScan\", %d)" format m))
       query.comment.foreach(c => sb.append("._addSpecial(\"$comment\", \"%s\")" format c))
       query.hint.foreach(h => sb.append(".hint(%s)" format buildHint(h).toString))
+      sb.append(command.functionSuffix)
       sb.toString
     }
 
-    def buildModifyString[R, M <: MongoRecord[M]](modify: BaseModifyQuery[M],
-                                                  upsert: Boolean = false, multi: Boolean = false): String = {
-      "db.%s.update(%s, %s, %s, %s)".format(
-        modify.query.meta.collectionName,
-        buildCondition(modify.query.condition, signature = false).toString,
-        buildModify(modify.mod),
-        upsert,
-        multi
-      )
-    }
-
-    def buildFindAndModifyString[R, M <: MongoRecord[M]](mod: BaseFindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
-      val query = mod.query
-      val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(query.meta.collectionName, buildCondition(query.condition)))
-      query.order.foreach(o => sb.append(", sort: " + buildOrder(o).toString))
-      if (remove) sb.append(", remove: true")
-      sb.append(", update: " + buildModify(mod.mod).toString)
-      sb.append(", new: " + returnNew)
-      query.select.foreach(s => sb.append(", fields: " + buildSelect(s).toString))
-      sb.append(", upsert: " + upsert)
-      sb.append(" })")
-      sb.toString
-    }
-
-    def buildSignature[R, M <: MongoRecord[M]](query: PlainBaseQuery[M, R]): String = {
-      val sb = new StringBuilder("db.%s.find(".format(query.meta.collectionName))
+    def buildQueryCommandSignature[M <: MongoRecord[M], R](command: QueryCommand[_, M, R]): String = {
+      val query = command.query
+      val sb = new StringBuilder("db.%s.%s".format(command.query.meta.collectionName, command.functionPrefix))
       sb.append(buildCondition(query.condition, signature = true).toString)
       sb.append(")")
       query.order.foreach(o => sb.append(".sort(%s)" format buildOrder(o).toString))
+      sb.append(command.functionSuffix)
+      sb.toString
+    }
+
+    def buildModifyCommandString[M <: MongoRecord[M]](command: ModifyCommand[M]): String =
+      doBuildModifyCommandString(command, false)
+
+    def buildModifyCommandSignature[M <: MongoRecord[M]](command: ModifyCommand[M]): String =
+      doBuildModifyCommandString(command, true)
+
+    private def doBuildModifyCommandString[M <: MongoRecord[M]](command: ModifyCommand[M], signature: Boolean): String = {
+      val modify = command.modify
+      "db.%s.update(%s, %s, %s, %s)".format(
+        modify.query.meta.collectionName,
+        buildCondition(modify.query.condition, signature).toString,
+        buildModify(modify.mod),
+        command.upsert,
+        command.multi
+      )
+    }
+
+    def buildFindAndModifyCommandString[M <: MongoRecord[M]](command: FindAndModifyCommand[M, _]): String =
+      doBuildFindAndModifyCommandString(command, false)
+
+    def buildFindAndModifyCommandSignature[M <: MongoRecord[M]](command: FindAndModifyCommand[M, _]): String =
+      doBuildFindAndModifyCommandString(command, true)
+
+    private def doBuildFindAndModifyCommandString[M <: MongoRecord[M]](command: FindAndModifyCommand[M, _], signature: Boolean): String = {
+      val modify = command.modify
+      val query = modify.query
+      val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(query.meta.collectionName, buildCondition(query.condition)))
+      query.order.foreach(o => sb.append(", sort: " + buildOrder(o).toString))
+      if (command.remove) sb.append(", remove: true")
+      sb.append(", update: " + buildModify(modify.mod).toString)
+      sb.append(", new: " + command.returnNew)
+      query.select.foreach(s => sb.append(", fields: " + buildSelect(s).toString))
+      sb.append(", upsert: " + command.upsert)
+      sb.append(" })")
       sb.toString
     }
   }
@@ -130,61 +145,57 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[T](description: => String, id: MongoIdentifier)(f: => T): T = runCommand(description, id.toString)(f)
-
-    private[rogue] def runCommand[T](description: => String, id: String)(f: => T): T = {
+    private[rogue] def runCommand[T](command: Command[T])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
       } catch {
         case e: Exception =>
-          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(id, description, System.currentTimeMillis - start), e)
+          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(command.id,
+            command.toString, System.currentTimeMillis - start), e)
       } finally {
-        logger.log(description, System.currentTimeMillis - start)
+        logger.log(command, System.currentTimeMillis - start)
       }
     }
 
-    def condition[M <: MongoRecord[M], T](operation: String,
-                                          query: PlainBaseQuery[M, _])
-                                         (f: DBObject => T): T = {
-
+    def condition[M <: MongoRecord[M], T](command: ConditionQueryCommand[T, M, _])(f: DBObject => T): T = {
+      val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
-      runCommand(query.toString, query.meta.mongoIdentifier){
+      runCommand(command) {
         f(cnd)
       }
     }
 
-    def modify[M <: MongoRecord[M], T](operation: String,
-                                       mod: BaseModifyQuery[M])
-                                      (f: (DBObject, DBObject) => T): Unit = {
-      validator.validateModify(mod)
-      if (!mod.mod.clauses.isEmpty) {
-        val q = buildCondition(mod.query.condition)
-        val m = buildModify(mod.mod)
-        lazy val description = buildModifyString(mod, operation == "upsertOne", operation == "updateMulti")
+    def modify[M <: MongoRecord[M]](command: ModifyCommand[M])
+                                   (f: (DBObject, DBObject) => Unit): Unit = {
+      val modify = command.modify
+      validator.validateModify(modify)
+      if (!modify.mod.clauses.isEmpty) {
+        val q = buildCondition(modify.query.condition)
+        val m = buildModify(modify.mod)
 
-        runCommand(description, mod.query.meta.mongoIdentifier) {
+        runCommand(command) {
           f(q, m)
         }
       }
     }
 
-    def findAndModify[M <: MongoRecord[M], R](mod: BaseFindAndModifyQuery[M, R],
-                                              returnNew: Boolean, upsert: Boolean, remove: Boolean)
+    def findAndModify[M <: MongoRecord[M], R](command: FindAndModifyCommand[M, R])
                                              (f: DBObject => R): Option[R] = {
-      validator.validateFindAndModify(mod)
-      if (!mod.mod.clauses.isEmpty || remove) {
-        val query = mod.query
+      val modify = command.modify
+      validator.validateFindAndModify(modify)
+      if (!modify.mod.clauses.isEmpty || command.remove) {
+        val query = modify.query
         val cnd = buildCondition(query.condition)
         val ord = query.order.map(buildOrder)
         val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
-        val m = buildModify(mod.mod)
-        lazy val description = buildFindAndModifyString(mod, returnNew, upsert, remove)
+        val m = buildModify(modify.mod)
+        lazy val description = command.toString
 
-        runCommand(description, mod.query.meta.mongoIdentifier) {
+        runCommand(command) {
           MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll => {
-            val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), remove, m, returnNew, upsert)
+            val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), command.remove, m, command.returnNew, command.upsert)
             Option(dbObj).map(f)
           }}
         }
@@ -192,39 +203,32 @@ object MongoHelpers {
       else None
     }
 
-    def query[M <: MongoRecord[M]](operation: String,
-                                   query: PlainBaseQuery[M, _],
-                                   batchSize: Option[Int])
-                                  (f: DBObject => Unit): Unit = {
-      doQuery(operation, query){cursor =>
+    def query[M <: MongoRecord[M]](command: FindQueryCommand[M, _])(f: DBObject => Unit): Unit = {
+      val batchSize = command.batchSize
+      doQuery(command) { cursor =>
         batchSize.foreach(cursor batchSize _)
         while (cursor.hasNext)
           f(cursor.next)
       }
     }
 
-    def explain[M <: MongoRecord[M]](operation: String,
-                                     query: PlainBaseQuery[M, _]): String = {
+    def explain[M <: MongoRecord[M]](command: FindQueryCommand[M, _]): String = {
       var explanation = ""
-      doQuery(operation, query){cursor =>
+      doQuery(command) { cursor =>
         explanation += cursor.explain.toString
       }
       explanation
     }
 
-    private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
-                                   query: PlainBaseQuery[M, _])
-                                  (f: DBCursor  => Unit): Unit = {
-
+    private[rogue] def doQuery[M <: MongoRecord[M]](command: FindQueryCommand[M, _])(f: DBCursor  => Unit): Unit = {
+      val query = command.query
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
       val ord = query.order.map(buildOrder)
       val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
       val hnt = query.hint.map(buildHint)
 
-      lazy val description = buildQueryString(operation, query)
-
-      runCommand(description, query.meta.mongoIdentifier){
+      runCommand(command) {
         MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
           try {
             val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
@@ -235,7 +239,8 @@ object MongoHelpers {
             f(cursor)
           } catch {
             case e: Exception =>
-              throw new RogueException("Mongo query on %s [%s] failed".format(coll.getDB().getMongo().toString(), description), e)
+              throw new RogueException("Mongo query on %s [%s] failed".format(coll.getDB().getMongo().toString(),
+                command.toString), e)
           }
         }
       }

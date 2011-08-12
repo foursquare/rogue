@@ -32,13 +32,19 @@ object QueryHelpers {
     (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
-    def log(msg: => String, timeMillis: Long): Unit
-    def warn(msg: => String): Unit
+    def log(command: Command[_], timeMillis: Long) {
+      // Default implementation, for backwards compatibility until we remove the deprecated log() method.
+      log(command.toString, timeMillis)
+    }
+
+    @deprecated("Replaced by structured logging") def log(msg: => String, timeMillis: Long): Unit = {}
+    @deprecated("Unused") def warn(msg: => String): Unit = {}
   }
 
   class DefaultQueryLogger extends QueryLogger {
-    override def log(msg: => String, timeMillis: Long) {}
-    override def warn(msg: => String) {}
+    override def log(command: Command[_], timeMillis: Long) {}
+    @deprecated("Replaced by structured logging") override def log(msg: => String, timeMillis: Long) {}
+    @deprecated("Unused") override def warn(msg: => String) {}
   }
 
   object NoopQueryLogger extends DefaultQueryLogger
@@ -48,17 +54,17 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
-    def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _, _]): Unit
-    def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]): Unit
-    def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]): Unit
+    def validateQuery[M <: MongoRecord[M]](query: BasicQuery[M, _, _, _, _, _, _]): Unit
+    def validateModify[M <: MongoRecord[M]](modify: ModifyQuery[M]): Unit
+    def validateFindAndModify[M <: MongoRecord[M], R](modify: FindAndModifyQuery[M, R]): Unit
   }
 
   class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
-    override def validateQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _, _]) {}
-    override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {}
-    override def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]) {}
+    override def validateQuery[M <: MongoRecord[M]](query: BasicQuery[M, _, _, _, _, _, _]) {}
+    override def validateModify[M <: MongoRecord[M]](modify: ModifyQuery[M]) {}
+    override def validateFindAndModify[M <: MongoRecord[M], R](modify: FindAndModifyQuery[M, R]) {}
   }
 
   object NoopQueryValidator extends DefaultQueryValidator
@@ -106,10 +112,10 @@ object QueryHelpers {
     JObjectParser.parse(Extraction.decompose(x).asInstanceOf[JObject])
   }
 
-  def orConditionFromQueries(subqueries: List[AbstractQuery[_, _, _, _, _, _, _]]) = {
+  def orConditionFromQueries(subqueries: List[BasicQuery[_, _, _, _, _, _, _]]) = {
     MongoHelpers.OrCondition(subqueries.flatMap(subquery => {
       subquery match {
-        case q: BaseQuery[_, _, _, _, _, _, _] => Some(q.condition)
+        case q: BasicQuery[_, _, _, _, _, _, _] => Some(q.condition)
         case _ => None
       }
     }))
