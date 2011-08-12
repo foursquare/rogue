@@ -266,15 +266,10 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
 
     // Other operations.
-
-    // For these tests we need a BasicQuery, while the DSL methods return an AbstractQuery.
-    val baseQuery = BasicQuery[Venue, Venue, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
-      Venue, None, None, None, None, None, AndCondition(List(new EqClause[Long]("mayor", 1L)), None) , None, None)
-
-    FindQueryCommand(baseQuery, None)(_ => ()) toString() must_== """db.venues.find({ "mayor" : 1})"""
-    CountQueryCommand(baseQuery)(_ => 0) toString() must_== """db.venues.count({ "mayor" : 1})"""
-    RemoveQueryCommand(baseQuery)(_ => ()) toString() must_== """db.venues.remove({ "mayor" : 1})"""
-    CountDistinctQueryCommand(baseQuery, "tags")(_ => 0) toString() must_== """db.venues.distinct("tags", { "mayor" : 1}).length"""
+    FindQueryCommand(Venue where (_.mayor eqs 1), None)(_ => ()) toString() must_== """db.venues.find({ "mayor" : 1})"""
+    CountQueryCommand(Venue where (_.mayor eqs 1))(_ => 0) toString() must_== """db.venues.count({ "mayor" : 1})"""
+    RemoveQueryCommand(Venue where (_.mayor eqs 1))(_ => ()) toString() must_== """db.venues.remove({ "mayor" : 1})"""
+    CountDistinctQueryCommand(Venue where (_.mayor eqs 1), "tags")(_ => 0) toString() must_== """db.venues.distinct("tags", { "mayor" : 1}).length"""
   }
 
   @Test
@@ -345,15 +340,9 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) noop() and (_.venuename setTo "fshq")    toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
 
     // Other operations
-
-    // For these tests we need a ModifyQuery, while the DSL methods return an AbstractModifyQuery.
-    val baseQuery = BasicQuery[Venue, Venue, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
-      Venue, None, None, None, None, None, AndCondition(List(new EqClause[Long]("legid", 1L)), None) , None, None)
-    val baseModifyQuery = ModifyQuery[Venue](baseQuery, MongoModify(List(new ModifyClause[String](ModOps.Set, ("venuename", "fshq") ))))
-
-    UpdateOneCommand(baseModifyQuery).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
-    UpsertOneCommand(baseModifyQuery).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, true, false)"""
-    UpdateMultiCommand(baseModifyQuery).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, false, true)"""
+    UpdateOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
+    UpsertOneCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, true, false)"""
+    UpdateMultiCommand(Venue where (_.legacyid eqs 1) modify (_.venuename setTo "fshq")).toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}, false, true)"""
   }
 
   @Test
