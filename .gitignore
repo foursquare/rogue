@@ -3,8 +3,8 @@
 *.iml
 Main/
 lib_managed
-project/boot/*
-project/build/target/*
+project*/boot/*
+project*/build/target/*
 sbtlib
 target
 out
