@@ -130,17 +130,16 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[T](description: => String, id: MongoIdentifier)(f: => T): T = runCommand(description, id.toString)(f)
-
-    private[rogue] def runCommand[T](description: => String, id: String)(f: => T): T = {
+    private[rogue] def runCommand[T](description: => String, query: PlainBaseQuery[_, _])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
       } catch {
         case e: Exception =>
-          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(id, description, System.currentTimeMillis - start), e)
+          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(query.meta.mongoIdentifier,
+            description, System.currentTimeMillis - start), e)
       } finally {
-        logger.log(description, System.currentTimeMillis - start)
+        logger.log(description, query.signature, System.currentTimeMillis - start)
       }
     }
 
@@ -150,7 +149,7 @@ object MongoHelpers {
 
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
-      runCommand(query.toString, query.meta.mongoIdentifier){
+      runCommand(query.toString, query){
         f(cnd)
       }
     }
@@ -164,7 +163,7 @@ object MongoHelpers {
         val m = buildModify(mod.mod)
         lazy val description = buildModifyString(mod, operation == "upsertOne", operation == "updateMulti")
 
-        runCommand(description, mod.query.meta.mongoIdentifier) {
+        runCommand(description, mod.query) {
           f(q, m)
         }
       }
@@ -182,7 +181,7 @@ object MongoHelpers {
         val m = buildModify(mod.mod)
         lazy val description = buildFindAndModifyString(mod, returnNew, upsert, remove)
 
-        runCommand(description, mod.query.meta.mongoIdentifier) {
+        runCommand(description, mod.query) {
           MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll => {
             val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), remove, m, returnNew, upsert)
             Option(dbObj).map(f)
@@ -224,7 +223,7 @@ object MongoHelpers {
 
       lazy val description = buildQueryString(operation, query)
 
-      runCommand(description, query.meta.mongoIdentifier){
+      runCommand(description, query){
         MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
           try {
             val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)

@@ -32,6 +32,7 @@ object QueryHelpers {
     (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
+    def log(msg: => String, signature: => String, timeMillis: Long): Unit = log(msg, timeMillis)
     def log(msg: => String, timeMillis: Long): Unit
     def warn(msg: => String): Unit
   }
