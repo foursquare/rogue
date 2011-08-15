@@ -502,6 +502,62 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testWhereOpt {
+    val someId = Some(1L)
+    val noId: Option[Long] = None
+    val someList = Some(List(1L, 2L))
+    val noList: Option[List[Long]] = None
+
+    // whereOpt
+    Venue.whereOpt(someId)(_.legacyid eqs _) toString() must_== """db.venues.find({ "legid" : 1})"""
+    Venue.whereOpt(noId)(_.legacyid eqs _) toString() must_== """db.venues.find({ })"""
+    Venue.whereOpt(someId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "legid" : 1 , "mayor" : 2})"""
+    Venue.whereOpt(noId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "mayor" : 2})"""
+
+    // whereOpt: lists
+    Venue.whereOpt(someList)(_.legacyid in _) toString() must_== """db.venues.find({ "legid" : { "$in" : [ 1 , 2]}})"""
+    Venue.whereOpt(noList)(_.legacyid in _) toString() must_== """db.venues.find({ })"""
+
+    // whereOpt: enum
+    val someEnum = Some(VenueStatus.open)
+    val noEnum: Option[VenueStatus.type#Value] = None
+    Venue.whereOpt(someEnum)(_.status eqs _) toString() must_== """db.venues.find({ "status" : "Open"})"""
+    Venue.whereOpt(noEnum)(_.status eqs _) toString() must_== """db.venues.find({ })"""
+
+    // whereOpt: date
+    val someDate = Some(new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC))
+    val noDate: Option[DateTime] = None
+    Venue.whereOpt(someDate)(_.last_updated after _) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"}}})"""
+    Venue.whereOpt(noDate)(_.last_updated after _) toString() must_== """db.venues.find({ })"""
+
+    // andOpt
+    Venue.where(_.mayor eqs 2).andOpt(someId)(_.legacyid eqs _) toString() must_== """db.venues.find({ "mayor" : 2 , "legid" : 1})"""
+    Venue.where(_.mayor eqs 2).andOpt(noId)(_.legacyid eqs _) toString() must_== """db.venues.find({ "mayor" : 2})"""
+
+    // scanOpt
+    Venue.scanOpt(someId)(_.legacyid eqs _) toString() must_== """db.venues.find({ "legid" : 1})"""
+    Venue.scanOpt(noId)(_.legacyid eqs _) toString() must_== """db.venues.find({ })"""
+    Venue.scanOpt(someId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "legid" : 1 , "mayor" : 2})"""
+    Venue.scanOpt(noId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "mayor" : 2})"""
+
+    // iscanOpt
+    Venue.iscanOpt(someId)(_.legacyid eqs _) toString() must_== """db.venues.find({ "legid" : 1})"""
+    Venue.iscanOpt(noId)(_.legacyid eqs _) toString() must_== """db.venues.find({ })"""
+    Venue.iscanOpt(someId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "legid" : 1 , "mayor" : 2})"""
+    Venue.iscanOpt(noId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "mayor" : 2})"""
+
+    // modify
+    val q = Venue.where(_.legacyid eqs 1)
+    val prefix = """db.venues.update({ "legid" : 1}, """
+    val suffix = ", false, false)"
+
+    q.modifyOpt(someId)(_.legacyid setTo _) toString() must_== prefix + """{ "$set" : { "legid" : 1}}""" + suffix
+    q.modifyOpt(noId)(_.legacyid setTo _) toString() must_== prefix + """{ }""" + suffix
+    q.modifyOpt(someEnum)(_.status setTo _) toString() must_== prefix + """{ "$set" : { "status" : "Open"}}""" + suffix
+    q.modifyOpt(noEnum)(_.status setTo _) toString() must_== prefix + """{ }""" + suffix
+  }
+
+  @Test
   def testCommonSuperclassForPhantomTypes {
     def maybeLimit(legid: Long, limitOpt: Option[Int]) = {
       limitOpt match {
@@ -539,6 +595,14 @@ class QueryTest extends SpecsMatchers {
     check("""Venue where (_.popularity at 3 eqs "hi")""")
     check("""Venue where (_.popularity at "a" eqs 3)""")
 
+    // Modify
+    check("""Venue where (_.legacyid eqs 1) modify (_.legacyid setTo "hi")""")
+    // TODO: more
+
+    // whereOpt
+    check("""Venue.whereOpt(Some("hi"))(_.legacyid eqs _)""")
+
+    // Foreign keys
     // first make sure that each type-safe foreign key works as expected
     check("""VenueClaim where (_.venueid eqs Venue.createRecord)""", true)
     check("""VenueClaim where (_.venueid neqs Venue.createRecord)""", true)
@@ -553,7 +617,9 @@ class QueryTest extends SpecsMatchers {
     // Can't select array index
     check("""Venue where (_.legacyid eqs 1) select(_.tags at 0)""")
 
+    //
     // Phantom type stuff
+    //
     check("""Venue orderAsc(_.legacyid) orderAsc(_.closed)""")
     check("""Venue andAsc(_.legacyid)""")
     check("""Venue limit(1) limit(5)""")

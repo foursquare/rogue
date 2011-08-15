@@ -49,6 +49,12 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def and[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def scan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def iscan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+
+  def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+  def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+  def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+  def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+
   def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
   def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
@@ -131,6 +137,18 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def and[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.Index)
   override def iscan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
   override def scan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
+
+  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F], expectedIndexBehavior: IndexBehavior.Value) = {
+    opt match {
+      case Some(v) => addClause(clause(_, v), expectedIndexBehavior)
+      case None => this
+    }
+  }
+
+  override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.Index)
+  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.Index)
+  override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
+  override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
 
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
     val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
@@ -319,6 +337,11 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def iscan[F](clause: M => QueryClause[F]) = this
   override def scan[F](clause: M => QueryClause[F]) = this
 
+  override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+  override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+  override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
   override def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) = new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
@@ -382,6 +405,9 @@ trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
   def and[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
 
+  def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
+  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
+
   def updateMulti(): Unit
   def updateOne(): Unit
   def upsertOne(): Unit
@@ -397,6 +423,16 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
   override def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
 
+  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
+    opt match {
+      case Some(v) => addClause(clause(_, v))
+      case None => this
+    }
+  }
+
+  override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = addClauseOpt(opt)(clause)
+  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = addClauseOpt(opt)(clause)
+
   // Always do modifications against master (not query.meta, which could point to slave)
   override def updateMulti(): Unit = QueryExecutor.modify("updateMulti", this)(query.master.updateMulti(_, _))
   override def updateOne(): Unit = QueryExecutor.modify("updateOne", this)(query.master.update(_, _))
@@ -408,6 +444,8 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
 class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
   override def modify[F](clause: M => ModifyClause[F]) = this
   override def and[F](clause: M => ModifyClause[F]) = this
+  override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
   override def updateMulti(): Unit = ()
   override def updateOne(): Unit = ()
@@ -425,6 +463,9 @@ trait AbstractFindAndModifyQuery[M <: MongoRecord[M], R] {
   def findAndModify[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
   def and[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
 
+  def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+
   def updateOne(returnNew: Boolean = false): Option[R]
   def upsertOne(returnNew: Boolean = false): Option[R]
 }
@@ -438,6 +479,16 @@ case class BaseFindAndModifyQuery[M <: MongoRecord[M], R](query: BaseQuery[M, R,
 
   override def findAndModify[F](clause: M => ModifyClause[F]) = addClause(clause)
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+
+  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
+    opt match {
+      case Some(v) => addClause(clause(_, v))
+      case None => this
+    }
+  }
+
+  override def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = addClauseOpt(opt)(clause)
+  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = addClauseOpt(opt)(clause)
 
   // Always do modifications against master (not query.meta, which could point to slave)
   override def updateOne(returnNew: Boolean = false): Option[R] = {
@@ -453,6 +504,8 @@ case class BaseFindAndModifyQuery[M <: MongoRecord[M], R](query: BaseQuery[M, R,
 class EmptyFindAndModifyQuery[M <: MongoRecord[M], R] extends AbstractFindAndModifyQuery[M, R] {
   override def findAndModify[F](clause: M => ModifyClause[F]) = this
   override def and[F](clause: M => ModifyClause[F]) = this
+  override def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
   override def updateOne(returnNew: Boolean = false): Option[Nothing] = None
   override def upsertOne(returnNew: Boolean = false): Option[Nothing] = None
