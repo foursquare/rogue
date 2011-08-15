@@ -66,6 +66,8 @@ For "find" query objects
     query.paginate(pageSize)
     query.fetchBatch(pageSize){vs: List[Venue] => ...}
     query.bulkDelete_!!
+    query.blockingBulkDelete_!!
+    query.findAndDeleteOne()
 
 For "modify" query objects
 
@@ -73,6 +75,12 @@ For "modify" query objects
     modify.updateMulti()
     modify.updateOne()
     modify.upsertOne()
+
+for "findAndModify" query objects
+
+    val modify = query where (_.legacyid eqs 222) findAndModify (_.zip setTo "10003")
+    modify.updateOne(returnNew = ...)
+    modify.upsertOne(returnNew = ...)
 
 ## Releases
 
