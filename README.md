@@ -31,18 +31,18 @@ Constructions like this:
 will also not compile, here because a limit is being specified twice. Other similar constraints
 are in place to prevent you from accidentally doing things you don't want to do anyway.
 
-## Building and Installation
+## Installation
 
-Use sbt (simple-build-tool) to build:
+Because Rogue is designed to work with several versions of lift-mongodb-record (2.2, 2.3, 2.4),
+you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
+on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    $ sbt clean update package
+    val rogue           = "com.foursquare" %% "rogue"               % "1.0.18" intransitive()
+    val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M2"
 
-The finished jar will be in `target/`.
-
-Or if you prefer, packaged JARs are available on scala-tools.org. Add the following line to your
-sbt project file to pull them in:
-
-    val rogue = "com.foursquare" %% "rogue" % "1.0.15" withSources()
+You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
+production against Lift 2.2 and 2.4-M2. If you encounter problems using Rogue with other versions
+of Lift, please let us know.
 
 ## More Examples
 
@@ -104,7 +104,7 @@ Other recent notable changes:
 
 ## Dependencies
 
-liftweb (2.2, 2.3), mongodb, joda-time, junit. These dependencies are managed by the build system.
+lift-mongodb-record (2.2, 2.3, 2.4), mongodb, joda-time, junit. These dependencies are managed by the build system.
 
 ## Maintainers
 
