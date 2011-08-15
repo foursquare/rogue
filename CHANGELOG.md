@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.0.19
+
+- whereOpt support: Venue.whereOpt(uidOpt)(_.userid eqs _)
+- Pass the query signature to the logging hook
+
 # 1.0.18
 
 - findAndModify support
