@@ -1,37 +1,45 @@
 name := "rogue"
 
-version := "1.0.14-SNAPSHOT"
+version := "1.0.20-SNAPSHOT"
 
 organization := "com.foursquare"
 
-scalaVersion := "2.8.1"
+crossScalaVersions := Seq("2.8.1", "2.9.0-1", "2.9.0", "2.8.0")
 
-//seq(WebPlugin.webSettings :_*)
-
-libraryDependencies ++= {
+libraryDependencies <++= (scalaVersion) { scalaVersion =>
+  val specsVersion = scalaVersion match {
+    case "2.8.0" => "1.6.5"
+    case _       => "1.6.8"
+  }
   val liftVersion = "2.4-M2"
   Seq(
-    "net.liftweb" %% "lift-mongodb-record" % liftVersion % "compile->default",
-    "junit" % "junit" % "4.5" % "test->default",
-    "com.novocode" % "junit-interface" % "0.6" % "test",
-    "ch.qos.logback" % "logback-classic" % "0.9.26",
-    "org.scala-tools.testing" %% "specs" % "1.6.8" % "test->default"
+    "net.liftweb"             %% "lift-mongodb-record" % liftVersion  % "compile",
+    "junit"                    % "junit"               % "4.5"        % "test",
+    "com.novocode"             % "junit-interface"     % "0.6"        % "test",
+    "ch.qos.logback"           % "logback-classic"     % "0.9.26"     % "provided",
+    "org.scala-tools.testing" %% "specs"               % specsVersion % "test",
+    "org.scala-lang"           % "scala-compiler"      % scalaVersion % "test"
   )
 }
 
-publishTo <<= (version) { version: String =>
-  val nexus = "http://nexus-direct.scala-tools.org/content/repositories/"
-  if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at nexus+"snapshots/") 
-  else                                   Some("releases" at nexus+"releases/")
+publishTo <<= (version) { v =>
+  val nexus = "http://nexus.scala-tools.org/content/repositories/"
+  if (v.endsWith("-SNAPSHOT"))
+    Some("snapshots" at nexus+"snapshots/")
+  else
+    Some("releases" at nexus+"releases/")
 }
 
 resolvers += "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/"
 
-resolvers += ScalaToolsSnapshots
+resolvers <++= (version) { v =>
+  if (v.endsWith("-SNAPSHOT"))
+    Seq(ScalaToolsSnapshots)
+  else
+    Seq()
+}
 
-scalacOptions += "-deprecation"
-
-javacOptions ++= Seq("-Xmx4096m", "-Xms512m", "-Xss4m")
+scalacOptions ++= Seq("-deprecation", "-unchecked")
 
 testFrameworks += new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker")
 
@@ -54,5 +62,3 @@ credentials ++= {
     case _ => Nil
   }
 }
-
-publishMavenStyle := true
