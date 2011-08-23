@@ -20,21 +20,30 @@ object MongoHelpers {
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
       val builder = BasicDBObjectBuilder.start
-      (cond.clauses.groupBy(_.fieldName)
-              .toList
-              .sortBy { case (fieldName, _) => -cond.clauses.indexWhere(_.fieldName == fieldName) }
-              .foreach { case (name, cs) =>
+      val (rawClauses, safeClauses) = cond.clauses.partition(_.isInstanceOf[RawQueryClause])
+
+      // Normal clauses
+      safeClauses.groupBy(_.fieldName).toList
+          .sortBy{ case (fieldName, _) => -cond.clauses.indexWhere(_.fieldName == fieldName) }
+          .foreach{ case (name, cs) => {
         // Equality clauses look like { a : 3 }
         // but all other clauses look like { a : { $op : 3 }}
         // and can be chained like { a : { $gt : 2, $lt: 6 }}.
         // So if there is any equality clause, apply it (only) to the builder;
         // otherwise, chain the clauses.
-        cs.filter(_.isInstanceOf[EqClause[_]]).headOption.map(_.extend(builder, signature)).getOrElse {
-          builder.push(name)
-          cs.foreach(_.extend(builder, signature))
-          builder.pop
+        cs.filter(_.isInstanceOf[EqClause[_]]).headOption match {
+          case Some(eqClause) => eqClause.extend(builder, signature)
+          case None => {
+            builder.push(name)
+            cs.foreach(_.extend(builder, signature))
+            builder.pop
+          }
         }
-      })
+      }}
+
+      // Raw clauses
+      rawClauses.foreach(_.extend(builder, signature))
+
       // Optional $or clause (only one per "and" chain)
       cond.orCondition.foreach(or => builder.add("$or", QueryHelpers.list(or.conditions.map(buildCondition(_, signature = false)))))
       builder.get

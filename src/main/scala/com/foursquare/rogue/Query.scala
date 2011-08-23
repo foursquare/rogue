@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import collection.immutable.List._
 import com.foursquare.rogue.MongoHelpers._
-import com.mongodb.{DBObject, WriteConcern}
+import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
 import net.liftweb.record.Field
 import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.MongoDB
@@ -54,6 +54,8 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+
+  def raw(f: BasicDBObjectBuilder => Unit): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
@@ -149,6 +151,11 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.Index)
   override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
   override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
+
+  override def raw(f: BasicDBObjectBuilder => Unit) = {
+    val newClause = new RawQueryClause(f)
+    this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
+  }
 
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
     val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
@@ -341,6 +348,8 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
   override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
   override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+
+  override def raw(f: BasicDBObjectBuilder => Unit) = this
 
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
