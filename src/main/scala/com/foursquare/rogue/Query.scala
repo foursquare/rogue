@@ -55,6 +55,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+  def jsWhereOpt[F](jsOpt: Option[String]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
@@ -153,6 +154,8 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.Index)
   override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
   override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
+  override def jsWhereOpt[F](jsOpt: Option[String]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] =
+    this.copy(js = jsOpt)
 
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
     val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
@@ -346,6 +349,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
   override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
   override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+  override def jsWhereOpt[F](jsOpt: Option[String]) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)(implicit ev: Or =:= HasNoOrClause) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
