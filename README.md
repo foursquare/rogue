@@ -37,12 +37,15 @@ Because Rogue is designed to work with several versions of lift-mongodb-record (
 you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    val rogue           = "com.foursquare" %% "rogue"               % "1.0.19" intransitive()
+    val rogue           = "com.foursquare" %% "rogue"               % "1.0.20" intransitive()
     val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M2"
 
 You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
 production against Lift 2.2 and 2.4-M2. If you encounter problems using Rogue with other versions
 of Lift, please let us know.
+
+Join the [rogue-users google group](http://groups.google.com/group/rogue-users) for help, bug reports,
+feature requests, and general discussion on Rogue.
 
 ## More Examples
 
@@ -84,15 +87,20 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 1.0.19. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.0.20. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.19:
+New in 1.0.20:
+
+- sbt 0.10.0
+- raw access do BasicDBObjectBuilder in the query builder, to let you do things like this:
+
+    Venue where (_.mayor eqs 1) raw (_.add("$where", "this.a > 3"))
+
+- fixed some broken logging
+
+Lots of new features in 1.0.18 and 1.0.19!:
 
 - whereOpt support: Venue.whereOpt(uidOpt)(_.userid eqs _)
-- Pass the query signature to the logging hook
-
-Lots of new features in 1.0.18!:
-
 - findAndModify support
 - $or query support
 - efficient .exists query method (thanks Jorge!)

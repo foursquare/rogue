@@ -272,6 +272,9 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skip(10)           toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(Some(10))  toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
+      
+    // raw query clauses
+    Venue where (_.mayor eqs 1) raw (_.add("$where", "this.a > 3")) toString() must_== """db.venues.find({ "mayor" : 1 , "$where" : "this.a > 3"})"""      
 
     // javascript $where clause
     Venue jsWhere("function() { return true; }") toString() must_== """db.venues.find({ "$where" : "function() { return true; }"})"""

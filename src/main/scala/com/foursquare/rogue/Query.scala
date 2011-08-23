@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import collection.immutable.List._
 import com.foursquare.rogue.MongoHelpers._
-import com.mongodb.{DBObject, WriteConcern}
+import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
 import net.liftweb.record.Field
 import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.MongoDB
@@ -61,6 +61,8 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or, Js]
   def jsWhereOpt[F](jsOpt: Option[String])(implicit ev: Js =:= HasNoJsWhereClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or, HasJsWhereClause]
 
+  def raw(f: BasicDBObjectBuilder => Unit): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or, Js]
+    
   def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause, Js]
 
   def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or, Js]
@@ -161,6 +163,11 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def jsWhereOpt[F](jsOpt: Option[String])(implicit ev: Js =:= HasNoJsWhereClause): BaseQuery[M, R, Ord, Sel, Lim, Sk, Or, HasJsWhereClause] =
     this.copy(js = jsOpt)
 
+  override def raw(f: BasicDBObjectBuilder => Unit) = {
+    val newClause = new RawQueryClause(f)
+    this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
+  }
+    
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _, _])*)(implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause, Js] = {
     val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
     this.copy(condition = condition.copy(orCondition = Some(orCondition)))
@@ -355,6 +362,8 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
   override def jsWhereOpt[F](jsOpt: Option[String])(implicit ev: Js =:= HasNoJsWhereClause) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, Or, HasJsWhereClause]
 
+  override def raw(f: BasicDBObjectBuilder => Unit) = this    
+    
   override def or(subqueries: (M with MongoMetaRecord[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _, _])*)(implicit ev: Or =:= HasNoOrClause) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause, Js]
 
   override def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) = new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or, Js]

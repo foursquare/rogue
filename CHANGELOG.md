@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 1.0.20
+
+- sbt 0.10.0
+- raw access do BasicDBObjectBuilder in query builder
+- fixed some broken logging
+
 # 1.0.19
 
 - whereOpt support: Venue.whereOpt(uidOpt)(_.userid eqs _)
