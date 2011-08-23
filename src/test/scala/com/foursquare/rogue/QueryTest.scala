@@ -272,6 +272,11 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skip(10)           toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(Some(10))  toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
+
+    // $where clause, using JS
+    Venue jsWhere("function() { return true; }") toString() must_== """db.venues.find({ "$where" : "function() { return true; }"})"""
+    Venue jsWhere("function() { return true; }") where(_.mayor eqs 1) toString() must_== """db.venues.find({ "mayor" : 1 , "$where" : "function() { return true; }"})"""
+    Venue where(_.mayor eqs 1) and (_.mayor_count < 5) limit(10) jsWhere("function() { return true; }")  toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$lt" : 5} , "$where" : "function() { return true; }"}).limit(10)"""
   }
 
   @Test

@@ -49,6 +49,7 @@ trait AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSel
   def and[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def scan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def iscan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+  def jsWhere[F](js: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
   def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
@@ -116,7 +117,8 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     hint: Option[ListMap[String, Any]],
     condition: AndCondition,
     order: Option[MongoOrder],
-    select: Option[MongoSelect[R, M]]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
+    select: Option[MongoSelect[R, M]],
+    js: Option[String]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
 
   // The meta field on the MongoMetaRecord (as an instance of MongoRecord)
   // points to the master MongoMetaRecord. This is here in case you have a
@@ -137,6 +139,8 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def and[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.Index)
   override def iscan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
   override def scan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
+  override def jsWhere[F](js: String): BaseQuery[M, R, Ord, Sel, Lim, Sk, Or] =
+    this.copy(js = Some(js))
 
   private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F], expectedIndexBehavior: IndexBehavior.Value) = {
     opt match {
@@ -336,6 +340,7 @@ class BaseEmptyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   override def and[F](clause: M => QueryClause[F]) = this
   override def iscan[F](clause: M => QueryClause[F]) = this
   override def scan[F](clause: M => QueryClause[F]) = this
+  override def jsWhere[F](js: String) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this

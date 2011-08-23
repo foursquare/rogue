@@ -22,7 +22,7 @@ trait Rogue {
       case Nil => throw new RogueException("No subqueries supplied to OrQuery", null)
       case q :: qs => {
         val orCondition = QueryHelpers.orConditionFromQueries(q :: qs)
-        BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](q.meta, None, None, None, None, None, AndCondition(Nil, Some(orCondition)), None, None)
+        BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](q.meta, None, None, None, None, None, AndCondition(Nil, Some(orCondition)), None, None, None)
       }
     }
   }
@@ -32,7 +32,7 @@ trait Rogue {
   object TwoD extends IndexModifier("2d")
 
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
-    BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](rec, None, None, None, None, None, AndCondition(Nil, None), None, None)
+    BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](rec, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
   implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): AbstractModifyQuery[M] =
     BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
