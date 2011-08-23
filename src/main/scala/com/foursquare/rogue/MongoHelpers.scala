@@ -15,7 +15,7 @@ object MongoHelpers {
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
   sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R)
 
-  private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
+  private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _, _]
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false, jsWhere: Option[String] = None): DBObject = {

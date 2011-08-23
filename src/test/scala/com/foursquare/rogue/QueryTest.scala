@@ -642,6 +642,7 @@ class QueryTest extends SpecsMatchers {
     check("""Venue limit(10) countDistinct(_.legacyid)""")
     check("""Venue skip(10) countDistinct(_.legacyid)""")
     check("""Venue select(_.legacyid) select(_.closed)""")
+    check("""Venue jsWhere("1 == 0") jsWhere("1 == 0")""")
 
     // select case class
     check("""Venue selectCase(_.legacyid, V2)""")
