@@ -149,7 +149,8 @@ object MongoHelpers {
 
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
-      runCommand(query.toString, query){
+      val description = buildQueryString(operation, query)
+      runCommand(description, query){
         f(cnd)
       }
     }
