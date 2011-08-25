@@ -101,6 +101,13 @@ object MongoHelpers {
       sb.toString
     }
 
+    def buildConditionString[R, M <: MongoRecord[M]](operation: String, query: PlainBaseQuery[M, R]): String = {
+      val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
+      sb.append(buildCondition(query.condition, signature = false).toString)
+      sb.append(")")
+      sb.toString
+    }
+
     def buildModifyString[R, M <: MongoRecord[M]](modify: BaseModifyQuery[M],
                                                   upsert: Boolean = false, multi: Boolean = false): String = {
       "db.%s.update(%s, %s, %s, %s)".format(
@@ -158,7 +165,7 @@ object MongoHelpers {
 
       validator.validateQuery(query)
       val cnd = buildCondition(query.condition)
-      val description = buildQueryString(operation, query)
+      val description = buildConditionString(operation, query)
       runCommand(description, query){
         f(cnd)
       }
