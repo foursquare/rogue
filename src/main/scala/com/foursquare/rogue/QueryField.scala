@@ -6,7 +6,7 @@ import com.mongodb.DBObject
 import java.util.Calendar
 import java.util.regex.Pattern
 import net.liftweb.common._
-import net.liftweb.json.JsonAST.{JInt, JValue}
+import net.liftweb.json.JsonAST.{JInt, JValue, JArray}
 import net.liftweb.http.js.JE.Num
 import net.liftweb.mongodb.record._
 import net.liftweb.record._
@@ -147,6 +147,22 @@ class CaseClassListQueryField[V, M <: MongoRecord[M]](field: MongoCaseClassListF
   def unsafeField[F](name: String): DummyField[F, M] = new DummyField[F, M](field.owner, field.name + "." + name)
 }
 
+class BsonRecordQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](val field: BsonRecordField[M, B]) {
+  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
+    val rec = field.defaultValue // a hack to get at the embedded record
+    new SelectableDummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
+  }
+}
+
+class BsonRecordListQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](field: BsonRecordListField[M, B]) extends AbstractListQueryField[B, DBObject, M](field) {
+  override def valueToDB(b: B) = b.asDBObject
+
+  def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
+    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
+    new DummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
+  }
+}
+
 class MapQueryField[V, M <: MongoRecord[M]](val field: Field[Map[String, V], M]) {
   def at(key: String): SelectableDummyField[V, M] = new SelectableDummyField[V, M](field.owner, field.name + "." + key)
 }
@@ -187,7 +203,7 @@ class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
 }
 
-class BsonRecordModifyField[B <: MongoRecord[B], M <: MongoRecord[M]](field: Field[B, M]) {
+class BsonRecordModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](field: Field[B, M]) {
   def setTo(b: B) = new ModifyClause(ModOps.Set, field.name -> b.asDBObject)
 }
 
@@ -218,7 +234,7 @@ class EnumerationListModifyField[V <: Enumeration#Value, M <: MongoRecord[M]](fi
   override def valueToDB(v: V) = v.toString
 }
 
-class BsonRecordListModifyField[B <: MongoRecord[B], M <: MongoRecord[M]](field: Field[List[B], M]) extends AbstractListModifyField[B, DBObject, M](field) {
+class BsonRecordListModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](field: Field[List[B], M]) extends AbstractListModifyField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
 }
 

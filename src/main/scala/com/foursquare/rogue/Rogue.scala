@@ -74,10 +74,14 @@ trait Rogue {
   implicit def listFieldToListModifyField[M <: MongoRecord[M], F](f: Field[List[F], M]): ListModifyField[F, M] = new ListModifyField[F, M](f)
   implicit def cclistFieldToListModifyField[M <: MongoRecord[M], V](f: MongoCaseClassListField[M, V]): CaseClassListModifyField[V, M] =
     new CaseClassListModifyField[V, M](f)
-  implicit def bsonRecordFieldToBsonRecordModifyField[B <: MongoRecord[B], M <: MongoRecord[M]](f: BsonRecordField[M, B]) =
-    new BsonRecordModifyField[B, M](f)
-  implicit def bsonRecordListFieldToBsonRecordListModifyField[B <: MongoRecord[B], M <: MongoRecord[M]](f: BsonRecordListField[M, B]) =
-    new BsonRecordListModifyField[B, M](f)
+  implicit def bsonRecordFieldToBsonRecordQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordField[M, B]) =
+    new BsonRecordQueryField[M, B](f)
+  implicit def bsonRecordListFieldToBsonRecordListQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordListField[M, B]) =
+    new BsonRecordListQueryField[M, B](f)
+  implicit def bsonRecordFieldToBsonRecordModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordField[M, B]) =
+    new BsonRecordModifyField[M, B](f)
+  implicit def bsonRecordListFieldToBsonRecordListModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordListField[M, B]) =
+    new BsonRecordListModifyField[M, B](f)
   implicit def intFieldToIntModifyField[M <: MongoRecord[M]](f: Field[Int, M]): NumericModifyField[Int, M] = new NumericModifyField(f)
   implicit def longFieldToLongModifyField[M <: MongoRecord[M]](f: Field[Long, M]): NumericModifyField[Long, M] = new NumericModifyField(f)
   implicit def enumerationListFieldToEnumerationListModifyField[M <: MongoRecord[M], F <: Enumeration#Value](f: Field[List[F], M]): EnumerationListModifyField[F, M] =
