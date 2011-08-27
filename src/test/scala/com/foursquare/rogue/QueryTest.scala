@@ -41,10 +41,10 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] {
 }
 object Venue extends Venue with MongoMetaRecord[Venue] {
   object CustomIndex extends IndexModifier("custom")
-  val idIdx = Venue.index(_._id, Asc)
-  val legIdx = Venue.index(_.legacyid, Desc)
-  val geoIdx = Venue.index(_.geolatlng, TwoD)
-  val geoCustomIdx = Venue.index(_.geolatlng, CustomIndex, _.tags, Asc)
+  val idIdx = Venue.index(_._id -> Asc)
+  val legIdx = Venue.index(_.legacyid -> Desc)
+  val geoIdx = Venue.index(_.geolatlng -> TwoD)
+  val geoCustomIdx = Venue.index(_.geolatlng -> CustomIndex, _.tags -> Asc)
 
   trait FK[T <: FK[T]] extends MongoRecord[T] {
     self: T=>
@@ -74,7 +74,7 @@ class Comment extends MongoRecord[Comment] with MongoId[Comment] {
   object comments extends MongoCaseClassListField[Comment, OneComment](this)
 }
 object Comment extends Comment with MongoMetaRecord[Comment] {
-  val idx1 = Comment.index(_._id, Asc)
+  val idx1 = Comment.index(_._id -> Asc)
 }
 
 class Tip extends MongoRecord[Tip] with MongoId[Tip] {

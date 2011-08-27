@@ -8,42 +8,42 @@ import scala.collection.immutable.ListMap
 
 case class IndexModifier(value: Any)
 
-// Venue.index(_.userid, Asc)
-// Venue.index(_.userid, Desc)
-// Venue.index(_.geolatlng, TwoD)
-// Venue.index(_.geolatlng, CrazyCustomIndex)
+// Venue.index(_.userid -> Asc)
+// Venue.index(_.userid -> Desc)
+// Venue.index(_.geolatlng -> TwoD, _.tags -> Asc)
+// Venue.index(_.geolatlng -> CrazyCustomIndex)
 
 trait MongoIndex[R <: MongoRecord[R]] {
   def asListMap: ListMap[String, Any]
+  protected def t(fld: (Field[_, R], IndexModifier)) = (fld._1.name, fld._2.value)
 }
 
 case class MongoIndex1[R <: MongoRecord[R],
                        F1 <: Field[_, R], M1 <: IndexModifier]
-                      (f1: F1, m1: M1) extends MongoIndex[R] {
-  def asListMap = ListMap((f1.name, m1.value))
+                      (f1: (F1, M1)) extends MongoIndex[R] {
+  def asListMap = ListMap(t(f1))
 }
 case class MongoIndex2[R <: MongoRecord[R],
                        F1 <: Field[_, R], M1 <: IndexModifier,
                        F2 <: Field[_, R], M2 <: IndexModifier]
-                      (f1: F1, m1: M1, f2: F2, m2: M2) extends MongoIndex[R] {
-  def asListMap = ListMap((f1.name, m1.value), (f2.name, m2.value))
+                      (f1: (F1, M1), f2: (F2, M2)) extends MongoIndex[R] {
+  def asListMap = ListMap(t(f1), t(f2))
 }
 case class MongoIndex3[R <: MongoRecord[R],
                        F1 <: Field[_, R], M1 <: IndexModifier,
                        F2 <: Field[_, R], M2 <: IndexModifier,
                        F3 <: Field[_, R], M3 <: IndexModifier]
-                      (f1: F1, m1: M1, f2: F2, m2: M2, f3: F3, m3: M3) extends MongoIndex[R] {
-  def asListMap = ListMap((f1.name, m1.value), (f2.name, m2.value), (f3.name, m3.value))
+                      (f1: (F1, M1), f2: (F2, M2), f3: (F3, M3)) extends MongoIndex[R] {
+  def asListMap = ListMap(t(f1), t(f2), t(f3))
 }
 case class MongoIndex4[R <: MongoRecord[R],
                        F1 <: Field[_, R], M1 <: IndexModifier,
                        F2 <: Field[_, R], M2 <: IndexModifier,
                        F3 <: Field[_, R], M3 <: IndexModifier,
                        F4 <: Field[_, R], M4 <: IndexModifier]
-                      (f1: F1, m1: M1, f2: F2, m2: M2, f3: F3, m3: M3,
-                       f4: F4, m4: M4) extends MongoIndex[R] {
-  def asListMap = ListMap((f1.name, m1.value), (f2.name, m2.value), (f3.name, m3.value),
-    (f4.name, m4.value))
+                      (f1: (F1, M1), f2: (F2, M2), f3: (F3, M3),
+                       f4: (F4, M4)) extends MongoIndex[R] {
+  def asListMap = ListMap(t(f1), t(f2), t(f3), t(f4))
 }
 case class MongoIndex5[R <: MongoRecord[R],
                        F1 <: Field[_, R], M1 <: IndexModifier,
@@ -51,10 +51,9 @@ case class MongoIndex5[R <: MongoRecord[R],
                        F3 <: Field[_, R], M3 <: IndexModifier,
                        F4 <: Field[_, R], M4 <: IndexModifier,
                        F5 <: Field[_, R], M5 <: IndexModifier]
-                      (f1: F1, m1: M1, f2: F2, m2: M2, f3: F3, m3: M3,
-                       f4: F4, m4: M4, f5: F5, m5: M5) extends MongoIndex[R] {
-  def asListMap = ListMap((f1.name, m1.value), (f2.name, m2.value), (f3.name, m3.value),
-    (f4.name, m4.value), (f5.name, m5.value))
+                      (f1: (F1, M1), f2: (F2, M2), f3: (F3, M3),
+                       f4: (F4, M4), f5: (F5, M5)) extends MongoIndex[R] {
+  def asListMap = ListMap(t(f1), t(f2), t(f3), t(f4), t(f5))
 }
 case class MongoIndex6[R <: MongoRecord[R],
                        F1 <: Field[_, R], M1 <: IndexModifier,
@@ -63,49 +62,48 @@ case class MongoIndex6[R <: MongoRecord[R],
                        F4 <: Field[_, R], M4 <: IndexModifier,
                        F5 <: Field[_, R], M5 <: IndexModifier,
                        F6 <: Field[_, R], M6 <: IndexModifier]
-                      (f1: F1, m1: M1, f2: F2, m2: M2, f3: F3, m3: M3,
-                       f4: F4, m4: M4, f5: F5, m5: M5, f6: F6, m6: M6) extends MongoIndex[R] {
-  def asListMap = ListMap((f1.name, m1.value), (f2.name, m2.value), (f3.name, m3.value),
-    (f4.name, m4.value), (f5.name, m5.value), (f6.name, m6.value))
+                      (f1: (F1, M1), f2: (F2, M2), f3: (F3, M3),
+                       f4: (F4, M4), f5: (F5, M5), f6: (F6, M6)) extends MongoIndex[R] {
+  def asListMap = ListMap(t(f1), t(f2), t(f3), t(f4), t(f5), t(f6))
 }
 
 case class IndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]) {
   def index[F1 <: Field[_, M], M1 <: IndexModifier]
-           (f1: M => F1, m1: M1): MongoIndex1[M, F1, M1] = MongoIndex1[M, F1, M1](f1(rec), m1)
+           (f1: M => (F1, M1)): MongoIndex1[M, F1, M1] = MongoIndex1[M, F1, M1](f1(rec))
   def index[F1 <: Field[_, M], M1 <: IndexModifier,
             F2 <: Field[_, M], M2 <: IndexModifier]
-           (f1: M => F1, m1: M1, f2: M => F2, m2: M2): MongoIndex2[M, F1, M1, F2, M2] =
-              MongoIndex2[M, F1, M1, F2, M2](f1(rec), m1, f2(rec), m2)
+           (f1: M => (F1, M1), f2: M => (F2, M2)): MongoIndex2[M, F1, M1, F2, M2] =
+              MongoIndex2[M, F1, M1, F2, M2](f1(rec), f2(rec))
   def index[F1 <: Field[_, M], M1 <: IndexModifier,
             F2 <: Field[_, M], M2 <: IndexModifier,
             F3 <: Field[_, M], M3 <: IndexModifier]
-           (f1: M => F1, m1: M1, f2: M => F2, m2: M2,
-            f3: M => F3, m3: M3): MongoIndex3[M, F1, M1, F2, M2, F3, M3] =
-              MongoIndex3[M, F1, M1, F2, M2, F3, M3](f1(rec), m1, f2(rec), m2, f3(rec), m3)
+           (f1: M => (F1, M1), f2: M => (F2, M2),
+            f3: M => (F3, M3)): MongoIndex3[M, F1, M1, F2, M2, F3, M3] =
+              MongoIndex3[M, F1, M1, F2, M2, F3, M3](f1(rec), f2(rec), f3(rec))
   def index[F1 <: Field[_, M], M1 <: IndexModifier,
             F2 <: Field[_, M], M2 <: IndexModifier,
             F3 <: Field[_, M], M3 <: IndexModifier,
             F4 <: Field[_, M], M4 <: IndexModifier]
-           (f1: M => F1, m1: M1, f2: M => F2, m2: M2,
-            f3: M => F3, m3: M3, f4: M => F4, m4: M4): MongoIndex4[M, F1, M1, F2, M2, F3, M3, F4, M4] =
-              MongoIndex4[M, F1, M1, F2, M2, F3, M3, F4, M4](f1(rec), m1, f2(rec), m2, f3(rec), m3, f4(rec), m4)
+           (f1: M => (F1, M1), f2: M => (F2, M2),
+            f3: M => (F3, M3), f4: M => (F4, M4)): MongoIndex4[M, F1, M1, F2, M2, F3, M3, F4, M4] =
+              MongoIndex4[M, F1, M1, F2, M2, F3, M3, F4, M4](f1(rec), f2(rec), f3(rec), f4(rec))
   def index[F1 <: Field[_, M], M1 <: IndexModifier,
             F2 <: Field[_, M], M2 <: IndexModifier,
             F3 <: Field[_, M], M3 <: IndexModifier,
             F4 <: Field[_, M], M4 <: IndexModifier,
             F5 <: Field[_, M], M5 <: IndexModifier]
-           (f1: M => F1, m1: M1, f2: M => F2, m2: M2,
-            f3: M => F3, m3: M3, f4: M => F4, m4: M4,
-            f5: M => F5, m5: M5): MongoIndex5[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5] =
-              MongoIndex5[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5](f1(rec), m1, f2(rec), m2, f3(rec), m3, f4(rec), m4, f5(rec), m5)
+           (f1: M => (F1, M1), f2: M => (F2, M2),
+            f3: M => (F3, M3), f4: M => (F4, M4),
+            f5: M => (F5, M5)): MongoIndex5[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5] =
+              MongoIndex5[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5](f1(rec), f2(rec), f3(rec), f4(rec), f5(rec))
   def index[F1 <: Field[_, M], M1 <: IndexModifier,
             F2 <: Field[_, M], M2 <: IndexModifier,
             F3 <: Field[_, M], M3 <: IndexModifier,
             F4 <: Field[_, M], M4 <: IndexModifier,
             F5 <: Field[_, M], M5 <: IndexModifier,
             F6 <: Field[_, M], M6 <: IndexModifier]
-           (f1: M => F1, m1: M1, f2: M => F2, m2: M2,
-            f3: M => F3, m3: M3, f4: M => F4, m4: M4,
-            f5: M => F5, m5: M5, f6: M => F6, m6: M6): MongoIndex6[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5, F6, M6] =
-              MongoIndex6[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5, F6, M6](f1(rec), m1, f2(rec), m2, f3(rec), m3, f4(rec), m4, f5(rec), m5, f6(rec), m6)
+           (f1: M => (F1, M1), f2: M => (F2, M2),
+            f3: M => (F3, M3), f4: M => (F4, M4),
+            f5: M => (F5, M5), f6: M => (F6, M6)): MongoIndex6[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5, F6, M6] =
+              MongoIndex6[M, F1, M1, F2, M2, F3, M3, F4, M4, F5, M5, F6, M6](f1(rec), f2(rec), f3(rec), f4(rec), f5(rec), f6(rec))
 }
