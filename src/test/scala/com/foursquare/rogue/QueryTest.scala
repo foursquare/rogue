@@ -159,6 +159,7 @@ class QueryTest extends SpecsMatchers {
     // startsWith, regex
     Venue where (_.venuename startsWith "Starbucks") toString() must_== """db.venues.find({ "venuename" : { "$regex" : "^\\QStarbucks\\E" , "$options" : ""}})"""
     Venue where (_.venuename regexWarningNotIndexed Pattern.compile("Star.*")) toString() must_== """db.venues.find({ "venuename" : { "$regex" : "Star.*" , "$options" : ""}})"""
+    Venue where (_.venuename matches Pattern.compile("Star.*")) toString() must_== """db.venues.find({ "venuename" : { "$regex" : "Star.*" , "$options" : ""}})"""
 
     // all, in, size, contains, at
     Venue where (_.tags all List("db", "ka"))   toString() must_== """db.venues.find({ "tags" : { "$all" : [ "db" , "ka"]}})"""

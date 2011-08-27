@@ -125,6 +125,9 @@ class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T] with Mo
 
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
   def startsWith(s: String) = new EqClause(field.name, Pattern.compile("^" + Pattern.quote(s)))
+  def matches(p: Pattern) = new EqClause(field.name, p) {
+    override lazy val actualIndexBehavior = IndexBehavior.DocumentScan
+  }
   def regexWarningNotIndexed(p: Pattern) = new EqClause(field.name, p)
 }
 
