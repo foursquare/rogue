@@ -355,21 +355,6 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
-  def testGenericSetField {
-    def setField[T, M <: MongoRecord[M]](field: Field[T, Venue], value: T) =
-      (v: Venue) => fieldToModifyField(field) setTo value
-
-    val venue = new Venue().geolatlng(LatLong(37.4, -73.9)).legacyid(2).status(VenueStatus.closed)
-    val fields: List[Field[_, Venue]] = List(venue.geolatlng, venue.legacyid, venue.status)
-    val query = Venue where (_.legacyid eqs 1) modify (_.venuename setTo "Starbucks")
-    val query2 = fields.foldLeft(query){ case (q, f) => {
-      val v = f.valueBox.open_!
-      q and setField(f, v)
-    }}
-    query2 toString() must_== """db.venues.update({ "legid" : 1}, { "$set" : { "status" : "Closed" , "legid" : 2 , "latlng" : [ 37.4 , -73.9] , "venuename" : "Starbucks"}}, false, false)"""
-  }
-
-  @Test
   def testProduceACorrectSignatureString {
     val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC)
     val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0, DateTimeZone.UTC)
