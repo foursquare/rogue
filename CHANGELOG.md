@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 1.0.21
+
+- support for subfield queries on BsonRecordField
+- added "matches" operator (for regexes) on StringFields with explicit index behavior expectations
+- fixed some more broken logging
+
 # 1.0.20
 
 - sbt 0.10.0

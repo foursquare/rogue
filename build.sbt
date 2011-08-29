@@ -1,10 +1,10 @@
 name := "rogue"
 
-version := "1.0.21-SNAPSHOT"
+version := "1.0.21"
 
 organization := "com.foursquare"
 
-crossScalaVersions := Seq("2.8.1", "2.9.0-1", "2.9.0", "2.8.0")
+crossScalaVersions := Seq("2.8.1", "2.9.0", "2.9.0-1", "2.8.0")
 
 libraryDependencies <++= (scalaVersion) { scalaVersion =>
   val specsVersion = scalaVersion match {
