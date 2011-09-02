@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 1.0.22
+
+- improved support for subfield queries on BsonRecordField
+
 # 1.0.21
 
 - support for subfield queries on BsonRecordField
