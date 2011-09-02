@@ -135,7 +135,7 @@ class CaseClassQueryField[V, M <: MongoRecord[M]](val field: MongoCaseClassField
   def unsafeField[F](name: String): SelectableDummyField[F, M] = new SelectableDummyField[F, M](field.owner, field.name + "." + name)
 }
 
-class BsonRecordQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](field: BsonRecordField[M, B])
+class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: BsonRecordField[M, B])
     extends AbstractNumericQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
   def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
@@ -169,7 +169,7 @@ class CaseClassListQueryField[V, M <: MongoRecord[M]](field: MongoCaseClassListF
   def unsafeField[F](name: String): DummyField[F, M] = new DummyField[F, M](field.owner, field.name + "." + name)
 }
 
-class BsonRecordListQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](field: BsonRecordListField[M, B])
+class BsonRecordListQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: BsonRecordListField[M, B])
     extends AbstractListQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
 
@@ -225,7 +225,7 @@ class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
 }
 
-class BsonRecordModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](field: Field[B, M])
+class BsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[B, M])
     extends AbstractModifyField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
 }
@@ -265,7 +265,7 @@ class EnumerationListModifyField[V <: Enumeration#Value, M <: MongoRecord[M]](fi
   override def valueToDB(v: V) = v.toString
 }
 
-class BsonRecordListModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](field: Field[List[B], M])
+class BsonRecordListModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[List[B], M])
     extends AbstractListModifyField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
 }

@@ -36,8 +36,8 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] {
   object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
   object last_updated extends DateTimeField(this)
   object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
-  object claims extends BsonRecordListField(this, VenueClaim)
-  object lastClaim extends BsonRecordField(this, VenueClaim)
+  object claims extends BsonRecordListField(this, VenueClaimBson)
+  object lastClaim extends BsonRecordField(this, VenueClaimBson)
 }
 object Venue extends Venue with MongoMetaRecord[Venue] {
   object CustomIndex extends IndexModifier("custom")
@@ -67,6 +67,16 @@ class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] with V
 object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim] {
   override def fieldOrder = List(status, _id, userid, venueid)
 }
+
+class VenueClaimBson extends BsonRecord[VenueClaimBson] {
+  def meta = VenueClaimBson
+  object userid extends LongField(this) { override def name = "uid" }
+  object status extends EnumNameField(this, ClaimStatus)
+}
+object VenueClaimBson extends VenueClaimBson with BsonMetaRecord[VenueClaimBson] {
+  override def fieldOrder = List(status, userid)
+}
+
 
 case class OneComment(timestamp: String, userid: Long, comment: String)
 class Comment extends MongoRecord[Comment] with MongoId[Comment] {
@@ -327,9 +337,9 @@ class QueryTest extends SpecsMatchers {
     OAuthConsumer modify (_.privileges addToSet ConsumerPrivilege.awardBadges) toString() must_== """db.oauthconsumers.update({ }, { "$addToSet" : { "privileges" : "Award badges"}}""" + suffix
 
     // BsonRecordField and BsonRecordListField with nested Enumeration
-    val claims = List(VenueClaim.createRecord.userid(1).status(ClaimStatus.approved))
-    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims)         toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "_id" : { "$oid" : "%s"} , "uid" : 1 , "vid" : { "$oid" : "%s"}}]}}""".format(claims.head.id, claims.head.venueid.value) + suffix
-    Venue where (_.legacyid eqs 1) modify (_.lastClaim setTo claims.head) toString() must_== query + """{ "$set" : { "lastClaim" : { "status" : "Approved" , "_id" : { "$oid" : "%s"} , "uid" : 1 , "vid" : { "$oid" : "%s"}}}}""".format(claims.head.id, claims.head.venueid.value) + suffix
+    val claims = List(VenueClaimBson.createRecord.userid(1).status(ClaimStatus.approved))
+    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims)         toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "uid" : 1}]}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.lastClaim setTo claims.head) toString() must_== query + """{ "$set" : { "lastClaim" : { "status" : "Approved" , "uid" : 1}}}""" + suffix
 
     // Map
     val m = Map("foo" -> 1L)

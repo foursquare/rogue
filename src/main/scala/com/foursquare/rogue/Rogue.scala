@@ -53,9 +53,9 @@ trait Rogue {
 
   // QueryField implicits
   implicit def fieldToQueryField[M <: MongoRecord[M], F](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
-  implicit def bsonRecordFieldToBsonRecordQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordField[M, B]) =
+  implicit def bsonRecordFieldToBsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](f: BsonRecordField[M, B]) =
     new BsonRecordQueryField[M, B](f)
-  implicit def bsonRecordListFieldToBsonRecordListQueryField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordListField[M, B]) =
+  implicit def bsonRecordListFieldToBsonRecordListQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](f: BsonRecordListField[M, B]) =
     new BsonRecordListQueryField[M, B](f)
   implicit def calendarFieldToCalendarQueryField[M <: MongoRecord[M], F](f: Field[java.util.Calendar, M]): CalendarQueryField[M] = new CalendarQueryField(f)
   implicit def ccFieldToQueryField[M <: MongoRecord[M], F](f: MongoCaseClassField[M, F]): CaseClassQueryField[F, M] = new CaseClassQueryField[F, M](f)
@@ -77,9 +77,9 @@ trait Rogue {
 
   // ModifyField implicits
   implicit def fieldToModifyField[M <: MongoRecord[M], F](f: Field[F, M]): ModifyField[F, M] = new ModifyField(f)
-  implicit def bsonRecordFieldToBsonRecordModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordField[M, B]) =
+  implicit def bsonRecordFieldToBsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](f: BsonRecordField[M, B]) =
     new BsonRecordModifyField[M, B](f)
-  implicit def bsonRecordListFieldToBsonRecordListModifyField[M <: MongoRecord[M], B <: MongoRecord[B]](f: BsonRecordListField[M, B]) =
+  implicit def bsonRecordListFieldToBsonRecordListModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](f: BsonRecordListField[M, B]) =
     new BsonRecordListModifyField[M, B](f)
   implicit def calendarFieldToCalendarModifyField[M <: MongoRecord[M]](f: Field[Calendar, M]): CalendarModifyField[M] = new CalendarModifyField(f)
   implicit def ccListFieldToListModifyField[M <: MongoRecord[M], V](f: MongoCaseClassListField[M, V]): CaseClassListModifyField[V, M] =
