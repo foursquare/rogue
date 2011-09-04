@@ -162,11 +162,12 @@ object MongoHelpers {
     def condition[M <: MongoRecord[M], T](operation: String,
                                           query: PlainBaseQuery[M, _])
                                          (f: DBObject => T): T = {
+      val queryClause = transformer.transformQuery(query)
+      validator.validateQuery(queryClause)
+      val cnd = buildCondition(queryClause.condition)
+      val description = buildConditionString(operation, queryClause)
 
-      validator.validateQuery(query)
-      val cnd = buildCondition(query.condition)
-      val description = buildConditionString(operation, query)
-      runCommand(description, query){
+      runCommand(description, queryClause) {
         f(cnd)
       }
     }
@@ -174,13 +175,14 @@ object MongoHelpers {
     def modify[M <: MongoRecord[M], T](operation: String,
                                        mod: BaseModifyQuery[M])
                                       (f: (DBObject, DBObject) => T): Unit = {
-      validator.validateModify(mod)
-      if (!mod.mod.clauses.isEmpty) {
-        val q = buildCondition(mod.query.condition)
-        val m = buildModify(mod.mod)
-        lazy val description = buildModifyString(mod, operation == "upsertOne", operation == "updateMulti")
+      val modClause = transformer.transformModify(mod)
+      validator.validateModify(modClause)
+      if (!modClause.mod.clauses.isEmpty) {
+        val q = buildCondition(modClause.query.condition)
+        val m = buildModify(modClause.mod)
+        lazy val description = buildModifyString(modClause, operation == "upsertOne", operation == "updateMulti")
 
-        runCommand(description, mod.query) {
+        runCommand(description, modClause.query) {
           f(q, m)
         }
       }
@@ -189,16 +191,17 @@ object MongoHelpers {
     def findAndModify[M <: MongoRecord[M], R](mod: BaseFindAndModifyQuery[M, R],
                                               returnNew: Boolean, upsert: Boolean, remove: Boolean)
                                              (f: DBObject => R): Option[R] = {
-      validator.validateFindAndModify(mod)
-      if (!mod.mod.clauses.isEmpty || remove) {
-        val query = mod.query
+      val modClause = transformer.transformFindAndModify(mod)
+      validator.validateFindAndModify(modClause)
+      if (!modClause.mod.clauses.isEmpty || remove) {
+        val query = modClause.query
         val cnd = buildCondition(query.condition)
         val ord = query.order.map(buildOrder)
         val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
-        val m = buildModify(mod.mod)
-        lazy val description = buildFindAndModifyString(mod, returnNew, upsert, remove)
+        val m = buildModify(modClause.mod)
+        lazy val description = buildFindAndModifyString(modClause, returnNew, upsert, remove)
 
-        runCommand(description, mod.query) {
+        runCommand(description, modClause.query) {
           MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll => {
             val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), remove, m, returnNew, upsert)
             Option(dbObj).map(f)
@@ -232,21 +235,22 @@ object MongoHelpers {
                                    query: PlainBaseQuery[M, _])
                                   (f: DBCursor  => Unit): Unit = {
 
-      validator.validateQuery(query)
-      val cnd = buildCondition(query.condition)
-      val ord = query.order.map(buildOrder)
-      val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
-      val hnt = query.hint.map(buildHint)
+      val queryClause = transformer.transformQuery(query)
+      validator.validateQuery(queryClause)
+      val cnd = buildCondition(queryClause.condition)
+      val ord = queryClause.order.map(buildOrder)
+      val sel = queryClause.select.map(buildSelect) getOrElse buildSelectFromNames(queryClause.meta.metaFields.view.map(_.name))
+      val hnt = queryClause.hint.map(buildHint)
 
-      lazy val description = buildQueryString(operation, query)
+      lazy val description = buildQueryString(operation, queryClause)
 
-      runCommand(description, query){
-        MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
+      runCommand(description, queryClause){
+        MongoDB.useCollection(queryClause.meta.mongoIdentifier, queryClause.meta.collectionName) { coll =>
           try {
-            val cursor = coll.find(cnd, sel).limit(query.lim getOrElse 0).skip(query.sk getOrElse 0)
+            val cursor = coll.find(cnd, sel).limit(queryClause.lim getOrElse 0).skip(queryClause.sk getOrElse 0)
             ord.foreach(cursor sort _)
-            query.maxScan.foreach(cursor addSpecial("$maxScan", _))
-            query.comment.foreach(cursor addSpecial("$comment", _))
+            queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
+            queryClause.comment.foreach(cursor addSpecial("$comment", _))
             hnt.foreach(cursor hint _)
             f(cursor)
           } catch {
