@@ -17,8 +17,8 @@ class QueryExecutorTest extends SpecsMatchers {
 
   @Test
   def testExeptionInRunCommandIsDecorated {
-    val query = BaseQuery[Dummy, Dummy, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
-      Dummy, None, None, None, None, None, AndCondition(Nil, None), None, None)
+    val query = BaseQuery[Dummy, Dummy, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause](
+      Dummy, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
     (QueryExecutor.runCommand("hello", query){
       throw new RuntimeException("bang")
       "hi"

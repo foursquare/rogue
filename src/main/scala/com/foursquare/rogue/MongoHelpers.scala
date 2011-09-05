@@ -15,10 +15,10 @@ object MongoHelpers {
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
   sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R)
 
-  private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
+  private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _, _]
 
   object MongoBuilder {
-    def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
+    def buildCondition(cond: AndCondition, signature: Boolean = false, jsWhere: Option[String] = None): DBObject = {
       val builder = BasicDBObjectBuilder.start
       val (rawClauses, safeClauses) = cond.clauses.partition(_.isInstanceOf[RawQueryClause])
 
@@ -46,6 +46,8 @@ object MongoHelpers {
 
       // Optional $or clause (only one per "and" chain)
       cond.orCondition.foreach(or => builder.add("$or", QueryHelpers.list(or.conditions.map(buildCondition(_, signature = false)))))
+      // Optional $where clause (only one per query)
+      jsWhere.foreach(js => builder.add("$where", js))
       builder.get
     }
 
@@ -89,7 +91,7 @@ object MongoHelpers {
 
     def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: PlainBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
-      sb.append(buildCondition(query.condition, signature = false).toString)
+      sb.append(buildCondition(query.condition, signature = false, jsWhere = query.js).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
       sb.append(")")
       query.order.foreach(o => sb.append(".sort(%s)" format buildOrder(o).toString))

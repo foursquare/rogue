@@ -11,18 +11,18 @@ import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, M
 import org.bson.types.ObjectId
 
 trait Rogue {
-  type Query[T <: MongoRecord[T]] = AbstractQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
-  type OrderedQuery[T <: MongoRecord[T]] = AbstractQuery[T, T, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+  type Query[T <: MongoRecord[T]] = AbstractQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause]
+  type OrderedQuery[T <: MongoRecord[T]] = AbstractQuery[T, T, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause]
   type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
-  type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+  type EmptyQuery[T <: MongoRecord[T]] = BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause]
   type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
 
-  def OrQuery[M <: MongoRecord[M]](subqueries: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _]*): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause] = {
+  def OrQuery[M <: MongoRecord[M]](subqueries: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _, HasNoJsWhereClause]*): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause, HasNoJsWhereClause] = {
     subqueries.toList match {
       case Nil => throw new RogueException("No subqueries supplied to OrQuery", null)
       case q :: qs => {
         val orCondition = QueryHelpers.orConditionFromQueries(q :: qs)
-        BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](q.meta, None, None, None, None, None, AndCondition(Nil, Some(orCondition)), None, None)
+        BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause, HasNoJsWhereClause](q.meta, None, None, None, None, None, AndCondition(Nil, Some(orCondition)), None, None, None)
       }
     }
   }
@@ -31,23 +31,23 @@ trait Rogue {
   object Desc extends IndexModifier(-1)
   object TwoD extends IndexModifier("2d")
 
-  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
-    BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](rec, None, None, None, None, None, AndCondition(Nil, None), None, None)
+  implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause] =
+    BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause](rec, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
   implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): AbstractModifyQuery[M] =
     BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
     IndexBuilder(rec)
 
-  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]): AbstractModifyQuery[M] = {
+  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause]): AbstractModifyQuery[M] = {
     query match {
-      case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[_, _, _, _, _, _, _] => BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]], MongoModify(Nil))
+      case q: BaseEmptyQuery[_, _, _, _, _, _, _, _] => new EmptyModifyQuery[M]
+      case q: BaseQuery[_, _, _, _, _, _, _, _] => BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause]], MongoModify(Nil))
     }
   }
-  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected](query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause]): AbstractFindAndModifyQuery[M, R] = {
+  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected](query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause]): AbstractFindAndModifyQuery[M, R] = {
     query match {
-      case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyFindAndModifyQuery[M, R]
-      case q: BaseQuery[_, _, _, _, _, _, _] => BaseFindAndModifyQuery[M, R](q.asInstanceOf[BaseQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause]], MongoModify(Nil))
+      case q: BaseEmptyQuery[_, _, _, _, _, _, _, _] => new EmptyFindAndModifyQuery[M, R]
+      case q: BaseQuery[_, _, _, _, _, _, _, _] => BaseFindAndModifyQuery[M, R](q.asInstanceOf[BaseQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause, HasNoJsWhereClause]], MongoModify(Nil))
     }
   }
 

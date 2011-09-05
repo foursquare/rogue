@@ -289,9 +289,14 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) skip(10)           toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(Some(10))  toString() must_== """db.venues.find({ "mayor" : 1}).skip(10)"""
     Venue where (_.mayor eqs 1) skipOpt(None)      toString() must_== """db.venues.find({ "mayor" : 1})"""
-
+      
     // raw query clauses
-    Venue where (_.mayor eqs 1) raw (_.add("$where", "this.a > 3")) toString() must_== """db.venues.find({ "mayor" : 1 , "$where" : "this.a > 3"})"""
+    Venue where (_.mayor eqs 1) raw (_.add("$where", "this.a > 3")) toString() must_== """db.venues.find({ "mayor" : 1 , "$where" : "this.a > 3"})"""      
+
+    // javascript $where clause
+    Venue jsWhere("function() { return true; }") toString() must_== """db.venues.find({ "$where" : "function() { return true; }"})"""
+    Venue jsWhere("function() { return true; }") where(_.mayor eqs 1) toString() must_== """db.venues.find({ "mayor" : 1 , "$where" : "function() { return true; }"})"""
+    Venue where(_.mayor eqs 1) and (_.mayor_count < 5) limit(10) jsWhere("function() { return true; }")  toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$lt" : 5} , "$where" : "function() { return true; }"}).limit(10)"""
   }
 
   @Test
@@ -512,6 +517,8 @@ class QueryTest extends SpecsMatchers {
     val noId: Option[Long] = None
     val someList = Some(List(1L, 2L))
     val noList: Option[List[Long]] = None
+    val someJs = Some("function() { return true; }")
+    val noJs: Option[String] = None
 
     // whereOpt
     Venue.whereOpt(someId)(_.legacyid eqs _) toString() must_== """db.venues.find({ "legid" : 1})"""
@@ -550,6 +557,10 @@ class QueryTest extends SpecsMatchers {
     Venue.iscanOpt(noId)(_.legacyid eqs _) toString() must_== """db.venues.find({ })"""
     Venue.iscanOpt(someId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "legid" : 1 , "mayor" : 2})"""
     Venue.iscanOpt(noId)(_.legacyid eqs _).and(_.mayor eqs 2) toString() must_== """db.venues.find({ "mayor" : 2})"""
+
+    // jsWhereOpt
+    Venue jsWhereOpt(someJs) toString() must_== """db.venues.find({ "$where" : "function() { return true; }"})"""
+    Venue jsWhereOpt(noJs) toString() must_== """db.venues.find({ })"""
 
     // modify
     val q = Venue.where(_.legacyid eqs 1)
@@ -636,6 +647,7 @@ class QueryTest extends SpecsMatchers {
     check("""Venue limit(10) countDistinct(_.legacyid)""")
     check("""Venue skip(10) countDistinct(_.legacyid)""")
     check("""Venue select(_.legacyid) select(_.closed)""")
+    check("""Venue jsWhere("1 == 0") jsWhere("1 == 0")""")
 
     // select case class
     check("""Venue selectCase(_.legacyid, V2)""")
