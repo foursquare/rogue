@@ -4,14 +4,18 @@ version := "1.0.24-SNAPSHOT"
 
 organization := "com.foursquare"
 
-crossScalaVersions := Seq("2.8.1", "2.9.0", "2.9.0-1", "2.8.0")
+crossScalaVersions := Seq("2.8.0", "2.8.1", "2.9.0", "2.9.0-1", "2.9.1")
 
 libraryDependencies <++= (scalaVersion) { scalaVersion =>
   val specsVersion = scalaVersion match {
     case "2.8.0" => "1.6.5"
+    case "2.9.1" => "1.6.9"
     case _       => "1.6.8"
   }
-  val liftVersion = "2.4-M2"
+  val liftVersion = scalaVersion match {
+    case "2.9.1" => "2.4-M4"
+    case _       => "2.4-M2"
+  }
   Seq(
     "net.liftweb"             %% "lift-mongodb-record" % liftVersion  % "compile",
     "junit"                    % "junit"               % "4.5"        % "test",
