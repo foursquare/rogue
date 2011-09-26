@@ -364,6 +364,10 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) noop() toString() must_== query + "{ }" + suffix
     Venue where (_.legacyid eqs 1) noop() modify (_.venuename setTo "fshq") toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
     Venue where (_.legacyid eqs 1) noop() and (_.venuename setTo "fshq")    toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
+
+    // $bit
+    Venue where (_.legacyid eqs 1) modify (_.mayor_count bitAnd 3) toString() must_== query + """{ "$bit" : { "mayor_count" : { "and" : 3}}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.mayor_count bitOr 3) toString() must_== query + """{ "$bit" : { "mayor_count" : { "or" : 3}}}""" + suffix
   }
 
   @Test
