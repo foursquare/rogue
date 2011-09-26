@@ -79,3 +79,15 @@ class ModifyAddEachClause[V](fieldName: String, values: Traversable[V]) extends 
     q.push(fieldName).add("$each", QueryHelpers.list(values)).pop
   }
 }
+
+class ModifyBitAndClause[V](fieldName: String, value: V) extends ModifyClause[V](ModOps.Bit) {
+  override def extend(q: BasicDBObjectBuilder): Unit = {
+    q.push(fieldName).add("and", value).pop
+  }
+}
+
+class ModifyBitOrClause[V](fieldName: String, value: V) extends ModifyClause[V](ModOps.Bit) {
+  override def extend(q: BasicDBObjectBuilder): Unit = {
+    q.push(fieldName).add("or", value).pop
+  }
+}

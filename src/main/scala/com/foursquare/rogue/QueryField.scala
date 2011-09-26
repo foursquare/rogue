@@ -19,9 +19,9 @@ object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte", "$in"
   val Ne, Lt, Gt, LtEq, GtEq, In, Nin, Near, All, Size, Exists, Type, Mod = Value
 }
 
-object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAll", "$addToSet", "$pop", "$pull", "$pullAll") {
+object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAll", "$addToSet", "$pop", "$pull", "$pullAll", "$bit") {
   type Op = Value
-  val Inc, Set, Unset, Push, PushAll, AddToSet, Pop, Pull, PullAll = Value
+  val Inc, Set, Unset, Push, PushAll, AddToSet, Pop, Pull, PullAll, Bit = Value
 }
 
 object MongoType extends Enumeration {
@@ -223,6 +223,8 @@ class GeoModifyField[M <: MongoRecord[M]](field: Field[LatLong, M])
 
 class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
+  def bitAnd(v: V) = new ModifyBitAndClause(field.name, v)
+  def bitOr(v: V) = new ModifyBitOrClause(field.name, v)
 }
 
 class BsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[B, M])
