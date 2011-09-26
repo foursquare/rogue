@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 1.0.24
+
+- $bit support
+
+# 1.0.23
+
+- Add hook for intercepting and transforming queries right before sending request to mongodb.
+
 # 1.0.22
 
 - improved support for subfield queries on BsonRecordField
