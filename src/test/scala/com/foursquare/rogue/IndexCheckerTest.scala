@@ -45,17 +45,17 @@ class MongoIndexCheckerTest extends SpecsMatchers with MongoQueryTypes {
     def test(query: GenericQuery[_, _], index: List[ListMap[String, Any]]) = {
       val q = query.asInstanceOf[GenericBaseQuery[_, _]]
       val clauses = MongoQueryNormalizer.normalizeCondition(q.condition)
-      try { 
+      try {
 	MongoIndexChecker.validateIndexExpectations(q, clauses)
 	true
-      } catch { 
+      } catch {
 	case _ => false
       }
     }
 
     def yes(query: GenericQuery[_, _], index: List[ListMap[String, Any]]) =
       test(query, index) must beTrue
-    def no(query: GenericQuery[_, _], index: List[ListMap[String, Any]]) = 
+    def no(query: GenericQuery[_, _], index: List[ListMap[String, Any]]) =
       test(query, index) must beFalse
 
     yes((TestModel where (_.a eqs 1)), TestModel.mongoIndexes)
@@ -98,7 +98,7 @@ class MongoIndexCheckerTest extends SpecsMatchers with MongoQueryTypes {
 	MongoIndexChecker.validateIndexExpectations(q, clauses) &&
         MongoIndexChecker.validateQueryMatchesSomeIndex(q, indexes, clauses)
 	true
-      } catch { 
+      } catch {
 	case _ => false
       }
     }

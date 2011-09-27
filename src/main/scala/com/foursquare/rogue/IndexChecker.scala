@@ -97,16 +97,18 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
         matchesCompoundIndex(index, clauses, scanning = false)
   }
 
-  /** 
-   * Matches a compound index against a list of query clauses, verifying that each
-   * query clause has its index expectations matched by a field of the index.
+  /**
+   * Matches a compound index against a list of query clauses, verifying that
+   * each query clause has its index expectations matched by a field of the
+   * index.
    * @param index the index to be checked.
    * @param clauses a list of query clauses joined by logical "and".
    * @return true if every clause of the query is matched by a field of the
    *   index; false otherwise.
    */
   private def matchesCompoundIndex(index: List[String],
-                                   clauses: List[QueryClause[_]], scanning: Boolean): Boolean = {
+                                   clauses: List[QueryClause[_]],
+				   scanning: Boolean): Boolean = {
     if (clauses.isEmpty) {
       // All of the clauses have been matched to an index field. We are done!
       true

@@ -17,7 +17,6 @@ import org.specs.SpecsMatchers
 /////////////////////////////////////////////////
 // Sample records for testing
 /////////////////////////////////////////////////
-
 object VenueStatus extends Enumeration {
   val open = Value("Open")
   val closed = Value("Closed")
