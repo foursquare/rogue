@@ -36,6 +36,13 @@ object MongoQueryNormalizer extends Loggable with MongoQueryTypes {
 object MongoIndexChecker extends Loggable with MongoQueryTypes {
 
   /**
+   * A user-settable function which will be called by the index checking methods to determine
+   * whether they'll throw exceptions when indexes aren't found. By default, missing indexes will be
+   * logged, but will not throw exceptions.
+   */
+  var throwErrors : () => Boolean = { () => false }
+
+  /**
    * Verifies that the indexes expected for a query actually exist in the mongo database.
    * Signals an error if the indexes don't fulfull the expectations.
    * @param query the query being validated.
@@ -54,8 +61,7 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
         badExpectations.forall{ case (expectation, badActual) => {
           if (clause.expectedIndexBehavior == expectation &&
               badActual.exists(_ == clause.actualIndexBehavior)) {
-            false
-            throw new Exception(
+	    signalError(
                 "Query is expecting %s on %s but actual behavior is %s. query = %s" format
                 (clause.expectedIndexBehavior, clause.fieldName, clause.actualIndexBehavior, query.toString))
           } else true
@@ -73,11 +79,11 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
    * @param the query clauses in DNF form.
    */
   def validateQueryMatchesSomeIndex(query: GenericBaseQuery[_, _],
-                                    indexes: List[ListMap[String, Any]],
+                                    indexes: List[MongoIndex[_]],
                                     conditions: List[List[QueryClause[_]]]) = {
-    lazy val indexString = indexes.map(idx => "{%s}".format(idx.map(fld => "%s:%s".format(fld._1, fld._2)).mkString(", "))).mkString(", ")
+    lazy val indexString = indexes.map(idx => "{%s}".format(idx.toString())).mkString(", ")
     conditions.forall(clauses => {
-      clauses.isEmpty || matchesUniqueIndex(clauses) || indexes.exists(idx => matchesIndex(idx.keys.toList, clauses)) ||
+      clauses.isEmpty || matchesUniqueIndex(clauses) || indexes.exists(idx => matchesIndex(idx.asListMap.keys.toList, clauses)) ||
       signalError("Query does not match an index! query: %s, indexes: %s" format (
         query.toString, indexString))
     })
@@ -147,7 +153,10 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
    * @param msg a message string describing the error.
    */
   private def signalError(msg : String) : Boolean = {
-    throw new Exception(msg)
+    if (throwErrors()) {
+      throw new Exception(msg)
+    }
+    logger.info("Indexing error: " + msg)
     false
   }
 
