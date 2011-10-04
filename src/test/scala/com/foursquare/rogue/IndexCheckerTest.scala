@@ -31,7 +31,7 @@ object TestModel extends TestModel with MongoMetaRecord[TestModel] {
   //  override def mongoIdentifier = NamedMongoIdentifier.venue
   val mongoIndexes = List(
     TestModel.index(_._id, Asc),
-    TestModel.index(_.a, Asc, _.b, Asc, _.c, Asc),
+In    TestModel.index(_.a, Asc, _.b, Asc, _.c, Asc),
     TestModel.index(_.m, Asc, _.a, Asc),
     TestModel.index(_.ll, TwoD, _.b, Asc))
 }
