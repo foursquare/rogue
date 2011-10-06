@@ -66,13 +66,13 @@ object QueryHelpers {
 
   var validator: QueryValidator = NoopQueryValidator
 
-  trait QueryTransformer { 
+  trait QueryTransformer {
     def transformQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _]
     def transformModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]): BaseModifyQuery[M]
     def transformFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R]
   }
 
-  class DefaultQueryTransformer extends QueryTransformer { 
+  class DefaultQueryTransformer extends QueryTransformer {
     override def transformQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _] = { query }
     override def transformModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]): BaseModifyQuery[M] = { modify }
     override def transformFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R] = { modify }

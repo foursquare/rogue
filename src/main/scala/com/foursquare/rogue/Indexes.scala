@@ -16,7 +16,7 @@ case class IndexModifier(value: Any)
 trait MongoIndex[R <: MongoRecord[R]] {
   def asListMap: ListMap[String, Any]
 
-  override def toString() = 
+  override def toString() =
     asListMap.map(fld => "%s:%s".format(fld._1, fld._2)).mkString(", ")
 
 
