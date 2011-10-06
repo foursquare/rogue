@@ -6,15 +6,27 @@ import net.liftweb.common.Loggable
 import net.liftweb.mongodb.record._
 import net.liftweb.util.Props
 
+/**
+ * A trait that represents the fact that a record type includes a list
+ * of the indexes that exist in MongoDB for that type.
+ */
 trait IndexedRecord[M <: MongoRecord[M]] {
   val mongoIndexList: List[MongoIndex[_]] = List()
 }
 
+/**
+ * A container for query-type shorthands.
+ */
 trait MongoQueryTypes {
   type GenericQuery[M <: MongoRecord[M], R] = AbstractQuery[M, R, _, _, _, _, _]
   type GenericBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
 }
 
+/**
+ * A utility object which provides the capability to verify if the set of indexes that
+ * actually exist for a MongoDB collection match the indexes that are expected by
+ * a query.
+ */
 object MongoIndexChecker extends Loggable with MongoQueryTypes {
 
   /**
@@ -45,31 +57,11 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
   var throwErrors : () => Boolean = { () => false }
 
   /**
-   * Analyzes a query and extracts lists of indices used by a query, and conditions associated
-   * with those indices.
-   * @param query the query to te analyzed.
-   * @return (indexes, indexedClauses) where:
-   * <ul>
-   * <li> <code>indexes</code> is a list of indexes, where each index is a map from
-   *   a field name to an integer indicating the sort direction of that field in the index.</li>
-   * <li> <code>indexedClauses</code> are a list of conjunctive query clauses. Each query clause
-   *   in the list is, in turn, a list of query clauses which are joined by logical "AND". </li>
-   * </ul>
+   * Retrieves the list of indexes declared for the record type associated with a
+   * query. If the record type doesn't declare any indexes, then returns an empty list.
+   * @param query the query
+   * @return the list of indexes, or an empty list.
    */
-  def getIndexesAndClauses(query: GenericBaseQuery[_, _]): (List[MongoIndex[_]], List[List[QueryClause[_]]]) = {
-    val queryMetaRecord = query.meta.asInstanceOf[MongoRecord[_]]
-    var indexes: List[MongoIndex[_]] = null
-    if (queryMetaRecord.isInstanceOf[IndexedRecord[_]]) {
-      indexes = query.meta.asInstanceOf[IndexedRecord[_]].mongoIndexList
-    } else {
-      indexes = List()
-    }
-
-    val conditions = flattenCondition(query.condition)
-    val indexedClauses = conditions.map(_.filter(_.expectedIndexBehavior != IndexBehavior.DocumentScan))
-    (indexes, indexedClauses)
-  }
-
   def getIndexes(query: GenericBaseQuery[_, _]): List[MongoIndex[_]] = {
     val queryMetaRecord = query.meta.asInstanceOf[MongoRecord[_]]
     if (queryMetaRecord.isInstanceOf[IndexedRecord[_]]) {
@@ -79,6 +71,12 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
     }
   }
 
+  /**
+   * Verifies that the indexes expected for a query actually exist in the mongo database.
+   * Signals an error if the indexes don't fulfull the expectations. ({@see #throwErrors})
+   * @param query the query being validated.
+   * @return true if the required indexes are found, false otherwise.
+   */
   def validateIndexExpectations(query: GenericBaseQuery[_, _]): Boolean = {
     val indexes = getIndexes(query)
     validateIndexExpectations(query, indexes)
@@ -86,9 +84,13 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
 
   /**
    * Verifies that the indexes expected for a query actually exist in the mongo database.
-   * Signals an error if the indexes don't fulfull the expectations.
+   * Signals an error if the indexes don't fulfull the expectations. ({@see #throwErrors})
+   * This version of validaateIndexExpectations is intended for use in cases where
+   * the indexes are not explicitly declared in the class, but the caller knows what set
+   * of indexes are actually available.
    * @param query the query being validated.
-   * @param conditions the query converted to DNF (e.g., by flattenCondition)
+   * @param indexes a list of the indexes
+   * @return true if the required indexes are found, false otherwise.
    */
   def validateIndexExpectations(query: GenericBaseQuery[_, _], indexes: List[MongoIndex[_]]): Boolean = {
     val baseConditions = normalizeCondition(query.condition);
@@ -119,7 +121,6 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
    * to execute that query. (Due to vagaries of the MongoDB implementation, sometimes a
    * conceptually usable index won't be found.)
    * @param query the query
-   * @param indexes the list of indexes that exist in the database
    * @param the query clauses in DNF form.
    */
   def validateQueryMatchesSomeIndex(query: GenericBaseQuery[_, _]): Boolean = {
@@ -127,8 +128,16 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
     validateQueryMatchesSomeIndex(query, indexes)
   }
 
+  /**
+   * Verifies that the index expected by a query both exists, and will be used by MongoDB
+   * to execute that query. (Due to vagaries of the MongoDB implementation, sometimes a
+   * conceptually usable index won't be found.)
+   * @param query the query
+   * @param indexes the list of indexes that exist in the database
+   * @param the query clauses in DNF form.
+   */
   def validateQueryMatchesSomeIndex(query: GenericBaseQuery[_, _], indexes: List[MongoIndex[_]]) = {
-    val (indexes, conditions) = getIndexesAndClauses(query)
+    val conditions = normalizeCondition(query.condition)
     lazy val indexString = indexes.map(idx => "{%s}".format(idx.toString())).mkString(", ")
     conditions.forall(clauses => {
       clauses.isEmpty || matchesUniqueIndex(clauses) ||
