@@ -450,6 +450,13 @@ trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def updateMulti(): Unit
   def updateOne(): Unit
   def upsertOne(): Unit
+
+  // These must be overloads and not default arguments because Scala does not allow a caller to omit parentheses
+  // when there are default arguments. As many existing uses of these methods omit the parentheses, these overloads
+  // are necessary to avoid breaking callers.
+  def updateMulti(writeConcern: WriteConcern): Unit
+  def updateOne(writeConcern: WriteConcern): Unit
+  def upsertOne(writeConcern: WriteConcern): Unit
 }
 
 case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped, _ <: MaybeHasOrClause],
@@ -472,10 +479,19 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
   override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = addClauseOpt(opt)(clause)
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = addClauseOpt(opt)(clause)
 
-  // Always do modifications against master (not query.meta, which could point to slave)
-  override def updateMulti(): Unit = QueryExecutor.modify("updateMulti", this)(query.master.updateMulti(_, _))
-  override def updateOne(): Unit = QueryExecutor.modify("updateOne", this)(query.master.update(_, _))
-  override def upsertOne(): Unit = QueryExecutor.modify("upsertOne", this)(query.master.upsert(_, _))
+  // These methods always do modifications against master (not query.meta, which could point to a slave).
+  override def updateMulti(): Unit
+    = QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = None)
+  override def updateOne(): Unit
+    = QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = None)
+  override def upsertOne(): Unit
+    = QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = None)
+  override def updateMulti(writeConcern: WriteConcern): Unit
+    = QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = Some(writeConcern))
+  override def updateOne(writeConcern: WriteConcern): Unit
+    = QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = Some(writeConcern))
+  override def upsertOne(writeConcern: WriteConcern): Unit
+    = QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = Some(writeConcern))
 
   override def toString = MongoBuilder.buildModifyString(this)
 }
@@ -489,6 +505,10 @@ class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
   override def updateMulti(): Unit = ()
   override def updateOne(): Unit = ()
   override def upsertOne(): Unit = ()
+
+  def updateMulti(writeConcern: WriteConcern): Unit = ()
+  def updateOne(writeConcern: WriteConcern): Unit = ()
+  def upsertOne(writeConcern: WriteConcern): Unit = ()
 
   override def toString = "empty modify query"
 }

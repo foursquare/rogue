@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.mongodb.{BasicDBObjectBuilder, DBObject, DBCursor}
+import com.mongodb.{BasicDBObjectBuilder, DBObject, DBCursor, WriteConcern}
 import net.liftweb.mongodb._
 import net.liftweb.mongodb.record._
 import scala.collection.immutable.ListMap
@@ -172,24 +172,33 @@ object MongoHelpers {
       }
     }
 
-    def modify[M <: MongoRecord[M], T](operation: String,
-                                       mod: BaseModifyQuery[M])
-                                      (f: (DBObject, DBObject) => T): Unit = {
+    def modify[M <: MongoRecord[M], T](mod: BaseModifyQuery[M],
+                                       upsert: Boolean,
+                                       multi: Boolean,
+                                       writeConcern: Option[WriteConcern] = None): Unit = {
       val modClause = transformer.transformModify(mod)
       validator.validateModify(modClause)
       if (!modClause.mod.clauses.isEmpty) {
         val q = buildCondition(modClause.query.condition)
         val m = buildModify(modClause.mod)
-        lazy val description = buildModifyString(modClause, operation == "upsertOne", operation == "updateMulti")
+        lazy val description = buildModifyString(modClause, upsert = upsert, multi = multi)
 
         runCommand(description, modClause.query) {
-          f(q, m)
+          MongoDB.useSession(mod.query.master.mongoIdentifier) { db =>
+            val coll = db.getCollection(mod.query.master.collectionName)
+            writeConcern match {
+              case Some(theWriteConcern) => coll.update(q, m, upsert, multi, theWriteConcern)
+              case None => coll.update(q, m, upsert, multi)
+            }
+          }
         }
       }
     }
 
     def findAndModify[M <: MongoRecord[M], R](mod: BaseFindAndModifyQuery[M, R],
-                                              returnNew: Boolean, upsert: Boolean, remove: Boolean)
+                                              returnNew: Boolean,
+                                              upsert: Boolean,
+                                              remove: Boolean)
                                              (f: DBObject => R): Option[R] = {
       val modClause = transformer.transformFindAndModify(mod)
       validator.validateFindAndModify(modClause)
@@ -202,10 +211,10 @@ object MongoHelpers {
         lazy val description = buildFindAndModifyString(modClause, returnNew, upsert, remove)
 
         runCommand(description, modClause.query) {
-          MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll => {
+          MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
             val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), remove, m, returnNew, upsert)
             Option(dbObj).map(f)
-          }}
+          }
         }
       }
       else None
