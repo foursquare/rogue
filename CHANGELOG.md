@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.0.25
+
+- ability to supply a WriteConcern to updateOne, updateMulti and upsertOne.
+- select and selectCase can handle 7 and 8 parameters
+
 # 1.0.24
 
 - $bit support
