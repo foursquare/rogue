@@ -48,14 +48,6 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
     flattenCondition(condition).map(_.filter(_.expectedIndexBehavior != IndexBehavior.DocumentScan))
   }
 
-
-  /**
-   * A user-settable function which will be called by the index checking methods to determine
-   * whether they'll throw exceptions when indexes aren't found. By default, missing indexes will be
-   * logged, but will not throw exceptions.
-   */
-  var throwErrors : () => Boolean = { () => false }
-
   /**
    * Retrieves the list of indexes declared for the record type associated with a
    * query. If the record type doesn't declare any indexes, then returns an empty list.
@@ -73,7 +65,9 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
 
   /**
    * Verifies that the indexes expected for a query actually exist in the mongo database.
-   * Signals an error if the indexes don't fulfull the expectations. ({@see #throwErrors})
+   * Logs an error via {@link QueryLogger#logQueryMismatch} if there is no
+   * matching index. Clients may choose to signal errors by overriding
+   * logQueryMismatch.
    * @param query the query being validated.
    * @return true if the required indexes are found, false otherwise.
    */
@@ -211,11 +205,7 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
    * @param msg a message string describing the error.
    */
   private def signalError(msg : String) : Boolean = {
-    if (throwErrors()) {
-      throw new Exception(msg)
-    }
-    logger.info("Indexing error: " + msg)
+    QueryHelpers.logger.logQueryMismatch("Indexing error: " + msg)
     false
   }
-
 }

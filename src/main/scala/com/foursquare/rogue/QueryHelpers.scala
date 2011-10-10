@@ -35,11 +35,13 @@ object QueryHelpers {
     def log(msg: => String, signature: => String, timeMillis: Long): Unit = log(msg, timeMillis)
     def log(msg: => String, timeMillis: Long): Unit
     def warn(msg: => String): Unit
+    def logQueryMismatch(msg: => String)
   }
 
   class DefaultQueryLogger extends QueryLogger {
     override def log(msg: => String, timeMillis: Long) {}
     override def warn(msg: => String) {}
+    def logQueryMismatch(msg: => String) {}
   }
 
   object NoopQueryLogger extends DefaultQueryLogger

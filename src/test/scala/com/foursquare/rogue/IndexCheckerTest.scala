@@ -28,7 +28,7 @@ class TestModel extends MongoRecord[TestModel] with MongoId[TestModel] {
 
 object TestModel extends TestModel with MongoMetaRecord[TestModel] with IndexedRecord[TestModel] {
   override def collectionName = "model"
-  //  override def mongoIdentifier = NamedMongoIdentifier.venue
+
   override val mongoIndexList = List(
     TestModel.index(_._id, Asc),
     TestModel.index(_.a, Asc, _.b, Asc, _.c, Asc),
