@@ -19,9 +19,9 @@ object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte", "$in"
   val Ne, Lt, Gt, LtEq, GtEq, In, Nin, Near, All, Size, Exists, Type, Mod = Value
 }
 
-object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAll", "$addToSet", "$pop", "$pull", "$pullAll", "$bit") {
+object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAll", "$addToSet", "$pop", "$pull", "$pullAll", "$bit", "$rename") {
   type Op = Value
-  val Inc, Set, Unset, Push, PushAll, AddToSet, Pop, Pull, PullAll, Bit = Value
+  val Inc, Set, Unset, Push, PushAll, AddToSet, Pop, Pull, PullAll, Bit, Rename = Value
 }
 
 object MongoType extends Enumeration {
@@ -197,6 +197,7 @@ abstract class AbstractModifyField[V, DB, M <: MongoRecord[M]](val field: Field[
   def valueToDB(v: V): DB
   def setTo(v: V) = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
   def unset = new ModifyClause(ModOps.Unset, field.name -> 1)
+  def rename(newName: String) = new ModifyClause(ModOps.Rename, field.name -> newName)
 }
 
 class ModifyField[V, M <: MongoRecord[M]](field: Field[V, M])
