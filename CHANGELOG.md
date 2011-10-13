@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 1.0.26
+
+- $rename support
+
 # 1.0.25
 
 - ability to supply a WriteConcern to updateOne, updateMulti and upsertOne.
