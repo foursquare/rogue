@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 1.0.27
+
+- Mongo index checking (see [here](https://github.com/foursquare/rogue/blob/master/docs/Indexing.md) for documentation)
+
 # 1.0.26
 
 - $rename support
