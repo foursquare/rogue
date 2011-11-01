@@ -62,34 +62,27 @@ The examples below assume a collection of `Thing`s with fields `a`, `b`, `c` and
 **Document scan**: the records themselves must be scanned in order to figure out which ones satisfy the query. Use `scan`.
 
 - An operator is used that cannot be answered by the index. These are `$exists, $nin and $size`.
-
-    Thing scan (_.a exists false)
-
+    `Thing scan (_.a exists false)`
 - A query field does not appear in the index.
-  ```
-  Thing where (_.a eqs 1) scan (_.d eqs 4)```
+    `Thing where (_.a eqs 1) scan (_.d eqs 4)`
 - The first field in the index does not appear in the query. (compare "a level is skipped" below)
-  ```
-  Thing scan (_.b eqs 2)```
+    `Thing scan (_.b eqs 2)`
 
 **Index scan**: The query can be answered by the index, but multiple (possibly non-matching) index entries need to be examined. Use `iscan`.
 
 - An operator is used that requires an index scan. These are `$mod` and `$type`.
-  ```
-  Thing iscan (_.a hastype MongoType.String)```
+    `Thing iscan (_.a hastype MongoType.String)`
 - An operator is used that requires a partial index scan. These are the "range" operators `$gt`, `$gte`, `$lt`, `$lte`, `$ne`, `$near` and `$within`.
-```
-  Thing iscan (_.a > 1)
-  Thing iscan (_.a > 1) iscan (_.b > 2)
-  Thing where (_.a eqs 1) iscan (_.b > 2)
-  Thing iscan (_.b > 2) and (_.a eqs 1) // NB: equivalent to previous
-```
+
+    Thing iscan (_.a > 1)
+    Thing iscan (_.a > 1) iscan (_.b > 2)
+    Thing where (_.a eqs 1) iscan (_.b > 2)
+    Thing iscan (_.b > 2) and (_.a eqs 1) // NB: equivalent to previous
+
 - A clause that would otherwise hit an index follows (in the index, not in the query) a clause that causes a partial index scan.
-  ```
-  Thing iscan (_.a > 1) iscan (_.b eqs 2)```
+    `Thing iscan (_.a > 1) iscan (_.b eqs 2)`
 - A level is skipped in the index.
-  ```
-  Thing where (_.a eqs 1) iscan (_.c eqs 3)```
+    `Thing where (_.a eqs 1) iscan (_.c eqs 3)`
 
 ## Checking Indexes
 
@@ -101,39 +94,35 @@ To check the indexes for a query, there are two different index checking methods
 You can call either or both of these from the `validateQuery` and/or `validateModify` callbacks in the `QueryValidator` hook. For example,
 when your application boots, set up the hooks like so:
 
-```object MyQueryValidator extends QueryHelpers.DefaultQueryValidator {
-  override def validateQuery[M <: MongoRecord[M]](query: Implicits.GenericBaseQuery[M, _]) {
-  if (Props.mode != Props.RunModes.Production) {
-    MongoIndexChecker.validateIndexExpectations(query) &&
-    MongoIndexChecker.validateQueryMatchesSomeIndex(query)
-  }
-```
-```
-  override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {
-    validateQuery(modify.query)
-  }
-```
-```
-  override def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]) {
-    validateQuery(modify.query)
-  }
-}
-```
-```
-QueryHelpers.validator = MyQueryValidator
-```
+    object MyQueryValidator extends QueryHelpers.DefaultQueryValidator {
+      override def validateQuery[M <: MongoRecord[M]](query: Implicits.GenericBaseQuery[M, _]) {
+        if (Props.mode != Props.RunModes.Production) {
+          MongoIndexChecker.validateIndexExpectations(query) &&
+          MongoIndexChecker.validateQueryMatchesSomeIndex(query)
+        }
+
+      override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {
+        validateQuery(modify.query)
+      }
+
+      override def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]) {
+        validateQuery(modify.query)
+      }
+    }
+
+    QueryHelpers.validator = MyQueryValidator
 
 When the index checker has something to warn about, it will call the `QueryHelpers.QueryLogger.logIndexMismatch` callback.
 At foursquare we have implemented it like so:
 
-```override def logIndexMismatch(msg: => String) {
-  val stack = Utils.currentStackTrace()
-  val prefix = stack.indexOf("validateQuery(MongoSetup.scala") // a hack
-  val trimmedStack = stack.drop(prefix).take(800)
-  LOG.warn(msg + " from " + trimmedStack)
-  if (services.exists(_.throttleService.throwOnQueryIndexMiss.isShown)) {
-    throw new Exception(msg)
-  }
-}
-```
+    override def logIndexMismatch(msg: => String) {
+       val stack = Utils.currentStackTrace()
+       val prefix = stack.indexOf("validateQuery(MongoSetup.scala") // a hack
+       val trimmedStack = stack.drop(prefix).take(800)
+       LOG.warn(msg + " from " + trimmedStack)
+       if (services.exists(_.throttleService.throwOnQueryIndexMiss.isShown)) {
+         throw new Exception(msg)
+       }
+    }
+
 
