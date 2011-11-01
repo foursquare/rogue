@@ -62,30 +62,30 @@ The examples below assume a collection of `Thing`s with fields `a`, `b`, `c` and
 **Document scan**: the records themselves must be scanned in order to figure out which ones satisfy the query. Use `scan`.
 
 - An operator is used that cannot be answered by the index. These are `$exists`, `$nin` and `$size`.
-
-    Thing scan (_.a exists false)
+  <br/>`Thing scan (_.a exists false)`
 
 - A query field does not appear in the index.
-    <br/>`Thing where (_.a eqs 1) scan (_.d eqs 4)`
+  <br/>`Thing where (_.a eqs 1) scan (_.d eqs 4)`
+
 - The first field in the index does not appear in the query. (compare "a level is skipped" below)
-    
-    Thing scan (_.b eqs 2)
+  <br/>`Thing scan (_.b eqs 2)`
 
 **Index scan**: The query can be answered by the index, but multiple (possibly non-matching) index entries need to be examined. Use `iscan`.
 
 - An operator is used that requires an index scan. These are `$mod` and `$type`.
-    `Thing iscan (_.a hastype MongoType.String)`
+  <br/>`Thing iscan (_.a hastype MongoType.String)`
+
 - An operator is used that requires a partial index scan. These are the "range" operators `$gt`, `$gte`, `$lt`, `$lte`, `$ne`, `$near` and `$within`.
-```
-    Thing iscan (_.a > 1)
-    Thing iscan (_.a > 1) iscan (_.b > 2)
-    Thing where (_.a eqs 1) iscan (_.b > 2)
-    Thing iscan (_.b > 2) and (_.a eqs 1) // NB: equivalent to previous
-```
+   <br/>`Thing iscan (_.a > 1)`
+   <br/>`Thing iscan (_.a > 1) iscan (_.b > 2)`
+   <br/>`Thing where (_.a eqs 1) iscan (_.b > 2)`
+   <br/>`Thing iscan (_.b > 2) and (_.a eqs 1) // NB: equivalent to previous`
+
 - A clause that would otherwise hit an index follows (in the index, not in the query) a clause that causes a partial index scan.
-`Thing iscan (_.a > 1) iscan (_.b eqs 2)`
+  <br/>`Thing iscan (_.a > 1) iscan (_.b eqs 2)`
+
 - A level is skipped in the index.
-    `Thing where (_.a eqs 1) iscan (_.c eqs 3)`
+  <br/>`Thing where (_.a eqs 1) iscan (_.c eqs 3)`
 
 ## Checking Indexes
 
