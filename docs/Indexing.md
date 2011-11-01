@@ -14,20 +14,18 @@ The way to provide indexing information is to use the trait `com.foursquare.rogu
 
 For example, consider a simple record type:
 
-```class SampleModel extends MongoRecord[SampleModel] with MongoId[SampleModel] {
-  def meta = SampleModel
-  object a extends IntField(this)	
-  object b extends StringField(this)
-}
-```
-```
-object SampleModel extends SampleModel with MongoMetaRecord[SampleModel] with IndexedRecord[TestModel] {
-  override def collectionName = "model"
-  override val mongoIndexList = List(
-    SampleModel.index(_._id, Asc),
-    SampleModel.index(_.a, Asc, _.b, Desc))
-}
-```
+    class SampleModel extends MongoRecord[SampleModel] with MongoId[SampleModel] {
+      def meta = SampleModel
+      object a extends IntField(this)	
+      object b extends StringField(this)
+    }
+
+    object SampleModel extends SampleModel with MongoMetaRecord[SampleModel] with IndexedRecord[TestModel] {
+      override def collectionName = "model"
+      override val mongoIndexList = List(
+        SampleModel.index(_._id, Asc),
+        SampleModel.index(_.a, Asc, _.b, Desc))
+    }
 
 The indexes are provided by overriding `val mongoIndexList`, and providing a list of index objects for the indexes that you will have in your mongo database. For simple field expressions, you can use `.index(_.fieldname, dir)`, where "dir" is the index type. For simple types like this, that's basically the sorting direction - `Asc` for ascending, or `Desc` for descending. There are a collection of index-types that are provided by Rogue, which you can find in the source file `Rogue.scala`. You can also add your own, by subclassing the case-class `IndexModifier`.
 
@@ -37,24 +35,21 @@ You can index more complex field expressions. Basically, if you can write a Mong
 
 Of course, not every query 100% matches an index! For instance, here's an index declared on Campaign:
 
-```{ groupids: 1, active: 1 }
-```
+    { groupids: 1, active: 1 }
 
 And say you have this query:
 
-```Campaign.where(_.groupids in allGroups.map(_.id))
-        .and(_.active eqs true)
-        .and(_.userid eqs user.id.is)
-        .fetch()
-```
+    Campaign.where(_.groupids in allGroups.map(_.id))
+            .and(_.active eqs true)
+            .and(_.userid eqs user.id.is)
+            .fetch()
 
 The query clearly matches that index! But how does the index checker know to ignore the userid part of the query? It doesn't! Unless you do this:
 
-```Campaign.where(_.groupids in allGroups.map(_.id))
-        .and(_.active eqs true)
-        .scan(_.userid eqs user.id.is)
-        .fetch()
-```
+    Campaign.where(_.groupids in allGroups.map(_.id))
+            .and(_.active eqs true)
+            .scan(_.userid eqs user.id.is)
+            .fetch()
 
 If you say `scan` instead of `where` or `and`, the index checker will ignore that clause and try to match the rest of the clauses exactly to an index. It is also a visual indication to the reader which part of the query is hitting an index and which part will result in a scan.
 
@@ -67,8 +62,9 @@ The examples below assume a collection of `Thing`s with fields `a`, `b`, `c` and
 **Document scan**: the records themselves must be scanned in order to figure out which ones satisfy the query. Use `scan`.
 
 - An operator is used that cannot be answered by the index. These are `$exists, $nin and $size`.
-  ```
-  Thing scan (_.a exists false)```
+
+    Thing scan (_.a exists false)
+
 - A query field does not appear in the index.
   ```
   Thing where (_.a eqs 1) scan (_.d eqs 4)```
