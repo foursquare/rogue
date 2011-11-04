@@ -118,7 +118,7 @@ object QueryHelpers {
     if (vs.isEmpty)
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
-      new QueryClause(fieldName, CondOps.All -> QueryHelpers.list(vs))
+      new AllQueryClause(fieldName, QueryHelpers.list(vs))
   }
 
   def asDBObject[T](x: T): DBObject = {

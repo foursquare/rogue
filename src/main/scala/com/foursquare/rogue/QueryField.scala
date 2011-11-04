@@ -53,7 +53,7 @@ abstract class AbstractQueryField[V, DB, M <: MongoRecord[M]](val field: Field[V
   def valueToDB(v: V): DB
   def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
 
-  def eqs(v: V) = new EqClause(field.name, valueToDB(v))
+  def eqs(v: V) = EqClause(field.name, valueToDB(v))
   def neqs(v: V) = new NeQueryClause(field.name, valueToDB(v))
   def in[L <% Traversable[V]](vs: L) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
   def nin[L <% Traversable[V]](vs: L) = new NinQueryClause(field.name, QueryHelpers.list(valuesToDB(vs)))
@@ -82,7 +82,7 @@ class GeoQueryField[M <: MongoRecord[M]](field: Field[LatLong, M])
     extends AbstractQueryField[LatLong, java.util.List[Double], M](field) {
   override def valueToDB(ll: LatLong) = QueryHelpers.list(List(ll.lat, ll.long))
 
-  def eqs(lat: Double, lng: Double) = new EqClause(field.name, QueryHelpers.list(List(lat, lng)))
+  def eqs(lat: Double, lng: Double) = EqClause(field.name, QueryHelpers.list(List(lat, lng)))
   def neqs(lat: Double, lng: Double) = new NeQueryClause(field.name, QueryHelpers.list(List(lat, lng)))
   def near(lat: Double, lng: Double, radius: Degrees) = new NearQueryClause(field.name, QueryHelpers.list(List(lat, lng, QueryHelpers.radius(radius))))
   def withinCircle(lat: Double, lng: Double, radius: Degrees) = new WithinCircleClause(field.name, lat, lng, QueryHelpers.radius(radius))
@@ -117,18 +117,16 @@ class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId
 
 class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T] with MongoId[T]](override val field: Field[ObjectId, M] with HasMongoForeignObjectId[T])
     extends ObjectIdQueryField[M](field) {
-  def eqs(obj: T) = new EqClause(field.name, obj.id)
+  def eqs(obj: T) = EqClause(field.name, obj.id)
   def neqs(obj: T) = new NeQueryClause(field.name, obj.id)
   def in(objs: Traversable[T]) = QueryHelpers.inListClause(field.name, objs.map(_.id))
   def nin(objs: Traversable[T]) = new NinQueryClause(field.name, QueryHelpers.list(objs.map(_.id)))
 }
 
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
-  def startsWith(s: String) = new EqClause(field.name, Pattern.compile("^" + Pattern.quote(s)))
-  def matches(p: Pattern) = new EqClause(field.name, p) {
-    override lazy val actualIndexBehavior = IndexBehavior.DocumentScan
-  }
-  def regexWarningNotIndexed(p: Pattern) = new EqClause(field.name, p)
+  def startsWith(s: String) = new EqClause[Pattern, PartialIndexScan](field.name, IndexBehavior.PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
+  def matches(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, IndexBehavior.DocumentScan, p)
+  def regexWarningNotIndexed(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, IndexBehavior.DocumentScan, p)
 }
 
 class CaseClassQueryField[V, M <: MongoRecord[M]](val field: MongoCaseClassField[M, V]) {
@@ -152,7 +150,7 @@ abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Fie
   def in(vs: Traversable[V]) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
   def nin(vs: Traversable[V]) = new NinQueryClause(field.name, QueryHelpers.list(valuesToDB(vs)))
   def size(s: Int) = new SizeQueryClause(field.name, s)
-  def contains(v: V) = new EqClause(field.name, valueToDB(v))
+  def contains(v: V) = EqClause(field.name, valueToDB(v))
   def notcontains(v: V) = new NeQueryClause(field.name, valueToDB(v))
   def at(i: Int): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + i.toString)
   def idx(i: Int): DummyField[V, M] = at(i)

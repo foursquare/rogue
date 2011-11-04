@@ -31,7 +31,7 @@ object MongoHelpers {
         // and can be chained like { a : { $gt : 2, $lt: 6 }}.
         // So if there is any equality clause, apply it (only) to the builder;
         // otherwise, chain the clauses.
-        cs.filter(_.isInstanceOf[EqClause[_]]).headOption match {
+        cs.filter(_.isInstanceOf[EqClause[_, _]]).headOption match {
           case Some(eqClause) => eqClause.extend(builder, signature)
           case None => {
             builder.push(name)
