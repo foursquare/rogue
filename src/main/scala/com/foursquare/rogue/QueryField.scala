@@ -251,6 +251,7 @@ abstract class AbstractListModifyField[V, DB, M <: MongoRecord[M]](val field: Fi
   def popLast = new ModifyClause(ModOps.Pop, field.name -> 1)
   def pull(v: V) = new ModifyClause(ModOps.Pull, field.name -> valueToDB(v))
   def pullAll(vs: Traversable[V]) = new ModifyClause(ModOps.PullAll, field.name -> QueryHelpers.list(valuesToDB(vs)))
+  def $: Field[V, M] = new DummyField[V, M](field.owner, field.name + ".$")
 }
 
 class ListModifyField[V, M <: MongoRecord[M]](field: Field[List[V], M])
@@ -268,9 +269,16 @@ class EnumerationListModifyField[V <: Enumeration#Value, M <: MongoRecord[M]](fi
   override def valueToDB(v: V) = v.toString
 }
 
-class BsonRecordListModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[List[B], M])
+class BsonRecordListModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[List[B], M])(implicit mf: Manifest[B])
     extends AbstractListModifyField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
+
+  override def $: BsonRecordField[M, B] = {
+    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
+    new BsonRecordField[M, B](field.owner, rec.meta)(mf) {
+      override def name = field.name + ".$"
+    }
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////////

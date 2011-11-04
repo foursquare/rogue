@@ -514,6 +514,19 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testDollarSelector {
+    Venue.where(_.legacyid eqs 1)
+         .and(_.claims.subfield(_.userid) eqs 2)
+         .modify(_.claims.$.subfield(_.status) setTo ClaimStatus.approved)
+         .toString() must_== """db.venues.update({ "legid" : 1 , "claims.uid" : 2}, { "$set" : { "claims.$.status" : "Approved"}}, false, false)"""
+
+    Venue.where(_.legacyid eqs 1)
+         .and(_.tags contains "sometag")
+         .modify(_.tags.$ setTo "othertag")
+         .toString() must_== """db.venues.update({ "legid" : 1 , "tags" : "sometag"}, { "$set" : { "tags.$" : "othertag"}}, false, false)"""
+  }
+
+  @Test
   def testWhereOpt {
     val someId = Some(1L)
     val noId: Option[Long] = None
