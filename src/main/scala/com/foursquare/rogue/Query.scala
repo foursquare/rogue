@@ -5,7 +5,6 @@ package com.foursquare.rogue
 import collection.immutable.List._
 import com.foursquare.rogue.MongoHelpers._
 import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
-import net.liftweb.record.Field
 import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record._
@@ -36,6 +35,83 @@ abstract sealed class Unskipped extends MaybeSkipped
 abstract sealed class MaybeHasOrClause
 abstract sealed class HasOrClause extends MaybeHasOrClause
 abstract sealed class HasNoOrClause extends MaybeHasOrClause
+
+abstract sealed class MaybeIndexed
+abstract sealed class Indexable extends MaybeIndexed
+abstract sealed class Empty extends Indexable
+abstract sealed class Index extends Indexable
+abstract sealed class IndexScannable extends MaybeIndexed
+abstract sealed class PartialIndexScan extends IndexScannable
+abstract sealed class IndexScan extends IndexScannable
+abstract sealed class DocumentScan extends MaybeIndexed
+
+/////////////////////////////////////////////////////////////////////////////
+// Indexes
+/////////////////////////////////////////////////////////////////////////////
+
+class IndexEnforcerBuilder[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] with IndexedRecord[M]) {
+  type MetaM = M with MongoMetaRecord[M] with IndexedRecord[M]
+
+  def useIndex1[F1 <: Field[_, M]](i: MongoIndex1[M, F1, _], f1: MetaM => F1): IndexEnforcer1[M, Empty, F1] = {
+    new IndexEnforcer1[M, Empty, F1](meta, f1(meta), new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  }
+
+  def useIndex2[F1 <: Field[_, M], F2 <: Field[_, M]](i: MongoIndex2[M, F1, _, F2, _], f1: MetaM => F1, f2: MetaM => F2): IndexEnforcer2[M, Empty, F1, F2] = {
+    new IndexEnforcer2[M, Empty, F1, F2](meta, f1(meta), f2(meta), new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  }
+
+  def useIndex3[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M]](i: MongoIndex3[M, F1, _, F2, _, F3, _], f1: MetaM => F1, f2: MetaM => F2, f3: MetaM => F3): IndexEnforcer3[M, Empty, F1, F2, F3] = {
+    new IndexEnforcer3[M, Empty, F1, F2, F3](meta, f1(meta), f2(meta), f3(meta), new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  }
+}
+
+case class IndexEnforcer1[M <: MongoRecord[M],
+                          Ind <: MaybeIndexed,
+                          F1 <: Field[_, M]](meta: M with MongoMetaRecord[M],
+                                             f1: F1,
+                                             q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
+  def where[F, ClauseInd <: Indexable](clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
+    q.where(_ => clause(f1))
+  }
+
+  def iscan[F, ClauseInd <: IndexScannable](clause: F1 => IndexableQueryClause[F, ClauseInd]): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
+    q.iscan(_ => clause(f1))
+  }
+}
+
+case class IndexEnforcer2[M <: MongoRecord[M],
+                          Ind <: MaybeIndexed,
+                          F1 <: Field[_, M],
+                          F2 <: Field[_, M]](meta: M with MongoMetaRecord[M],
+                                             f1: F1,
+                                             f2: F2,
+                                             q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
+  def where[F, ClauseInd <: Indexable](clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer1[M, Index, F2] = {
+    new IndexEnforcer1[M, Index, F2](meta, f2, q.where(_ => clause(f1)))
+  }
+
+  def iscan[F, ClauseInd <: IndexScannable](clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer1[M, IndexScan, F2] = {
+    new IndexEnforcer1[M, IndexScan, F2](meta, f2, q.iscan(_ => clause(f1)))
+  }
+}
+
+case class IndexEnforcer3[M <: MongoRecord[M],
+                          Ind <: MaybeIndexed,
+                          F1 <: Field[_, M],
+                          F2 <: Field[_, M],
+                          F3 <: Field[_, M]](meta: M with MongoMetaRecord[M],
+                                             f1: F1,
+                                             f2: F2,
+                                             f3: F3,
+                                             q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
+  def where[F, ClauseInd <: Indexable](clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer2[M, Index, F2, F3] = {
+    new IndexEnforcer2[M, Index, F2, F3](meta, f2, f3, q.where(_ => clause(f1)))
+  }
+
+  def iscan[F, ClauseInd <: IndexScannable](clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer2[M, IndexScan, F2, F3] = {
+    new IndexEnforcer2[M, IndexScan, F2, F3](meta, f2, f3, q.iscan(_ => clause(f1)))
+  }
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // Builders
@@ -353,7 +429,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6], xs(6).asInstanceOf[F7])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
-  
+
   def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, CC](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M], f8: M => SelectField[F8, M], create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)(implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
     val inst = meta.createRecord
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst), f8(inst))
