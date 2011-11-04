@@ -40,15 +40,16 @@ sealed trait MaybeIndexed
 sealed trait Indexable extends MaybeIndexed
 sealed trait IndexScannable extends MaybeIndexed
 
-trait NoIndexInfo extends Indexable with IndexScannable
+abstract sealed class NoIndexInfo extends Indexable with IndexScannable
+abstract sealed class Index extends Indexable with IndexScannable
+abstract sealed class PartialIndexScan extends IndexScannable
+abstract sealed class IndexScan extends IndexScannable
+abstract sealed class DocumentScan extends MaybeIndexed
+
 case object NoIndexInfo extends NoIndexInfo
-trait Index extends Indexable with IndexScannable
 case object Index extends Index
-trait PartialIndexScan extends IndexScannable
 case object PartialIndexScan extends PartialIndexScan
-trait IndexScan extends IndexScannable
 case object IndexScan extends IndexScan
-trait DocumentScan extends MaybeIndexed
 case object DocumentScan extends DocumentScan
 
 abstract sealed class AtLeastOneIndexColumn
@@ -75,6 +76,18 @@ class IndexEnforcerBuilder[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] 
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M]](i: MongoIndex3[M, F1, _, F2, _, F3, _]): IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, AtLeastThreeIndexColumns] = {
     new IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, AtLeastThreeIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  }
+
+  def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M]](i: MongoIndex4[M, F1, _, F2, _, F3, _, F4, _]): IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, AtLeastFourIndexColumns] = {
+    new IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, AtLeastFourIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  }
+
+  def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M], F5 <: Field[_, M]](i: MongoIndex5[M, F1, _, F2, _, F3, _, F4, _, F5, _]): IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, AtLeastFiveIndexColumns] = {
+    new IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, AtLeastFiveIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  }
+
+  def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M], F5 <: Field[_, M], F6 <: Field[_, M]](i: MongoIndex6[M, F1, _, F2, _, F3, _, F4, _, F5, _, F6, _]): IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, AtLeastSixIndexColumns] = {
+    new IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, AtLeastSixIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
   }
 }
 
@@ -139,6 +152,92 @@ case class IndexEnforcer3[M <: MongoRecord[M],
   }
 
   def noop(f1Func: M => F1, f2Func: M => F2, f3Func: M => F3)(implicit ev: IndS <:< AtLeastFourIndexColumns): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = q
+}
+
+case class IndexEnforcer4[M <: MongoRecord[M],
+                          Ind <: MaybeIndexed,
+                          F1 <: Field[_, M],
+                          F2 <: Field[_, M],
+                          F3 <: Field[_, M],
+                          F4 <: Field[_, M],
+                          IndS <: AtLeastFourIndexColumns](meta: M with MongoMetaRecord[M],
+                                                           q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
+  def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer3[M, Index, F2, F3, F4, IndS] = {
+    new IndexEnforcer3[M, Index, F2, F3, F4, IndS](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer3[M, IndexScan, F2, F3, F4, IndS] = {
+    new IndexEnforcer3[M, IndexScan, F2, F3, F4, IndS](meta, q.iscan(_ => clause(f1Func(meta))))
+  }
+
+  def noop(f1Func: M => F1)(implicit ev: IndS <:< AtLeastFiveIndexColumns): IndexEnforcer3[M, IndexScan, F2, F3, F4, IndS] = {
+    new IndexEnforcer3[M, IndexScan, F2, F3, F4, IndS](meta, q)
+  }
+
+  def noop(f1Func: M => F1, f2Func: M => F2)(implicit ev: IndS <:< AtLeastFiveIndexColumns): IndexEnforcer2[M, IndexScan, F3, F4, IndS] = {
+    new IndexEnforcer2[M, IndexScan, F3, F4, IndS](meta, q)
+  }
+
+  def noop(f1Func: M => F1, f2Func: M => F2, f3Func: M => F3)(implicit ev: IndS <:< AtLeastFiveIndexColumns): IndexEnforcer1[M, IndexScan, F4, IndS] = {
+    new IndexEnforcer1[M, IndexScan, F4, IndS](meta, q)
+  }
+
+  def noop(f1Func: M => F1, f2Func: M => F2, f3Func: M => F3, f4Func: M => F4)(implicit ev: IndS <:< AtLeastFiveIndexColumns): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = q
+}
+
+case class IndexEnforcer5[M <: MongoRecord[M],
+                          Ind <: MaybeIndexed,
+                          F1 <: Field[_, M],
+                          F2 <: Field[_, M],
+                          F3 <: Field[_, M],
+                          F4 <: Field[_, M],
+                          F5 <: Field[_, M],
+                          IndS <: AtLeastFiveIndexColumns](meta: M with MongoMetaRecord[M],
+                                                           q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
+  def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer4[M, Index, F2, F3, F4, F5, IndS] = {
+    new IndexEnforcer4[M, Index, F2, F3, F4, F5, IndS](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer4[M, IndexScan, F2, F3, F4, F5, IndS] = {
+    new IndexEnforcer4[M, IndexScan, F2, F3, F4, F5, IndS](meta, q.iscan(_ => clause(f1Func(meta))))
+  }
+
+  def noop(f1Func: M => F1)(implicit ev: IndS <:< AtLeastSixIndexColumns): IndexEnforcer4[M, IndexScan, F2, F3, F4, F5, IndS] = {
+    new IndexEnforcer4[M, IndexScan, F2, F3, F4, F5, IndS](meta, q)
+  }
+
+  def noop(f1Func: M => F1, f2Func: M => F2)(implicit ev: IndS <:< AtLeastSixIndexColumns): IndexEnforcer3[M, IndexScan, F3, F4, F5, IndS] = {
+    new IndexEnforcer3[M, IndexScan, F3, F4, F5, IndS](meta, q)
+  }
+
+  def noop(f1Func: M => F1, f2Func: M => F2, f3Func: M => F3)(implicit ev: IndS <:< AtLeastSixIndexColumns): IndexEnforcer2[M, IndexScan, F4, F5, IndS] = {
+    new IndexEnforcer2[M, IndexScan, F4, F5, IndS](meta, q)
+  }
+
+  def noop(f1Func: M => F1, f2Func: M => F2, f3Func: M => F3, f4Func: M => F4)(implicit ev: IndS <:< AtLeastSixIndexColumns): IndexEnforcer1[M, IndexScan, F5, IndS] = {
+    new IndexEnforcer1[M, IndexScan, F5, IndS](meta, q)
+  }
+
+  def noop(f1Func: M => F1, f2Func: M => F2, f3Func: M => F3, f4Func: M => F4, f5Func: M => F5)(implicit ev: IndS <:< AtLeastSixIndexColumns): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = q
+}
+
+case class IndexEnforcer6[M <: MongoRecord[M],
+                          Ind <: MaybeIndexed,
+                          F1 <: Field[_, M],
+                          F2 <: Field[_, M],
+                          F3 <: Field[_, M],
+                          F4 <: Field[_, M],
+                          F5 <: Field[_, M],
+                          F6 <: Field[_, M],
+                          IndS <: AtLeastSixIndexColumns](meta: M with MongoMetaRecord[M],
+                                                          q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
+  def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer5[M, Index, F2, F3, F4, F5, F6, IndS] = {
+    new IndexEnforcer5[M, Index, F2, F3, F4, F5, F6, IndS](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer5[M, IndexScan, F2, F3, F4, F5, F6, IndS] = {
+    new IndexEnforcer5[M, IndexScan, F2, F3, F4, F5, F6, IndS](meta, q.iscan(_ => clause(f1Func(meta))))
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////
