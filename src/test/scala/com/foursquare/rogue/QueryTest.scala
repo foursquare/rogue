@@ -526,7 +526,7 @@ class QueryTest extends SpecsMatchers {
          .where(_ in List(2097L))
          .where(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
          .scan(_.legacyid eqs 4)
-         .toString() must_== """db.venues.find({ "mayor" : 2097 , "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
+         .toString() must_== """db.venues.find({ "mayor" : { "$in" : [ 2097]} , "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
   }
 
   def testWhereOpt {
