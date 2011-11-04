@@ -77,7 +77,7 @@ trait Rogue {
 
   // ModifyField implicits
   implicit def fieldToModifyField[M <: MongoRecord[M], F](f: Field[F, M]): ModifyField[F, M] = new ModifyField(f)
-  implicit def bsonRecordFieldToBsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](f: Field[B, M]) =
+  implicit def bsonRecordFieldToBsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](f: BsonRecordField[M, B]) =
     new BsonRecordModifyField[M, B](f)
   implicit def bsonRecordListFieldToBsonRecordListModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](f: BsonRecordListField[M, B])(implicit mf: Manifest[B]): BsonRecordListModifyField[M, B] =
     new BsonRecordListModifyField[M, B](f)(mf)
