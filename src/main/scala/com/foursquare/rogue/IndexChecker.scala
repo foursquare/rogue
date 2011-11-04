@@ -45,7 +45,7 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
   }
 
   def normalizeCondition(condition: MongoHelpers.AndCondition): List[List[QueryClause[_]]] = {
-    flattenCondition(condition).map(_.filter(_.expectedIndexBehavior != IndexBehavior.DocumentScan))
+    flattenCondition(condition).map(_.filter(_.expectedIndexBehavior != DocumentScan))
   }
 
   /**
@@ -88,20 +88,20 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
    */
   def validateIndexExpectations(query: GenericBaseQuery[_, _], indexes: List[MongoIndex[_]]): Boolean = {
     val baseConditions = normalizeCondition(query.condition);
-    val conditions = baseConditions.map(_.filter(_.expectedIndexBehavior != IndexBehavior.DocumentScan))
+    val conditions = baseConditions.map(_.filter(_.expectedIndexBehavior != DocumentScan))
 
     conditions.forall(clauses => {
       clauses.forall(clause => {
         // DocumentScan expectations have been filtered out at this point.
         // We just have to worry about expectations being more optimistic than actual.
         val badExpectations = List(
-          IndexBehavior.Index -> List(IndexBehavior.PartialIndexScan, IndexBehavior.IndexScan,IndexBehavior.DocumentScan),
-          IndexBehavior.IndexScan -> List(IndexBehavior.DocumentScan)
+          Index -> List(PartialIndexScan, IndexScan, DocumentScan),
+          IndexScan -> List(DocumentScan)
         )
         badExpectations.forall{ case (expectation, badActual) => {
           if (clause.expectedIndexBehavior == expectation &&
               badActual.exists(_ == clause.actualIndexBehavior)) {
-	    signalError(
+            signalError(
                 "Query is expecting %s on %s but actual behavior is %s. query = %s" format
                 (clause.expectedIndexBehavior, clause.fieldName, clause.actualIndexBehavior, query.toString))
           } else true
@@ -144,7 +144,7 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
   private def matchesUniqueIndex(clauses: List[QueryClause[_]]) = {
     // Special case for overspecified queries matching on the _id field.
     // TODO: Do the same for any overspecified query exactly matching a unique index.
-    clauses.exists(clause => clause.fieldName == "_id" && clause.actualIndexBehavior == IndexBehavior.Index)
+    clauses.exists(clause => clause.fieldName == "_id" && clause.actualIndexBehavior == Index)
   }
 
   private def matchesIndex(index: List[String],
@@ -181,11 +181,11 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
           matchingClauses match {
             case matchingClause :: _ => {
               // If a previous field caused a scan, this field must scan too.
-              val expectationOk = !scanning || matchingClause.expectedIndexBehavior == IndexBehavior.IndexScan
+              val expectationOk = !scanning || matchingClause.expectedIndexBehavior == IndexScan
               // If this field causes a scan, later fields must scan too.
               val nowScanning = scanning ||
-                  matchingClause.actualIndexBehavior == IndexBehavior.IndexScan ||
-                  matchingClause.actualIndexBehavior == IndexBehavior.PartialIndexScan
+                  matchingClause.actualIndexBehavior == IndexScan ||
+                  matchingClause.actualIndexBehavior == PartialIndexScan
               expectationOk && matchesCompoundIndex(rest, remainingClauses, scanning = nowScanning)
             }
             case Nil => {

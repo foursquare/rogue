@@ -36,15 +36,20 @@ abstract sealed class MaybeHasOrClause
 abstract sealed class HasOrClause extends MaybeHasOrClause
 abstract sealed class HasNoOrClause extends MaybeHasOrClause
 
-abstract sealed class MaybeIndexed
-abstract sealed class Indexable extends MaybeIndexed
+sealed trait MaybeIndexed
+sealed trait Indexable extends MaybeIndexed
 sealed trait IndexScannable extends MaybeIndexed
 
-abstract sealed class Empty extends Indexable with IndexScannable
-abstract sealed class Index extends Indexable with IndexScannable
-abstract sealed class PartialIndexScan extends IndexScannable
-abstract sealed class IndexScan extends IndexScannable
-abstract sealed class DocumentScan extends MaybeIndexed
+trait NoIndexInfo extends Indexable with IndexScannable
+case object NoIndexInfo extends NoIndexInfo
+trait Index extends Indexable with IndexScannable
+case object Index extends Index
+trait PartialIndexScan extends IndexScannable
+case object PartialIndexScan extends PartialIndexScan
+trait IndexScan extends IndexScannable
+case object IndexScan extends IndexScan
+trait DocumentScan extends MaybeIndexed
+case object DocumentScan extends DocumentScan
 
 abstract sealed class AtLeastOneIndexColumn
 abstract sealed class AtLeastTwoIndexColumns extends AtLeastOneIndexColumn
@@ -60,16 +65,16 @@ abstract sealed class AtLeastSixIndexColumns extends AtLeastFiveIndexColumns
 class IndexEnforcerBuilder[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] with IndexedRecord[M]) {
   type MetaM = M with MongoMetaRecord[M] with IndexedRecord[M]
 
-  def useIndex[F1 <: Field[_, M]](i: MongoIndex1[M, F1, _]): IndexEnforcer1[M, Empty, F1, AtLeastOneIndexColumn] = {
-    new IndexEnforcer1[M, Empty, F1, AtLeastOneIndexColumn](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  def useIndex[F1 <: Field[_, M]](i: MongoIndex1[M, F1, _]): IndexEnforcer1[M, NoIndexInfo, F1, AtLeastOneIndexColumn] = {
+    new IndexEnforcer1[M, NoIndexInfo, F1, AtLeastOneIndexColumn](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
   }
 
-  def useIndex[F1 <: Field[_, M], F2 <: Field[_, M]](i: MongoIndex2[M, F1, _, F2, _]): IndexEnforcer2[M, Empty, F1, F2, AtLeastTwoIndexColumns] = {
-    new IndexEnforcer2[M, Empty, F1, F2, AtLeastTwoIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  def useIndex[F1 <: Field[_, M], F2 <: Field[_, M]](i: MongoIndex2[M, F1, _, F2, _]): IndexEnforcer2[M, NoIndexInfo, F1, F2, AtLeastTwoIndexColumns] = {
+    new IndexEnforcer2[M, NoIndexInfo, F1, F2, AtLeastTwoIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
   }
 
-  def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M]](i: MongoIndex3[M, F1, _, F2, _, F3, _]): IndexEnforcer3[M, Empty, F1, F2, F3, AtLeastThreeIndexColumns] = {
-    new IndexEnforcer3[M, Empty, F1, F2, F3, AtLeastThreeIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+  def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M]](i: MongoIndex3[M, F1, _, F2, _, F3, _]): IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, AtLeastThreeIndexColumns] = {
+    new IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, AtLeastThreeIndexColumns](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
   }
 }
 
@@ -228,7 +233,7 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
   // second MongoMetaRecord pointing to the slave.
   override lazy val master = meta.meta
 
-  private def addClause[F](clause: M => QueryClause[F], expectedIndexBehavior: IndexBehavior.Value): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = {
+  private def addClause[F](clause: M => QueryClause[F], expectedIndexBehavior: MaybeIndexed): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = {
     clause(meta) match {
       case cl: EmptyQueryClause[_] => new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, Or]
       case cl => {
@@ -238,22 +243,22 @@ case class BaseQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSe
     }
   }
 
-  override def where[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.Index)
-  override def and[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.Index)
-  override def iscan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
-  override def scan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
+  override def where[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = Index)
+  override def and[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = Index)
+  override def iscan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = IndexScan)
+  override def scan[F](clause: M => QueryClause[F]) = addClause(clause, expectedIndexBehavior = DocumentScan)
 
-  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F], expectedIndexBehavior: IndexBehavior.Value) = {
+  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F], expectedIndexBehavior: MaybeIndexed) = {
     opt match {
       case Some(v) => addClause(clause(_, v), expectedIndexBehavior)
       case None => this
     }
   }
 
-  override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.Index)
-  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.Index)
-  override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.IndexScan)
-  override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexBehavior.DocumentScan)
+  override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = Index)
+  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = Index)
+  override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = IndexScan)
+  override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = addClauseOpt(opt)(clause, expectedIndexBehavior = DocumentScan)
 
   override def raw(f: BasicDBObjectBuilder => Unit) = {
     val newClause = new RawQueryClause(f)

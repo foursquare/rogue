@@ -124,9 +124,9 @@ class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T] with Mo
 }
 
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
-  def startsWith(s: String) = new EqClause[Pattern, PartialIndexScan](field.name, IndexBehavior.PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
-  def matches(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, IndexBehavior.DocumentScan, p)
-  def regexWarningNotIndexed(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, IndexBehavior.DocumentScan, p)
+  def startsWith(s: String) = new EqClause[Pattern, PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
+  def matches(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, DocumentScan, p)
+  def regexWarningNotIndexed(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, DocumentScan, p)
 }
 
 class CaseClassQueryField[V, M <: MongoRecord[M]](val field: MongoCaseClassField[M, V]) {
