@@ -39,12 +39,14 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] {
   object claims extends BsonRecordListField(this, VenueClaimBson)
   object lastClaim extends BsonRecordField(this, VenueClaimBson)
 }
-object Venue extends Venue with MongoMetaRecord[Venue] {
+object Venue extends Venue with MongoMetaRecord[Venue] with IndexedRecord[Venue] {
   object CustomIndex extends IndexModifier("custom")
   val idIdx = Venue.index(_._id, Asc)
+  val mayorIdIdx = Venue.index(_.mayor, Asc, _._id, Asc)
   val legIdx = Venue.index(_.legacyid, Desc)
   val geoIdx = Venue.index(_.geolatlng, TwoD)
   val geoCustomIdx = Venue.index(_.geolatlng, CustomIndex, _.tags, Asc)
+  override val mongoIndexList = List(idIdx, mayorIdIdx, legIdx, geoIdx, geoCustomIdx)
 
   trait FK[T <: FK[T]] extends MongoRecord[T] {
     self: T=>
@@ -511,6 +513,33 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) hint (Venue.legIdx) toString()       must_== """db.venues.find({ "legid" : 1}).hint({ "legid" : -1})"""
     Venue where (_.legacyid eqs 1) hint (Venue.geoIdx) toString()       must_== """db.venues.find({ "legid" : 1}).hint({ "latlng" : "2d"})"""
     Venue where (_.legacyid eqs 1) hint (Venue.geoCustomIdx) toString() must_== """db.venues.find({ "legid" : 1}).hint({ "latlng" : "custom" , "tags" : 1})"""
+  }
+
+  @Test
+  def testDollarSelector {
+    Venue.where(_.legacyid eqs 1)
+         .and(_.claims.subfield(_.userid) eqs 2)
+         .modify(_.claims.$.subfield(_.status) setTo ClaimStatus.approved)
+         .toString() must_== """db.venues.update({ "legid" : 1 , "claims.uid" : 2}, { "$set" : { "claims.$.status" : "Approved"}}, false, false)"""
+
+    Venue.where(_.legacyid eqs 1)
+         .and(_.tags contains "sometag")
+         .modify(_.tags.$ setTo "othertag")
+         .toString() must_== """db.venues.update({ "legid" : 1 , "tags" : "sometag"}, { "$set" : { "tags.$" : "othertag"}}, false, false)"""
+  }
+
+  @Test
+  def testEnforceIndexes {
+    Venue.useIndex1(Venue.idIdx, _._id)
+         .where(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
+         .scan(_.legacyid eqs 4)
+         .toString() must_== """db.venues.find({ "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
+
+    Venue.useIndex2(Venue.mayorIdIdx, _.mayor, _._id)
+         .where(_ in List(2097L))
+         .where(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
+         .scan(_.legacyid eqs 4)
+         .toString() must_== """db.venues.find({ "mayor" : { "$in" : [ 2097]} , "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
   }
 
   @Test

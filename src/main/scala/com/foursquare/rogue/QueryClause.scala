@@ -3,6 +3,7 @@
 package com.foursquare.rogue
 
 import com.mongodb.BasicDBObjectBuilder
+import net.liftweb.record.Field
 
 object IndexBehavior extends Enumeration {
   type IndexBehavior = Value
@@ -26,7 +27,55 @@ class QueryClause[V](val fieldName: String, conditions: (CondOps.Value, V)*) {
   def withExpectedIndexBehavior(b: IndexBehavior.Value) = new QueryClause(fieldName, conditions: _*) { override val expectedIndexBehavior = b }
 }
 
-class RawQueryClause(f: BasicDBObjectBuilder => Unit) extends QueryClause("raw") {
+class IndexableQueryClause[V, Ind <: MaybeIndexed](fname: String, conds: (CondOps.Value, V)*)
+    extends QueryClause[V](fname, conds: _*)
+
+class AllQueryClause[V](fieldName: String, vs: java.util.List[V])
+    extends IndexableQueryClause[java.util.List[V], Index](fieldName, CondOps.All -> vs)
+
+class InQueryClause[V](fieldName: String, vs: java.util.List[V])
+    extends IndexableQueryClause[java.util.List[V], Index](fieldName, CondOps.In -> vs)
+
+class GtQueryClause[V](fieldName: String, v: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.Gt -> v)
+
+class GtEqQueryClause[V](fieldName: String, v: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.GtEq -> v)
+
+class LtQueryClause[V](fieldName: String, v: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.Lt -> v)
+
+class LtEqQueryClause[V](fieldName: String, v: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.LtEq -> v)
+
+class BetweenQueryClause[V](fieldName: String, lower: V, upper: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.GtEq -> lower, CondOps.LtEq -> upper)
+
+class StrictBetweenQueryClause[V](fieldName: String, lower: V, upper: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.Gt -> lower, CondOps.Lt -> upper)
+
+class NeQueryClause[V](fieldName: String, v: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.Ne -> v)
+
+class NearQueryClause[V](fieldName: String, v: V)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, CondOps.Near -> v)
+
+class ModQueryClause[V](fieldName: String, v: java.util.List[V])
+    extends IndexableQueryClause[java.util.List[V], IndexScan](fieldName, CondOps.Mod -> v)
+
+class TypeQueryClause(fieldName: String, v: MongoType.Value)
+    extends IndexableQueryClause[Int, IndexScan](fieldName, CondOps.Type -> v.id)
+
+class ExistsQueryClause(fieldName: String, v: Boolean)
+    extends IndexableQueryClause[Boolean, DocumentScan](fieldName, CondOps.Exists -> v)
+
+class NinQueryClause[V](fieldName: String, vs: java.util.List[V])
+    extends IndexableQueryClause[java.util.List[V], DocumentScan](fieldName, CondOps.Nin -> vs)
+
+class SizeQueryClause(fieldName: String, v: Int)
+    extends IndexableQueryClause[Int, DocumentScan](fieldName, CondOps.Size -> v)
+
+class RawQueryClause(f: BasicDBObjectBuilder => Unit) extends IndexableQueryClause("raw") {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     f(q)
   }
@@ -34,13 +83,13 @@ class RawQueryClause(f: BasicDBObjectBuilder => Unit) extends QueryClause("raw")
   override val expectedIndexBehavior = IndexBehavior.DocumentScan
 }
 
-class EmptyQueryClause[V](fieldName: String) extends QueryClause[V](fieldName) {
+class EmptyQueryClause[V](fieldName: String) extends IndexableQueryClause[V, Index](fieldName) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {}
   override lazy val actualIndexBehavior = IndexBehavior.Index
   override def withExpectedIndexBehavior(b: IndexBehavior.Value) = new EmptyQueryClause[V](fieldName) { override val expectedIndexBehavior = b }
 }
 
-class EqClause[V](fieldName: String, value: V) extends QueryClause[V](fieldName) {
+class EqClause[V](fieldName: String, value: V) extends IndexableQueryClause[V, Index](fieldName) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     q.add(fieldName, if (signature) 0 else value)
   }
@@ -48,7 +97,7 @@ class EqClause[V](fieldName: String, value: V) extends QueryClause[V](fieldName)
   override def withExpectedIndexBehavior(b: IndexBehavior.Value) = new EqClause(fieldName, value) { override val expectedIndexBehavior = b }
 }
 
-class WithinCircleClause[V](fieldName: String, lat: Double, lng: Double, radius: Double) extends QueryClause(fieldName) {
+class WithinCircleClause[V](fieldName: String, lat: Double, lng: Double, radius: Double) extends IndexableQueryClause[V, PartialIndexScan](fieldName) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     val value = if (signature) 0 else QueryHelpers.list(List(QueryHelpers.list(List(lat, lng)), radius))
     q.push("$within").add("$center", value).pop
@@ -57,7 +106,7 @@ class WithinCircleClause[V](fieldName: String, lat: Double, lng: Double, radius:
   override def withExpectedIndexBehavior(b: IndexBehavior.Value) = new WithinCircleClause[V](fieldName, lat, lng, radius) { override val expectedIndexBehavior = b }
 }
 
-class WithinBoxClause[V](fieldName: String, lat1: Double, lng1: Double, lat2: Double, lng2: Double) extends QueryClause(fieldName) {
+class WithinBoxClause[V](fieldName: String, lat1: Double, lng1: Double, lat2: Double, lng2: Double) extends IndexableQueryClause[V, PartialIndexScan](fieldName) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     val value = if (signature) 0 else {
       QueryHelpers.list(List(QueryHelpers.list(lat1, lng1), QueryHelpers.list(lat2, lng2)))
