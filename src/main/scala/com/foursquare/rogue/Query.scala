@@ -97,6 +97,10 @@ case class IndexEnforcer1[M <: MongoRecord[M],
     q.where(_ => clause(f1Func(meta)))
   }
 
+  def and[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
+    q.and(_ => clause(f1Func(meta)))
+  }
+
   def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
     q.iscan(_ => clause(f1Func(meta)))
   }
@@ -112,6 +116,10 @@ case class IndexEnforcer2[M <: MongoRecord[M],
                                                           q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
   def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer1[M, Index, F2, UsedIndex] = {
     new IndexEnforcer1[M, Index, F2, UsedIndex](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def and[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer1[M, Index, F2, UsedIndex] = {
+    new IndexEnforcer1[M, Index, F2, UsedIndex](meta, q.and(_ => clause(f1Func(meta))))
   }
 
   def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer1[M, IndexScan, F2, UsedIndex] = {
@@ -134,6 +142,10 @@ case class IndexEnforcer3[M <: MongoRecord[M],
                                              q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
   def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer2[M, Index, F2, F3, UsedIndex] = {
     new IndexEnforcer2[M, Index, F2, F3, UsedIndex](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def and[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer2[M, Index, F2, F3, UsedIndex] = {
+    new IndexEnforcer2[M, Index, F2, F3, UsedIndex](meta, q.and(_ => clause(f1Func(meta))))
   }
 
   def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer2[M, IndexScan, F2, F3, UsedIndex] = {
@@ -161,6 +173,10 @@ case class IndexEnforcer4[M <: MongoRecord[M],
                                                            q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
   def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer3[M, Index, F2, F3, F4, UsedIndex] = {
     new IndexEnforcer3[M, Index, F2, F3, F4, UsedIndex](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def and[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer3[M, Index, F2, F3, F4, UsedIndex] = {
+    new IndexEnforcer3[M, Index, F2, F3, F4, UsedIndex](meta, q.and(_ => clause(f1Func(meta))))
   }
 
   def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer3[M, IndexScan, F2, F3, F4, UsedIndex] = {
@@ -193,6 +209,10 @@ case class IndexEnforcer5[M <: MongoRecord[M],
                                                            q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
   def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer4[M, Index, F2, F3, F4, F5, UsedIndex] = {
     new IndexEnforcer4[M, Index, F2, F3, F4, F5, UsedIndex](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def and[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer4[M, Index, F2, F3, F4, F5, UsedIndex] = {
+    new IndexEnforcer4[M, Index, F2, F3, F4, F5, UsedIndex](meta, q.and(_ => clause(f1Func(meta))))
   }
 
   def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer4[M, IndexScan, F2, F3, F4, F5, UsedIndex] = {
@@ -228,6 +248,10 @@ case class IndexEnforcer6[M <: MongoRecord[M],
                                                           q: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]) {
   def where[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer5[M, Index, F2, F3, F4, F5, F6, UsedIndex] = {
     new IndexEnforcer5[M, Index, F2, F3, F4, F5, F6, UsedIndex](meta, q.where(_ => clause(f1Func(meta))))
+  }
+
+  def and[F, ClauseInd <: Indexable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd])(implicit ev: Ind <:< Indexable): IndexEnforcer5[M, Index, F2, F3, F4, F5, F6, UsedIndex] = {
+    new IndexEnforcer5[M, Index, F2, F3, F4, F5, F6, UsedIndex](meta, q.and(_ => clause(f1Func(meta))))
   }
 
   def iscan[F, ClauseInd <: IndexScannable](f1Func: M => F1)(clause: F1 => IndexableQueryClause[F, ClauseInd]): IndexEnforcer5[M, IndexScan, F2, F3, F4, F5, F6, UsedIndex] = {

@@ -525,7 +525,7 @@ class QueryTest extends SpecsMatchers {
 
     Venue.useIndex(Venue.mayorIdIdx)
          .where(_.mayor)(_ in List(2097L))
-         .where(_._id)(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
+         .and(_._id)(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
          .scan(_.legacyid eqs 4)
          .toString() must_== """db.venues.find({ "mayor" : { "$in" : [ 2097]} , "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
 
@@ -705,17 +705,33 @@ class QueryTest extends SpecsMatchers {
     check("""Venue.useIndex(Venue.idIdx).where(_.legacyid eqs 4)""",
           Some("found.*EqClause.*required.*Venue#_id"))
     // Can't use where with an IndexScan'ing operation.
-    check("""Venue.useIndex(Venue.idIdx).where(_._id after new DateTime())""",
-          Some("missing arguments for method where"))
+    check("""Venue.useIndex(Venue.idIdx).where(_._id)(_ after new DateTime())""",
+          Some("do not conform to method where.*com.foursquare.rogue.Indexable"))
+    // But you can use iscan with an IndexScan'ing operation.
+    check("""Venue.useIndex(Venue.idIdx).iscan(_._id)(_ after new DateTime())""",
+          None)
+
     // Can't skip past the first field in an index.
     check("""Venue.useIndex(Venue.idIdx).rangeScan(_._id)""",
           Some("could not find implicit value for parameter ev.*com.foursquare.rogue.UsedIndex"))
+
     // Can't skip past the first field in an index.
     check("""Venue.useIndex(Venue.mayorIdIdx).rangeScan(_.mayor).iscan(_._id)(_ eqs new ObjectId())""",
           Some("could not find implicit value for parameter ev.*com.foursquare.rogue.UsedIndex"))
+
     // If first column is index-scanned, other fields must be marked as iscan too.
     check("""Venue.useIndex(Venue.mayorIdIdx).iscan(_.mayor)(_ lt 10).where(_._id)(_ eqs new ObjectId())""",
           Some("could not find implicit value for parameter ev.*com.foursquare.rogue.Indexable"))
+    // Query should compile fine when the second clause is marked as iscan.
+    check("""Venue.useIndex(Venue.mayorIdIdx).iscan(_.mayor)(_ lt 10).iscan(_._id)(_ eqs new ObjectId())""",
+          None)
+
+    // If you rangeScan past a column, you must iscan all index fields after.
+    check("""Venue.useIndex(Venue.mayorIdClosedIdx).where(_.mayor)(_ eqs 10).rangeScan(_._id).where(_.closed)(_ eqs true)""",
+          Some("could not find implicit value for parameter ev.*com.foursquare.rogue.Indexable"))
+    // Version of the above with an iscan of later fields.
+    check("""Venue.useIndex(Venue.mayorIdClosedIdx).where(_.mayor)(_ eqs 10).rangeScan(_._id).iscan(_.closed)(_ eqs true)""",
+          None)
   }
 
   class Compiler {
@@ -751,6 +767,7 @@ class QueryTest extends SpecsMatchers {
     interpreter.interpret("""import com.foursquare.rogue._""")
     interpreter.interpret("""import com.foursquare.rogue.Rogue._""")
     interpreter.interpret("""import org.bson.types.ObjectId""")
+    interpreter.interpret("""import org.joda.time.DateTime""")
 
     def typeCheck(code: String): Option[String] = {
       stringWriter.getBuffer.delete(0, stringWriter.getBuffer.length)
