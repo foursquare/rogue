@@ -53,24 +53,24 @@ abstract class AbstractQueryField[V, DB, M <: MongoRecord[M]](val field: Field[V
   def valueToDB(v: V): DB
   def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
 
-  def eqs(v: V) = new EqClause(field.name, valueToDB(v))
-  def neqs(v: V) = new QueryClause(field.name, CondOps.Ne -> valueToDB(v))
+  def eqs(v: V) = EqClause(field.name, valueToDB(v))
+  def neqs(v: V) = new NeQueryClause(field.name, valueToDB(v))
   def in[L <% Traversable[V]](vs: L) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
-  def nin[L <% Traversable[V]](vs: L) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(valuesToDB(vs)))
+  def nin[L <% Traversable[V]](vs: L) = new NinQueryClause(field.name, QueryHelpers.list(valuesToDB(vs)))
 }
 
 class QueryField[V, M <: MongoRecord[M]](field: Field[V, M])
     extends AbstractQueryField[V, V, M](field) {
   override def valueToDB(v: V) = v
 
-  def exists(b: Boolean) = new QueryClause(field.name, CondOps.Exists -> b)
-  def hastype(t: MongoType.Value) = new QueryClause(field.name, CondOps.Type -> t.id)
+  def exists(b: Boolean) = new ExistsQueryClause(field.name, b)
+  def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
 class CalendarQueryField[M <: MongoRecord[M]](val field: Field[java.util.Calendar, M]) {
-  def before(d: DateTime) = new QueryClause(field.name, CondOps.Lt -> d.toDate)
-  def after(d: DateTime) = new QueryClause(field.name, CondOps.Gt -> d.toDate)
-  def between(d1: DateTime, d2: DateTime) = new QueryClause(field.name, CondOps.Gt -> d1.toDate, CondOps.Lt -> d2.toDate)
+  def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
+  def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
+  def between(d1: DateTime, d2: DateTime) = new StrictBetweenQueryClause(field.name, d1.toDate, d2.toDate)
 }
 
 class EnumerationQueryField[M <: MongoRecord[M], E <: Enumeration#Value](field: Field[E, M])
@@ -82,25 +82,25 @@ class GeoQueryField[M <: MongoRecord[M]](field: Field[LatLong, M])
     extends AbstractQueryField[LatLong, java.util.List[Double], M](field) {
   override def valueToDB(ll: LatLong) = QueryHelpers.list(List(ll.lat, ll.long))
 
-  def eqs(lat: Double, lng: Double) = new EqClause(field.name, QueryHelpers.list(List(lat, lng)))
-  def neqs(lat: Double, lng: Double) = new QueryClause(field.name, CondOps.Ne -> QueryHelpers.list(List(lat, lng)))
-  def near(lat: Double, lng: Double, radius: Degrees) = new QueryClause(field.name, CondOps.Near -> QueryHelpers.list(List(lat, lng, QueryHelpers.radius(radius))))
+  def eqs(lat: Double, lng: Double) = EqClause(field.name, QueryHelpers.list(List(lat, lng)))
+  def neqs(lat: Double, lng: Double) = new NeQueryClause(field.name, QueryHelpers.list(List(lat, lng)))
+  def near(lat: Double, lng: Double, radius: Degrees) = new NearQueryClause(field.name, QueryHelpers.list(List(lat, lng, QueryHelpers.radius(radius))))
   def withinCircle(lat: Double, lng: Double, radius: Degrees) = new WithinCircleClause(field.name, lat, lng, QueryHelpers.radius(radius))
   def withinBox(lat1: Double, lng1: Double, lat2: Double, lng2: Double) = new WithinBoxClause(field.name, lat1, lng1, lat2, lng2)
 }
 
 abstract class AbstractNumericQueryField[V, DB, M <: MongoRecord[M]](field: Field[V, M])
     extends AbstractQueryField[V, DB, M](field) {
-  def lt(v: V) = new QueryClause(field.name, CondOps.Lt -> valueToDB(v))
-  def gt(v: V) = new QueryClause(field.name, CondOps.Gt -> valueToDB(v))
-  def lte(v: V) = new QueryClause(field.name, CondOps.LtEq -> valueToDB(v))
-  def gte(v: V) = new QueryClause(field.name, CondOps.GtEq -> valueToDB(v))
+  def lt(v: V) = new LtQueryClause(field.name, valueToDB(v))
+  def gt(v: V) = new GtQueryClause(field.name, valueToDB(v))
+  def lte(v: V) = new LtEqQueryClause(field.name, valueToDB(v))
+  def gte(v: V) = new GtEqQueryClause(field.name, valueToDB(v))
   def <(v: V) = lt(v)
   def <=(v: V) = lte(v)
   def >(v: V) = gt(v)
   def >=(v: V) = gte(v)
-  def between(v1: V, v2: V) = new QueryClause(field.name, CondOps.GtEq -> valueToDB(v1), CondOps.LtEq -> valueToDB(v2))
-  def mod(by: Int, eq: Int) = new QueryClause(field.name, CondOps.Mod -> QueryHelpers.list(List(by, eq)))
+  def between(v1: V, v2: V) = new BetweenQueryClause(field.name, valueToDB(v1), valueToDB(v2))
+  def mod(by: Int, eq: Int) = new ModQueryClause(field.name, QueryHelpers.list(List(by, eq)))
 }
 
 class NumericQueryField[V, M <: MongoRecord[M]](field: Field[V, M])
@@ -110,25 +110,23 @@ class NumericQueryField[V, M <: MongoRecord[M]](field: Field[V, M])
 
 class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId, M])
     extends NumericQueryField(field) {
-  def before(d: DateTime) = new QueryClause(field.name, CondOps.Lt -> new ObjectId(d.toDate, 0, 0))
-  def after(d: DateTime) = new QueryClause(field.name, CondOps.Gt -> new ObjectId(d.toDate, 0, 0))
-  def between(d1: DateTime, d2: DateTime) = new QueryClause(field.name, CondOps.Gt -> new ObjectId(d1.toDate, 0, 0), CondOps.Lt -> new ObjectId(d2.toDate, 0, 0))
+  def before(d: DateTime) = new LtQueryClause(field.name, new ObjectId(d.toDate, 0, 0))
+  def after(d: DateTime) = new GtQueryClause(field.name, new ObjectId(d.toDate, 0, 0))
+  def between(d1: DateTime, d2: DateTime) = new StrictBetweenQueryClause(field.name, new ObjectId(d1.toDate, 0, 0), new ObjectId(d2.toDate, 0, 0))
 }
 
 class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T] with MongoId[T]](override val field: Field[ObjectId, M] with HasMongoForeignObjectId[T])
     extends ObjectIdQueryField[M](field) {
-  def eqs(obj: T) = new EqClause(field.name, obj.id)
-  def neqs(obj: T) = new QueryClause(field.name, CondOps.Ne -> obj.id)
+  def eqs(obj: T) = EqClause(field.name, obj.id)
+  def neqs(obj: T) = new NeQueryClause(field.name, obj.id)
   def in(objs: Traversable[T]) = QueryHelpers.inListClause(field.name, objs.map(_.id))
-  def nin(objs: Traversable[T]) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(objs.map(_.id)))
+  def nin(objs: Traversable[T]) = new NinQueryClause(field.name, QueryHelpers.list(objs.map(_.id)))
 }
 
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
-  def startsWith(s: String) = new EqClause(field.name, Pattern.compile("^" + Pattern.quote(s)))
-  def matches(p: Pattern) = new EqClause(field.name, p) {
-    override lazy val actualIndexBehavior = IndexBehavior.DocumentScan
-  }
-  def regexWarningNotIndexed(p: Pattern) = new EqClause(field.name, p)
+  def startsWith(s: String) = new EqClause[Pattern, PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
+  def matches(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, DocumentScan, p)
+  def regexWarningNotIndexed(p: Pattern) = new EqClause[Pattern, DocumentScan](field.name, DocumentScan, p)
 }
 
 class CaseClassQueryField[V, M <: MongoRecord[M]](val field: MongoCaseClassField[M, V]) {
@@ -150,10 +148,10 @@ abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Fie
 
   def all(vs: Traversable[V]) = QueryHelpers.allListClause(field.name, valuesToDB(vs))
   def in(vs: Traversable[V]) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
-  def nin(vs: Traversable[V]) = new QueryClause(field.name, CondOps.Nin -> QueryHelpers.list(valuesToDB(vs)))
-  def size(s: Int) = new QueryClause(field.name, CondOps.Size -> s)
-  def contains(v: V) = new EqClause(field.name, valueToDB(v))
-  def notcontains(v: V) = new QueryClause(field.name, CondOps.Ne -> valueToDB(v))
+  def nin(vs: Traversable[V]) = new NinQueryClause(field.name, QueryHelpers.list(valuesToDB(vs)))
+  def size(s: Int) = new SizeQueryClause(field.name, s)
+  def contains(v: V) = EqClause(field.name, valueToDB(v))
+  def notcontains(v: V) = new NeQueryClause(field.name, valueToDB(v))
   def at(i: Int): DummyField[V, M] = new DummyField[V, M](field.owner, field.name + "." + i.toString)
   def idx(i: Int): DummyField[V, M] = at(i)
 }

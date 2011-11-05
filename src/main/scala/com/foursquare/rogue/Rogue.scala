@@ -37,6 +37,9 @@ trait Rogue {
     BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
     IndexBuilder(rec)
+  implicit def metaRecordToIndexEnforcer[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] with IndexedRecord[M]): IndexEnforcerBuilder[M] =
+    new IndexEnforcerBuilder(meta)
+
 
   implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]](query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]): AbstractModifyQuery[M] = {
     query match {
