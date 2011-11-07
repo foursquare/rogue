@@ -19,7 +19,10 @@ object MongoHelpers {
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
-      val builder = BasicDBObjectBuilder.start
+      buildCondition(cond, BasicDBObjectBuilder.start, signature)
+    }
+
+    def buildCondition(cond: AndCondition, builder: BasicDBObjectBuilder, signature: Boolean): DBObject = {
       val (rawClauses, safeClauses) = cond.clauses.partition(_.isInstanceOf[RawQueryClause])
 
       // Normal clauses
