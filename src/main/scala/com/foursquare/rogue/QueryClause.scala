@@ -2,6 +2,7 @@
 
 package com.foursquare.rogue
 
+import com.mongodb.DBObject
 import com.mongodb.BasicDBObjectBuilder
 
 object IndexBehavior extends Enumeration {
@@ -89,5 +90,23 @@ class ModifyBitAndClause[V](fieldName: String, value: V) extends ModifyClause[V]
 class ModifyBitOrClause[V](fieldName: String, value: V) extends ModifyClause[V](ModOps.Bit) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     q.push(fieldName).add("or", value).pop
+  }
+}
+
+class ModifyPullWithPredicateClause[V](fieldName: String, clauses: QueryClause[_]*)
+    extends ModifyClause[DBObject](ModOps.Pull) {
+  override def extend(q: BasicDBObjectBuilder): Unit = {
+    import com.foursquare.rogue.MongoHelpers.AndCondition
+    MongoHelpers.MongoBuilder.buildCondition(AndCondition(clauses.toList, None), q, false)
+  }
+}
+
+class ModifyPullObjWithPredicateClause[V](fieldName: String, clauses: QueryClause[_]*)
+    extends ModifyClause[DBObject](ModOps.Pull) {
+  override def extend(q: BasicDBObjectBuilder): Unit = {
+    import com.foursquare.rogue.MongoHelpers.AndCondition
+    val nested = q.push(fieldName)
+    MongoHelpers.MongoBuilder.buildCondition(AndCondition(clauses.toList, None), nested, false)
+    nested.pop
   }
 }
