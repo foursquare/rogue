@@ -135,12 +135,21 @@ class CaseClassQueryField[V, M <: MongoRecord[M]](val field: MongoCaseClassField
   def unsafeField[F](name: String): SelectableDummyField[F, M] = new SelectableDummyField[F, M](field.owner, field.name + "." + name)
 }
 
-class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: BsonRecordField[M, B])
+class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[B, M] with MandatoryTypedField[B])
     extends AbstractNumericQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
   def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
     val rec = field.defaultValue // a hack to get at the embedded record
     new SelectableDummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
+  }
+}
+
+class BsonRecordQueryFieldInPullContext[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[B, M] with MandatoryTypedField[B])
+    extends AbstractNumericQueryField[B, DBObject, M](field) {
+  override def valueToDB(b: B) = b.asDBObject
+  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
+    val rec = field.defaultValue // a hack to get at the embedded record
+    new SelectableDummyField[V, M](field.owner, subfield(rec).name)
   }
 }
 
@@ -313,7 +322,7 @@ trait AbstractDummyField[V, M <: MongoRecord[M]] extends Field[V, M] {
   override val asJValue = JInt(0)
   override val asJs = Num(0)
   override val toForm = Empty
-  override def toBoxMyType(v: ValueType) = Empty
+  override def toBoxMyType(v: ValueType): Box[V] = Empty
   override def toValueType(v: Box[MyType]) = null.asInstanceOf[ValueType]
   override def defaultValueBox = Empty
   override def set(v: ValueType) = v
@@ -331,3 +340,8 @@ class DummyField[V, M <: MongoRecord[M]](override val owner: M, override val nam
 class SelectableDummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String)
     extends OptionalTypedField[V]
     with AbstractDummyField[V, M]
+class MandatoryDummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String, override val defaultValue: V)
+    extends MandatoryTypedField[V] with AbstractDummyField[V, M] {
+  override def set(v: MyType) = v
+  override def toBoxMyType(v: ValueType): Full[V] = Full(v)
+}
