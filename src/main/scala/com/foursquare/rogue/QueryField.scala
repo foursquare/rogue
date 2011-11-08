@@ -144,6 +144,12 @@ class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field
   }
 }
 
+// This class is a hack to get $pull working for lists of objects. In that case,
+// the $pull should look like:
+//   "$pull" : { "field" : { "subfield" : { "$gt" : 3 }}}
+// whereas for normal queries, the same query would look like:
+//   { "field.subfield" : { "$gt" : 3 }}
+// So, normally, we need to just have one level of nesting, but here we want two.
 class BsonRecordQueryFieldInPullContext[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[B, M] with MandatoryTypedField[B])
     extends AbstractNumericQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
@@ -153,12 +159,6 @@ class BsonRecordQueryFieldInPullContext[M <: MongoRecord[M], B <: BsonRecord[B]]
   }
 }
 
-// This class is a hack to get $pull working for lists of objects. In that case,
-// the $pull should look like:
-//   "$pull" : { "field" : { "subfield" : { "$gt" : 3 }}}
-// whereas for normal queries, the same query would look like:
-//   { "field.subfield" : { "$gt" : 3 }}
-// So, normally, we need to just have one level of nesting, but here we want two.
 abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Field[List[V], M]) {
   def valueToDB(v: V): DB
   def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
