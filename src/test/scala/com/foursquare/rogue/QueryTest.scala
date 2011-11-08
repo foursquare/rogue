@@ -370,6 +370,27 @@ class QueryTest extends SpecsMatchers {
 
     // $rename
     Venue where (_.legacyid eqs 1) modify (_.venuename rename "vn") toString() must_== query + """{ "$rename" : { "venuename" : "vn"}}""" + suffix
+
+    // pullWhere
+    /*
+    object tags extends MongoListField[Venue, String](this)
+    object popularity extends MongoListField[Venue, Long](this)
+    object categories extends MongoListField[Venue, ObjectId](this)
+    object claims extends BsonRecordListField(this, VenueClaimBson)
+    */
+    Venue.where(_.legacyid eqs 1)
+         .modify(_.tags pullWhere(_ startsWith "prefix"))
+         .toString() must_== query + """{ "$pull" : { "tags" : { "$regex" : "^\\Qprefix\\E" , "$options" : ""}}}""" + suffix
+    Venue.where(_.legacyid eqs 1)
+         .modify(_.popularity pullWhere(_ gt 2))
+         .toString() must_== query + """{ "$pull" : { "popularity" : { "$gt" : 2}}}""" + suffix
+    Venue.where(_.legacyid eqs 1)
+         .modify(_.popularity pullWhere(_ gt 2, _ lt 5))
+         .toString() must_== query + """{ "$pull" : { "popularity" : { "$gt" : 2 , "$lt" : 5}}}""" + suffix
+    Venue.where(_.legacyid eqs 1)
+         .modify(_.claims pullObjectWhere(_.subfield(_.status) eqs ClaimStatus.approved,
+                                          _.subfield(_.userid) eqs 2097))
+         .toString() must_== query + """{ "$pull" : { "claims" : { "uid" : 2097 , "status" : "Approved"}}}""" + suffix
   }
 
   @Test
