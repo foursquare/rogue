@@ -37,7 +37,7 @@ Because Rogue is designed to work with several versions of lift-mongodb-record (
 you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    val rogue           = "com.foursquare" %% "rogue"               % "1.0.27" intransitive()
+    val rogue           = "com.foursquare" %% "rogue"               % "1.0.28" intransitive()
     val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M2"
 
 You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
@@ -87,13 +87,16 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 1.0.27. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.0.28. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.27:
+New in 1.0.28:
 
-- Mongo index checking (see [here](https://github.com/foursquare/rogue/blob/master/docs/Indexing.md) for documentation)
+- Support for the $ positional operator
+- pullWhere - $pull by query instead of exact match
 
 Lots of new features since 1.0.18!:
+
+- Mongo index checking (see [here](https://github.com/foursquare/rogue/blob/master/docs/Indexing.md) for documentation)
 
 - $rename support
 - ability to supply a WriteConcern to updateOne, updateMulti and upsertOne

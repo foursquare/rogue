@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.0.28
+
+- Support for the $ positional operator
+- pullWhere - $pull by query instead of exact match
+
 # 1.0.27
 
 - Mongo index checking (see [here](https://github.com/foursquare/rogue/blob/master/docs/Indexing.md) for documentation)
