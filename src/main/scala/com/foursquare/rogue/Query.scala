@@ -176,20 +176,6 @@ trait AbstractQuery[M <: MongoRecord[M], R,
    */
   def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long
 
-  def countDistinct[V](field: M => QueryField[V, M])
-                      (implicit ev1: Lim =:= Unlimited,
-                       ev2: Sk =:= Unskipped): Long
-
-  def exists()(implicit ev1: Lim =:= Unlimited,
-               ev2: Sk =:= Unskipped): Boolean
-
-  def countDistinct[V](field: M => QueryField[V, M])
-                      (implicit ev1: Lim =:= Unlimited,
-                       ev2: Sk =:= Unskipped): Long
-
-  def exists()(implicit ev1: Lim =:= Unlimited,
-               ev2: Sk =:= Unskipped): Boolean
-
   /**
    * Returns the number of distinct values returned by a query. The query must not have
    * limit or skip clauses.
@@ -482,7 +468,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }
 
-  override def or(subqueries: (M with MongoMetaRecord[M] =>addClauseOpt
+  override def or(subqueries: (M with MongoMetaRecord[M] =>
                               AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
                        (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
     val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
