@@ -283,6 +283,7 @@ trait AbstractQuery[M <: MongoRecord[M], R,
   def explain(): String
 
   def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+
   def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   /**
