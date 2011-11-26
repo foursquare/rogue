@@ -183,11 +183,66 @@ trait AbstractQuery[M <: MongoRecord[M], R,
   def exists()(implicit ev1: Lim =:= Unlimited,
                ev2: Sk =:= Unskipped): Boolean
 
+  def countDistinct[V](field: M => QueryField[V, M])
+                      (implicit ev1: Lim =:= Unlimited,
+                       ev2: Sk =:= Unskipped): Long
+
+  def exists()(implicit ev1: Lim =:= Unlimited,
+               ev2: Sk =:= Unskipped): Boolean
+
+  /**
+   * Returns the number of distinct values returned by a query. The query must not have
+   * limit or skip clauses.
+   */
+  def countDistinct[V](field: M => QueryField[V, M])
+                      (implicit ev1: Lim =:= Unlimited,
+                       ev2: Sk =:= Unskipped): Long
+
+  /**
+   * Checks if there are any records that match this query.
+   */
+  def exists()(implicit ev1: Lim =:= Unlimited,
+               ev2: Sk =:= Unskipped): Boolean
+
+  /**
+   * Executes a function on each record value returned by a query.
+   * @param f a function to be invoked on each fetched record.
+   * @return nothing.
+   */
   def foreach(f: R => Unit): Unit
+
+  /**
+   * Execute the query, returning all of the records that match the query.
+   * @return a list containing the records that match the query
+   */
   def fetch(): List[R]
+
+  /**
+   * Execute a query, returning no more than a specified number of result records. The
+   * query must not have a limit clause.
+   * @param limit the maximum number of records to return.
+   */
   def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R]
+
+  /**
+   * fetch a batch of results, and execute a function on each element of the list.
+   * @param f the function to invoke on the records that match the query.
+   * @return a list containing the results of invoking the function on each record.
+   */
   def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T]
+
+  /**
+   * Fetches the first record that matches the query. The query must not contain a "limited" clause.
+   * @return an option record containing either the first result that matches the
+   *     query, or None if there are no records that match.
+   */
   def get()(implicit ev: Lim =:= Unlimited): Option[R]
+
+  /**
+   * Fetches the records that match the query in paginated form. The query must not contain
+   * a "limit" clause.
+   * @param countPerPage the number of records to be contained in each page of the result.
+   */
   def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited,
                                   ev2: Sk =:= Unskipped): BasePaginatedQuery[M, R]
 
@@ -195,16 +250,36 @@ trait AbstractQuery[M <: MongoRecord[M], R,
              ev2: Lim =:= Unlimited,
              ev3: Sk =:= Unskipped): AbstractModifyQuery[M]
 
+  /**
+   * Delete all of the records that match the query. The query must not contain any "skip",
+   * "limit", or "select" clauses. Sends the delete operation to mongo, and returns - does
+   * <em>not</em> wait for the delete to be finished.
+   */
   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected,
                       ev2: Lim =:= Unlimited,
                       ev3: Sk =:= Unskipped): Unit
 
+  /**
+   * Delete all of the recurds that match the query. The query must not contain any "skip",
+   * "limit", or "select" clauses. Sends the delete operation to mongo, and waits for the
+   * delete operation to complete before returning to the caller.
+   */
   def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected,
                                                    ev2: Lim =:= Unlimited,
                                                    ev3: Sk =:= Unskipped): Unit
+
+  /**
+   * Finds the first record that matches the query (if any), fetches it, and then deletes it.
+   * A copy of the deleted record is returned to the caller.
+   */
   def findAndDeleteOne(): Option[R]
 
   def signature(): String
+
+  /**
+   * Return a string containing details about how the query would be executed in mongo.
+   * In particular, this is useful for finding out what indexes will be used by the query.
+   */
   def explain(): String
 
   def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
@@ -470,9 +545,11 @@ case class BaseQuery[M <: MongoRecord[M], R,
 
   override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
     QueryExecutor.condition("count", this)(meta.count(_))
+
   override def countDistinct[V](field: M => QueryField[V, M])
                        (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
     QueryExecutor.condition("countDistinct", this)(meta.countDistinct(field(meta).field.name, _))
+
   override def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean =
     this.copy(select = Some(MongoSelect[Null, M](Nil, _ => null))).limit(1).fetch().size > 0
 
@@ -532,13 +609,17 @@ case class BaseQuery[M <: MongoRecord[M], R,
 
   override def toString: String =
     MongoBuilder.buildQueryString("find", this)
+
   override def signature(): String =
     MongoBuilder.buildSignature(this)
+
   override def explain(): String =
     QueryExecutor.explain("find", this)
 
   override def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(maxScan = Some(max))
+
   override def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(comment = Some(c))
+
   override def hint(index: MongoIndex[M]) = this.copy(hint = Some(index.asListMap))
 
   override def select[F1](f: M => SelectField[F1, M])
@@ -750,15 +831,23 @@ class BaseEmptyQuery[M <: MongoRecord[M], R,
                      Sk <: MaybeSkipped,
                      Or <: MaybeHasOrClause] extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
   override lazy val meta = throw new Exception("tried to read meta field of an EmptyQuery")
+
   override lazy val master = throw new Exception("tried to read master field of an EmptyQuery")
+
   override def where[F](clause: M => QueryClause[F]) = this
+
   override def and[F](clause: M => QueryClause[F]) = this
+
   override def iscan[F](clause: M => QueryClause[F]) = this
+
   override def scan[F](clause: M => QueryClause[F]) = this
 
   override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+
   override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+
   override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
 
   override def raw(f: BasicDBObjectBuilder => Unit) = this
@@ -792,15 +881,21 @@ class BaseEmptyQuery[M <: MongoRecord[M], R,
     new BaseEmptyQuery[M, R, Ord, Sel, Lim, Skipped, Or]
 
   override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
+
   override def countDistinct[V](field: M => QueryField[V, M])
                        (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
   override def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean = false
 
   override def foreach(f: R => Unit): Unit = ()
+
   override def fetch(): List[R] = Nil
+
   override def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] = Nil
+
   override def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] = Nil
+
   override def get()(implicit ev: Lim =:= Unlimited): Option[R] = None
+
   override def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
     val emptyQuery = new BaseEmptyQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or]
     new BasePaginatedQuery(emptyQuery, countPerPage)
@@ -823,11 +918,15 @@ class BaseEmptyQuery[M <: MongoRecord[M], R,
   override def findAndDeleteOne(): Option[R] = None
 
   override def toString = "empty query"
+
   override def signature = "empty query"
+
   override def explain = "{}"
 
   override def maxScan(max: Int) = this
+
   override def comment(c: String) = this
+
   override def hint(index: MongoIndex[M]) = this
 
   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected) =
@@ -956,27 +1055,32 @@ class BaseEmptyQuery[M <: MongoRecord[M], R,
      (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 }
 
-
-// ///////////////////////////////////////////////////////
-// / Modify Queries
-// ///////////////////////////////////////////////////////
+// *******************************************************
+// *** Modify Queries
+// *******************************************************
 
 trait AbstractModifyQuery[M <: MongoRecord[M]] {
   def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
+
   def and[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
 
   def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
+
   def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
 
   def updateMulti(): Unit
+
   def updateOne(): Unit
+
   def upsertOne(): Unit
 
   // These must be overloads and not default arguments because Scala does not allow a caller to omit parentheses
   // when there are default arguments. As many existing uses of these methods omit the parentheses, these overloads
   // are necessary to avoid breaking callers.
   def updateMulti(writeConcern: WriteConcern): Unit
+
   def updateOne(writeConcern: WriteConcern): Unit
+
   def upsertOne(writeConcern: WriteConcern): Unit
 }
 
@@ -1003,57 +1107,71 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
 
   override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
+
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
 
   // These methods always do modifications against master (not query.meta, which could point to a slave).
-  override def updateMulti(): Unit
-    = QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = None)
-  override def updateOne(): Unit
-    = QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = None)
-  override def upsertOne(): Unit
-    = QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = None)
-  override def updateMulti(writeConcern: WriteConcern): Unit
-    = QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = Some(writeConcern))
-  override def updateOne(writeConcern: WriteConcern): Unit
-    = QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = Some(writeConcern))
-  override def upsertOne(writeConcern: WriteConcern): Unit
-    = QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = Some(writeConcern))
+  override def updateMulti(): Unit =
+      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = None)
+
+  override def updateOne(): Unit =
+      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = None)
+
+  override def upsertOne(): Unit =
+      QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = None)
+
+  override def updateMulti(writeConcern: WriteConcern): Unit =
+      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = Some(writeConcern))
+
+  override def updateOne(writeConcern: WriteConcern): Unit =
+      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = Some(writeConcern))
+
+  override def upsertOne(writeConcern: WriteConcern): Unit =
+      QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = Some(writeConcern))
 
   override def toString = MongoBuilder.buildModifyString(this)
 }
 
 class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
   override def modify[F](clause: M => ModifyClause[F]) = this
+
   override def and[F](clause: M => ModifyClause[F]) = this
+
   override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
   override def updateMulti(): Unit = ()
+
   override def updateOne(): Unit = ()
+
   override def upsertOne(): Unit = ()
 
   def updateMulti(writeConcern: WriteConcern): Unit = ()
+
   def updateOne(writeConcern: WriteConcern): Unit = ()
+
   def upsertOne(writeConcern: WriteConcern): Unit = ()
 
   override def toString = "empty modify query"
 }
 
-/*
-/////////////////////////////////////////////////////////
-/// FindAndModify Queries
-/////////////////////////////////////////////////////////
-*/
+// *******************************************************
+// *** FindAndModify Queries
+// *******************************************************
 
 trait AbstractFindAndModifyQuery[M <: MongoRecord[M], R] {
   def findAndModify[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+
   def and[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
 
   def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+
   def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
 
   def updateOne(returnNew: Boolean = false): Option[R]
+
   def upsertOne(returnNew: Boolean = false): Option[R]
 }
 
@@ -1069,6 +1187,7 @@ case class BaseFindAndModifyQuery[M <: MongoRecord[M], R](query: BaseQuery[M, R,
   }
 
   override def findAndModify[F](clause: M => ModifyClause[F]) = addClause(clause)
+
   override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
 
   private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
@@ -1097,24 +1216,32 @@ case class BaseFindAndModifyQuery[M <: MongoRecord[M], R](query: BaseQuery[M, R,
 
 class EmptyFindAndModifyQuery[M <: MongoRecord[M], R] extends AbstractFindAndModifyQuery[M, R] {
   override def findAndModify[F](clause: M => ModifyClause[F]) = this
+
   override def and[F](clause: M => ModifyClause[F]) = this
+
   override def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+
   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
   override def updateOne(returnNew: Boolean = false): Option[Nothing] = None
+
   override def upsertOne(returnNew: Boolean = false): Option[Nothing] = None
 
   override def toString = "empty findAndModify query"
 }
 
-class BasePaginatedQuery[M <: MongoRecord[M], R](q: AbstractQuery[M, R,
-                                                                  _, _,
-                                                                  Unlimited, Unskipped, _],
-                                                 val countPerPage: Int, val pageNum: Int = 1) {
+class BasePaginatedQuery[M <: MongoRecord[M], R]
+        (q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
+         val countPerPage: Int, val pageNum: Int = 1) {
   def copy() = new BasePaginatedQuery(q, countPerPage, pageNum)
+
   def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, countPerPage, p)
+
   def setCountPerPage(c: Int) = if (c == countPerPage) this else new BasePaginatedQuery(q, c, pageNum)
+
   lazy val countAll: Long = q.count
+
   def fetch(): List[R] = q.skip(countPerPage * (pageNum - 1)).limit(countPerPage).fetch()
+
   def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
 }
