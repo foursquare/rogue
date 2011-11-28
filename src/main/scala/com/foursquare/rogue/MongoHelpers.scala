@@ -9,11 +9,15 @@ import scala.collection.immutable.ListMap
 
 object MongoHelpers {
   case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition])
+
   case class OrCondition(conditions: List[AndCondition])
 
   sealed case class MongoOrder(terms: List[(String, Boolean)])
+
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
-  sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]], transformer: List[_] => R)
+
+  sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]],
+                                                        transformer: List[_] => R)
 
   private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
 
@@ -22,7 +26,9 @@ object MongoHelpers {
       buildCondition(cond, BasicDBObjectBuilder.start, signature)
     }
 
-    def buildCondition(cond: AndCondition, builder: BasicDBObjectBuilder, signature: Boolean): DBObject = {
+    def buildCondition(cond: AndCondition,
+                       builder: BasicDBObjectBuilder,
+                       signature: Boolean): DBObject = {
       val (rawClauses, safeClauses) = cond.clauses.partition(_.isInstanceOf[RawQueryClause])
 
       // Normal clauses
@@ -48,7 +54,8 @@ object MongoHelpers {
       rawClauses.foreach(_.extend(builder, signature))
 
       // Optional $or clause (only one per "and" chain)
-      cond.orCondition.foreach(or => builder.add("$or", QueryHelpers.list(or.conditions.map(buildCondition(_, signature = false)))))
+      cond.orCondition.foreach(or =>
+        builder.add("$or", QueryHelpers.list(or.conditions.map(buildCondition(_, signature = false)))))
       builder.get
     }
 
@@ -124,7 +131,8 @@ object MongoHelpers {
 
     def buildFindAndModifyString[R, M <: MongoRecord[M]](mod: BaseFindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
       val query = mod.query
-      val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(query.meta.collectionName, buildCondition(query.condition)))
+      val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(
+          query.meta.collectionName, buildCondition(query.condition)))
       query.order.foreach(o => sb.append(", sort: " + buildOrder(o).toString))
       if (remove) sb.append(", remove: true")
       sb.append(", update: " + buildModify(mod.mod).toString)
@@ -149,13 +157,15 @@ object MongoHelpers {
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[T](description: => String, query: PlainBaseQuery[_, _])(f: => T): T = {
+    private[rogue] def runCommand[T](description: => String,
+                                     query: PlainBaseQuery[_, _])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
       } catch {
         case e: Exception =>
-          throw new RogueException("Mongo query on %s [%s] failed after %d ms".format(query.meta.mongoIdentifier,
+          throw new RogueException("Mongo query on %s [%s] failed after %d ms".
+                                   format(query.meta.mongoIdentifier,
             description, System.currentTimeMillis - start), e)
       } finally {
         logger.log(description, query.signature, System.currentTimeMillis - start)
@@ -209,7 +219,8 @@ object MongoHelpers {
         val query = modClause.query
         val cnd = buildCondition(query.condition)
         val ord = query.order.map(buildOrder)
-        val sel = query.select.map(buildSelect) getOrElse buildSelectFromNames(query.meta.metaFields.view.map(_.name))
+        val sel = query.select.map(buildSelect) getOrElse
+            buildSelectFromNames(query.meta.metaFields.view.map(_.name))
         val m = buildModify(modClause.mod)
         lazy val description = buildFindAndModifyString(modClause, returnNew, upsert, remove)
 
@@ -251,15 +262,18 @@ object MongoHelpers {
       validator.validateQuery(queryClause)
       val cnd = buildCondition(queryClause.condition)
       val ord = queryClause.order.map(buildOrder)
-      val sel = queryClause.select.map(buildSelect) getOrElse buildSelectFromNames(queryClause.meta.metaFields.view.map(_.name))
+      val sel = queryClause.select.map(buildSelect) getOrElse
+                                    buildSelectFromNames(queryClause.meta.metaFields.view.map(_.name))
       val hnt = queryClause.hint.map(buildHint)
 
       lazy val description = buildQueryString(operation, queryClause)
 
       runCommand(description, queryClause){
-        MongoDB.useCollection(queryClause.meta.mongoIdentifier, queryClause.meta.collectionName) { coll =>
+        MongoDB.useCollection(queryClause.meta.mongoIdentifier, queryClause.meta.collectionName) {
+          coll =>
           try {
-            val cursor = coll.find(cnd, sel).limit(queryClause.lim getOrElse 0).skip(queryClause.sk getOrElse 0)
+            val cursor = coll.find(cnd, sel).limit(queryClause.lim getOrElse 0)
+                .skip(queryClause.sk getOrElse 0)
             ord.foreach(cursor sort _)
             queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
             queryClause.comment.foreach(cursor addSpecial("$comment", _))
@@ -267,7 +281,8 @@ object MongoHelpers {
             f(cursor)
           } catch {
             case e: Exception =>
-              throw new RogueException("Mongo query on %s [%s] failed".format(coll.getDB().getMongo().toString(), description), e)
+              throw new RogueException("Mongo query on %s [%s] failed".format(
+                coll.getDB().getMongo().toString(), description), e)
           }
         }
       }
