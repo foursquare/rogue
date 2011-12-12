@@ -83,6 +83,10 @@ class CalendarQueryField[M <: MongoRecord[M]](val field: Field[java.util.Calenda
   def between(d1: DateTime, d2: DateTime) = new QueryClause(field.name,
                                                             CondOps.Gt -> d1.toDate,
                                                             CondOps.Lt -> d2.toDate)
+
+  def between(range: (DateTime, DateTime)) = new QueryClause(field.name,
+                                                            CondOps.Gt -> range._1.toDate,
+                                                            CondOps.Lt -> range._2.toDate)
 }
 
 class EnumerationQueryField[M <: MongoRecord[M], E <: Enumeration#Value](field: Field[E, M])
@@ -160,6 +164,11 @@ class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId
     new QueryClause(field.name,
                     CondOps.Gt -> new ObjectId(d1.toDate, 0, 0),
                     CondOps.Lt -> new ObjectId(d2.toDate, 0, 0))
+
+  def between(range: (DateTime, DateTime)) =
+    new QueryClause(field.name,
+                    CondOps.Gt -> new ObjectId(range._1.toDate, 0, 0),
+                    CondOps.Lt -> new ObjectId(range._2.toDate, 0, 0))
 }
 
 class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T]
