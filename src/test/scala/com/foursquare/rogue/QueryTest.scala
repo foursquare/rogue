@@ -201,11 +201,13 @@ class QueryTest extends SpecsMatchers {
     Venue where (_._id before d2)        toString() must_== """db.venues.find({ "_id" : { "$lt" : { "$oid" : "%s"}}})""".format(oid2.toString)
     Venue where (_._id after d1)         toString() must_== """db.venues.find({ "_id" : { "$gt" : { "$oid" : "%s"}}})""".format(oid1.toString)
     Venue where (_._id between (d1, d2)) toString() must_== """db.venues.find({ "_id" : { "$gt" : { "$oid" : "%s"} , "$lt" : { "$oid" : "%s"}}})""".format(oid1.toString, oid2.toString)
+    Venue where (_._id between Tuple2(d1, d2)) toString() must_== """db.venues.find({ "_id" : { "$gt" : { "$oid" : "%s"} , "$lt" : { "$oid" : "%s"}}})""".format(oid1.toString, oid2.toString)
 
     // DateTime before, after, between
     Venue where (_.last_updated before d2)        toString() must_== """db.venues.find({ "last_updated" : { "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}})"""
     Venue where (_.last_updated after d1)         toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"}}})"""
     Venue where (_.last_updated between (d1, d2)) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}})"""
+    Venue where (_.last_updated between Tuple2(d1, d2)) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}})"""
 
     // Case class list field
     Comment where (_.comments.unsafeField[Int]("z") eqs 123) toString() must_== """db.comments.find({ "comments.z" : 123})"""
