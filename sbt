@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Internal options, always specified
 INTERNAL_OPTS="-Dfile.encoding=UTF-8 -Xss8M -Xmx1G -noverify -XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC -XX:MaxPermSize=512M"
 
