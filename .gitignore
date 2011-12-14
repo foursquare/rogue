@@ -9,3 +9,8 @@ sbtlib
 target
 out
 *~
+mongo-testdb
+dependencies
+mongo.log
+tags
+tags.old
