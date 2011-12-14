@@ -10,6 +10,7 @@ import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record._
 import net.liftweb.record.Field
+import org.bson.types.BasicBSONList
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListMap
 
@@ -509,10 +510,18 @@ case class BaseQuery[M <: MongoRecord[M], R,
         inst.fieldByName(field.name) match {
           case Full(fld) => fld.setFromAny(dbo.get(field.name))
           case _ => {
-            // Subfield select
-            Box !! field.name.split('.').toList.foldLeft(dbo: Object){
-              case (obj, f) => obj.asInstanceOf[DBObject].get(f)
-            }
+            val splitName = field.name.split('.').toList
+            Box.!!(splitName.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
+              obj match {
+                case dbl: BasicBSONList =>
+                  (for {
+                    index <- 0 to dbl.size - 1
+                    val item: DBObject = dbl.get(index).asInstanceOf[DBObject]
+                  } yield item.get(fieldName)).toList
+                case dbo: DBObject =>
+                  dbo.get(fieldName)
+              }
+            }))
           }
         }
       }

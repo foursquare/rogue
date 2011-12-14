@@ -283,6 +283,11 @@ class BsonRecordListQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: B
     val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
     new DummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
   }
+
+  def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
+    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
+    new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
+  }
 }
 
 class MapQueryField[V, M <: MongoRecord[M]](val field: Field[Map[String, V], M]) {
@@ -452,7 +457,6 @@ class OptionalSelectField[V, M <: MongoRecord[M]](override val field: Field[V, M
     extends SelectField[Box[V], M](field) {
   override def apply(v: Any): Any = v.asInstanceOf[Box[V]]
 }
-
 
 // ********************************************************************************
 // *** Dummy field
