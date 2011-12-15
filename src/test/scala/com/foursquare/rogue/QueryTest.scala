@@ -114,7 +114,7 @@ class QueryTest extends SpecsMatchers {
 
     // BsonRecordField subfield queries
     Venue where (_.claims.subfield(_.status) eqs ClaimStatus.approved) toString() must_== """db.venues.find({ "claims.status" : "Approved"})"""
-    Venue where (_.lastClaim.subfield(_.userid) eqs 123)               toString() must_== """db.venues.find({ "lastClaim.uid" : 123})"""
+    Venue where (_.lastClaim.subfield(_.userid) eqs 123)               toString()      must_== """db.venues.find({ "lastClaim.uid" : 123})"""
 
     // Enumeration list
     OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) toString() must_== """db.oauthconsumers.find({ "privileges" : "Award badges"})"""
@@ -160,6 +160,7 @@ class QueryTest extends SpecsMatchers {
     Tip where (_.legacyid eqs 1) select (_.counts at "foo") toString() must_== """db.tips.find({ "legid" : 1}, { "counts.foo" : 1})"""
     Venue where (_.legacyid eqs 1) select (_.geolatlng.unsafeField[Double]("lat")) toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
     Venue where (_.legacyid eqs 1) select (_.lastClaim.subfield(_.status)) toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
+    Venue where (_.legacyid eqs 1) select(_.claims.subselect(_.userid)) toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
 
     // TODO: case class list fields
     // Comment select(_.comments.unsafeField[Long]("userid")) toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
