@@ -215,6 +215,8 @@ class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field
     val rec = field.defaultValue // a hack to get at the embedded record
     new SelectableDummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
   }
+
+  def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
 }
 
 // This class is a hack to get $pull working for lists of objects. In that case,
