@@ -195,11 +195,11 @@ class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
   def startsWith(s: String) =
     new EqClause(field.name, Pattern.compile("^" + Pattern.quote(s)))
 
-  def matches(p: Pattern) =
+  def matches(p: Pattern): EqClause[Pattern] =
     new EqClause(field.name, p) {
       override lazy val actualIndexBehavior = IndexBehavior.DocumentScan
     }
-  def matches(r: Regex) = matches(r.pattern)
+  def matches(r: Regex): EqClause[Pattern] = matches(r.pattern)
   def regexWarningNotIndexed(p: Pattern) = new EqClause(field.name, p)
 }
 

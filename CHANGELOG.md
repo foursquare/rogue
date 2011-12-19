@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 1.0.29
+
+- updated inline documentation (markcc)
+- between takes a tuple (davidt)
+- end-to-end tests (nsanch)
+- subfield select on embedded list (nsanch)
+- regex match operator for string fields (jliszka)
+
 # 1.0.28
 
 - Support for the $ positional operator
