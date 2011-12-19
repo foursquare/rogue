@@ -13,6 +13,7 @@ import net.liftweb.record._
 import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
 import org.joda.time._
+import scala.util.matching.Regex
 
 object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte",
                                    "$in", "$nin", "$near", "$all", "$size",
@@ -198,7 +199,7 @@ class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
     new EqClause(field.name, p) {
       override lazy val actualIndexBehavior = IndexBehavior.DocumentScan
     }
-
+  def matches(r: Regex) = matches(r.pattern)
   def regexWarningNotIndexed(p: Pattern) = new EqClause(field.name, p)
 }
 
