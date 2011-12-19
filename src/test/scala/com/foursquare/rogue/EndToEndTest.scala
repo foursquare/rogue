@@ -142,6 +142,9 @@ class EndToEndTest extends SpecsMatchers {
     Tip.where(_._id eqs t.id).select(_.counts at "foo").fetch() must_== List(Full(1L))
 
     Venue.where(_._id eqs v.id).select(_.geolatlng.unsafeField[Double]("lat")).fetch() must_== List(Full(40.73))
+
+    val subuserids: List[Box[List[Long]]] = Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch()
+    subuserids must_== List(Full(List(1234, 5678)))
   }
 
   @Ignore("These tests are broken because DummyField doesn't know how to convert a String to an Enum")
@@ -158,5 +161,15 @@ class EndToEndTest extends SpecsMatchers {
     statuses must_== List(Full("Approved"))
     // This assertion is what we want, and it fails.
     // statuses must_== List(Full(ClaimStatus.approved))
+
+    val subuseridsAndStatuses: List[(Box[List[Long]], Box[List[VenueClaimBson.status.MyType]])] =
+          Venue.where(_._id eqs v.id)
+               .select(_.claims.subselect(_.userid), _.claims.subselect(_.status))
+               .fetch()
+    // This assertion works.
+    subuseridsAndStatuses must_== List((Full(List(1234, 5678)), Full(List("Pending approval", "Approved"))))
+
+    // This assertion is what we want, and it fails.
+    // subuseridsAndStatuses must_== List((Full(List(1234, 5678)), Full(List(ClaimStatus.pending, ClaimStatus.approved))))
   }
 }

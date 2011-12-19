@@ -215,6 +215,8 @@ class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field
     val rec = field.defaultValue // a hack to get at the embedded record
     new SelectableDummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
   }
+
+  def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
 }
 
 // This class is a hack to get $pull working for lists of objects. In that case,
@@ -282,6 +284,11 @@ class BsonRecordListQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: B
   def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
     val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
     new DummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
+  }
+
+  def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
+    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
+    new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
   }
 }
 
@@ -452,7 +459,6 @@ class OptionalSelectField[V, M <: MongoRecord[M]](override val field: Field[V, M
     extends SelectField[Box[V], M](field) {
   override def apply(v: Any): Any = v.asInstanceOf[Box[V]]
 }
-
 
 // ********************************************************************************
 // *** Dummy field
