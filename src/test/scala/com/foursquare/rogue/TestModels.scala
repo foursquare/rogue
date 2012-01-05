@@ -38,7 +38,7 @@ object VenueStatus extends Enumeration {
   val closed = Value("Closed")
 }
 
-class Venue extends MongoRecord[Venue] with MongoId[Venue] {
+class Venue extends MongoRecord[Venue] with MongoId[Venue] with IndexedRecord[Venue] {
   def meta = Venue
   object legacyid extends LongField(this) { override def name = "legid" }
   object userid extends LongField(this)
@@ -61,9 +61,12 @@ object Venue extends Venue with MongoMetaRecord[Venue] {
 
   object CustomIndex extends IndexModifier("custom")
   val idIdx = Venue.index(_._id, Asc)
+  val mayorIdIdx = Venue.index(_.mayor, Asc, _._id, Asc)
+  val mayorIdClosedIdx = Venue.index(_.mayor, Asc, _._id, Asc, _.closed, Asc)
   val legIdx = Venue.index(_.legacyid, Desc)
   val geoIdx = Venue.index(_.geolatlng, TwoD)
   val geoCustomIdx = Venue.index(_.geolatlng, CustomIndex, _.tags, Asc)
+  override val mongoIndexList = List(idIdx, mayorIdIdx, mayorIdClosedIdx, legIdx, geoIdx, geoCustomIdx)
 
   trait FK[T <: FK[T]] extends MongoRecord[T] {
     self: T=>

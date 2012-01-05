@@ -450,6 +450,26 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testEnforceIndexes {
+    metaRecordToIndexEnforcer(Venue).useIndex(Venue.idIdx)
+         .where(_._id)(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
+         .scan(_.legacyid eqs 4)
+         .toString() must_== """db.venues.find({ "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
+
+    Venue.useIndex(Venue.mayorIdIdx)
+         .where(_.mayor)(_ in List(2097L))
+         .and(_._id)(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
+         .scan(_.legacyid eqs 4)
+         .toString() must_== """db.venues.find({ "mayor" : { "$in" : [ 2097]} , "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
+
+    Venue.useIndex(Venue.mayorIdClosedIdx)
+         .where(_.mayor)(_ eqs 2097)
+         .rangeScan(_._id)
+         .iscan(_.closed)(_ eqs true)
+         .toString() must_== """db.venues.find({ "mayor" : 2097 , "closed" : true})"""
+  }
+
+  @Test
   def testWhereOpt {
     val someId = Some(1L)
     val noId: Option[Long] = None
@@ -521,13 +541,16 @@ class QueryTest extends SpecsMatchers {
   @Test
   def thingsThatShouldntCompile {
     val compiler = new Compiler
-    def check(code: String, shouldTypeCheck: Boolean = false): Unit = {
-      compiler.typeCheck(code) aka "'%s' compiles!".format(code) must_== shouldTypeCheck
+    def check(code: String, expectedErrorREOpt: Option[String] = Some("")): Unit = {
+      (expectedErrorREOpt, compiler.typeCheck(code)) aka "'%s' compiles!".format(code) must beLike {
+        case (Some(expectedErrorRE), Some(actualError)) => expectedErrorRE.r.findFirstIn(actualError.replaceAll("\n", "")).isDefined
+        case (None, None) => true
+      }
     }
 
     // For sanity
     // Venue where (_.legacyid eqs 3)
-    check("""Venue where (_.legacyid eqs 3)""", shouldTypeCheck = true)
+    check("""Venue where (_.legacyid eqs 3)""", None)
 
     // Basic operator and operand type matching
     check("""Venue where (_.legacyid eqs "hi")""")
@@ -552,10 +575,10 @@ class QueryTest extends SpecsMatchers {
 
     // Foreign keys
     // first make sure that each type-safe foreign key works as expected
-    check("""VenueClaim where (_.venueid eqs Venue.createRecord)""", true)
-    check("""VenueClaim where (_.venueid neqs Venue.createRecord)""", true)
-    check("""VenueClaim where (_.venueid in List(Venue.createRecord))""", true)
-    check("""VenueClaim where (_.venueid nin List(Venue.createRecord))""", true)
+    check("""VenueClaim where (_.venueid eqs Venue.createRecord)""", None)
+    check("""VenueClaim where (_.venueid neqs Venue.createRecord)""", None)
+    check("""VenueClaim where (_.venueid in List(Venue.createRecord))""", None)
+    check("""VenueClaim where (_.venueid nin List(Venue.createRecord))""", None)
     // now check that they reject invalid args
     check("""VenueClaim where (_.venueid eqs Tip.createRecord)""")
     check("""VenueClaim where (_.venueid neqs Tip.createRecord)""")
@@ -609,6 +632,40 @@ class QueryTest extends SpecsMatchers {
     check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) limit 10)""")
     check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) skip 10)""")
     check("""OrQuery(Venue.where(_.legacyid eqs 1), Tip.where(_.legacyid eqs 2))""")
+
+    // Indexes
+
+    // Can't say useIndex and then not use that field.
+    check("""Venue.useIndex(Venue.idIdx).where(_.legacyid eqs 4)""",
+          Some("found.*EqClause.*required.*Venue#_id"))
+    // Can't use where with an IndexScan'ing operation.
+    check("""Venue.useIndex(Venue.idIdx).where(_._id)(_ after new DateTime())""",
+          Some("do not conform to method where.*com.foursquare.rogue.Indexable"))
+    // But you can use iscan with an IndexScan'ing operation.
+    check("""Venue.useIndex(Venue.idIdx).iscan(_._id)(_ after new DateTime())""",
+          None)
+
+    // Can't skip past the first field in an index.
+    check("""Venue.useIndex(Venue.idIdx).rangeScan(_._id)""",
+          Some("could not find implicit value for parameter ev.*com.foursquare.rogue.UsedIndex"))
+
+    // Can't skip past the first field in an index.
+    check("""Venue.useIndex(Venue.mayorIdIdx).rangeScan(_.mayor).iscan(_._id)(_ eqs new ObjectId())""",
+          Some("could not find implicit value for parameter ev.*com.foursquare.rogue.UsedIndex"))
+
+    // If first column is index-scanned, other fields must be marked as iscan too.
+    check("""Venue.useIndex(Venue.mayorIdIdx).iscan(_.mayor)(_ lt 10).where(_._id)(_ eqs new ObjectId())""",
+          Some("could not find implicit value for parameter ev.*com.foursquare.rogue.Indexable"))
+    // Query should compile fine when the second clause is marked as iscan.
+    check("""Venue.useIndex(Venue.mayorIdIdx).iscan(_.mayor)(_ lt 10).iscan(_._id)(_ eqs new ObjectId())""",
+          None)
+
+    // If you rangeScan past a column, you must iscan all index fields after.
+    check("""Venue.useIndex(Venue.mayorIdClosedIdx).where(_.mayor)(_ eqs 10).rangeScan(_._id).where(_.closed)(_ eqs true)""",
+          Some("could not find implicit value for parameter ev.*com.foursquare.rogue.Indexable"))
+    // Version of the above with an iscan of later fields.
+    check("""Venue.useIndex(Venue.mayorIdClosedIdx).where(_.mayor)(_ eqs 10).rangeScan(_._id).iscan(_.closed)(_ eqs true)""",
+          None)
   }
 
   class Compiler {
@@ -630,6 +687,7 @@ class QueryTest extends SpecsMatchers {
     settings.unchecked.value = true // enable detailed unchecked warnings
 
     // This is deprecated in 2.9.x, but we need to use it for compatibility with 2.8.x
+    val stringWriter = new java.io.StringWriter()
     private val interpreter =
       new Interpreter(
         settings,
@@ -637,20 +695,20 @@ class QueryTest extends SpecsMatchers {
          * It's a good idea to comment out this second parameter when adding or modifying
          * tests that shouldn't compile, to make sure that the tests don't compile for the
          * right reason.
-         *
-         * TODO(jorge): Consider comparing string output for each test to ensure the
-         * actual compile error matches the expected compile error.
          **/
-        new PrintWriter(new NullWriter()))
+        new PrintWriter(stringWriter))
 
     interpreter.interpret("""import com.foursquare.rogue._""")
     interpreter.interpret("""import com.foursquare.rogue.Rogue._""")
+    interpreter.interpret("""import org.bson.types.ObjectId""")
+    interpreter.interpret("""import org.joda.time.DateTime""")
 
-    def typeCheck(code: String): Boolean = {
+    def typeCheck(code: String): Option[String] = {
+      stringWriter.getBuffer.delete(0, stringWriter.getBuffer.length)
       val thunked = "() => { %s }".format(code)
       interpreter.interpret(thunked) match {
-        case InterpreterResults.Success => true
-        case InterpreterResults.Error => false
+        case InterpreterResults.Success => None
+        case InterpreterResults.Error => Some(stringWriter.toString)
         case InterpreterResults.Incomplete => throw new Exception("Incomplete code snippet")
       }
     }

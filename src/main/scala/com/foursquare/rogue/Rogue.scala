@@ -61,6 +61,8 @@ trait Rogue {
 
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
       IndexBuilder(rec)
+  implicit def metaRecordToIndexEnforcer[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] with IndexedRecord[M]): IndexEnforcerBuilder[M] =
+      new IndexEnforcerBuilder(meta)
 
 
   /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
