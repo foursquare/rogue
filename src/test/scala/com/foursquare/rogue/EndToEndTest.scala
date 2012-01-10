@@ -172,4 +172,17 @@ class EndToEndTest extends SpecsMatchers {
     // This assertion is what we want, and it fails.
     // subuseridsAndStatuses must_== List((Full(List(1234, 5678)), Full(List(ClaimStatus.pending, ClaimStatus.approved))))
   }
+
+  @Test
+  def testSlaveOk: Unit = {
+    // Note: this isn't a real test of slaveok because the test mongo setup
+    // doesn't have replicas. This basically just makes sure that slaveok
+    // doesn't break everything.
+    val v = baseTestVenue().save
+
+    // eqs
+    Venue.where(_._id eqs v.id).fetch().map(_.id)                         must_== List(v.id)
+    Venue.where(_._id eqs v.id).setSlaveOk(true).fetch().map(_.id)        must_== List(v.id)
+    Venue.where(_._id eqs v.id).setSlaveOk(false).fetch().map(_.id)       must_== List(v.id)
+  }
 }

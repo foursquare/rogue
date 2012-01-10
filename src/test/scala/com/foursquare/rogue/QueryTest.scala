@@ -539,6 +539,16 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testSetSlaveOk: Unit = {
+    type Q = BaseQuery[Venue, Venue, _, _, _, _, _]
+
+    Venue.where(_.mayor eqs 2).asInstanceOf[Q].slaveOk must_== None
+    Venue.where(_.mayor eqs 2).setSlaveOk(true).asInstanceOf[Q].slaveOk must_== Some(true)
+    Venue.where(_.mayor eqs 2).setSlaveOk(false).asInstanceOf[Q].slaveOk must_== Some(false)
+    Venue.where(_.mayor eqs 2).setSlaveOk(true).setSlaveOk(false).asInstanceOf[Q].slaveOk must_== Some(false)
+  }
+
+  @Test
   def thingsThatShouldntCompile {
     val compiler = new Compiler
     def check(code: String, expectedErrorREOpt: Option[String] = Some("")): Unit = {

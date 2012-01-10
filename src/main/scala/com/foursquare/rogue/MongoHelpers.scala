@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.mongodb.{BasicDBObjectBuilder, DBObject, DBCursor, WriteConcern}
+import com.mongodb.{BasicDBObjectBuilder, Bytes, DBObject, DBCursor, WriteConcern}
 import net.liftweb.mongodb._
 import net.liftweb.mongodb.record._
 import scala.collection.immutable.ListMap
@@ -272,9 +272,19 @@ object MongoHelpers {
         MongoDB.useCollection(queryClause.meta.mongoIdentifier, queryClause.meta.collectionName) {
           coll =>
           try {
-            val cursor = coll.find(cnd, sel).limit(queryClause.lim getOrElse 0)
-                .skip(queryClause.sk getOrElse 0)
-            ord.foreach(cursor sort _)
+            val cursor = coll.find(cnd, sel)
+            queryClause.lim.foreach(cursor.limit _)
+            queryClause.sk.foreach(cursor.skip _)
+            ord.foreach(cursor.sort _)
+            queryClause.slaveOk.foreach(so => {
+              if (so) {
+                // Use bitwise-or to add in slave-ok
+                cursor.setOptions(cursor.getOptions | Bytes.QUERYOPTION_SLAVEOK)
+              } else {
+                // Remove slave-ok from options
+                cursor.setOptions(cursor.getOptions & ~Bytes.QUERYOPTION_SLAVEOK)
+              }
+            })
             queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
             queryClause.comment.foreach(cursor addSpecial("$comment", _))
             hnt.foreach(cursor hint _)
