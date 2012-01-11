@@ -65,27 +65,27 @@ class IndexEnforcerBuilder[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] 
   type MetaM = M with MongoMetaRecord[M] with IndexedRecord[M]
 
   def useIndex[F1 <: Field[_, M]](i: MongoIndex1[M, F1, _]): IndexEnforcer1[M, NoIndexInfo, F1, HasntUsedIndex] = {
-    new IndexEnforcer1[M, NoIndexInfo, F1, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+    new IndexEnforcer1[M, NoIndexInfo, F1, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M]](i: MongoIndex2[M, F1, _, F2, _]): IndexEnforcer2[M, NoIndexInfo, F1, F2, HasntUsedIndex] = {
-    new IndexEnforcer2[M, NoIndexInfo, F1, F2, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+    new IndexEnforcer2[M, NoIndexInfo, F1, F2, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M]](i: MongoIndex3[M, F1, _, F2, _, F3, _]): IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, HasntUsedIndex] = {
-    new IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+    new IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M]](i: MongoIndex4[M, F1, _, F2, _, F3, _, F4, _]): IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, HasntUsedIndex] = {
-    new IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+    new IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M], F5 <: Field[_, M]](i: MongoIndex5[M, F1, _, F2, _, F3, _, F4, _, F5, _]): IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, HasntUsedIndex] = {
-    new IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+    new IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M], F5 <: Field[_, M], F6 <: Field[_, M]](i: MongoIndex6[M, F1, _, F2, _, F3, _, F4, _, F5, _, F6, _]): IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, HasntUsedIndex] = {
-    new IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None))
+    new IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
   }
 }
 
@@ -500,6 +500,19 @@ trait AbstractQuery[M <: MongoRecord[M], R,
   def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   /**
+   * Set a flag to indicate whether this query may hit secondaries. This only
+   * really makes sense if you're using replica sets. If this field is
+   * unspecified, rogue will leave the option untouched, so you'll use
+   * secondaries or not depending on how you configure the mongo java driver.
+   * Also, this only works if you're doing a query -- findAndModify, updates,
+   * and deletes always go to the primaries.
+   *
+   * For more info, see
+   * http://www.mongodb.org/display/DOCS/Querying#Querying-slaveOk%28QueryingSecondaries%29.
+   */
+  def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+
+  /**
    * Adds a select clause to the query. The use of this method constrains the type
    * signature of the query to force the "Sel" field to be type "Selected".
    *
@@ -644,7 +657,8 @@ case class BaseQuery[M <: MongoRecord[M], R,
     hint: Option[ListMap[String, Any]],
     condition: AndCondition,
     order: Option[MongoOrder],
-    select: Option[MongoSelect[R, M]]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
+    select: Option[MongoSelect[R, M]],
+    slaveOk: Option[Boolean]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
 
   // The meta field on the MongoMetaRecord (as an instance of MongoRecord)
   // points to the master MongoMetaRecord. This is here in case you have a
@@ -841,6 +855,8 @@ case class BaseQuery[M <: MongoRecord[M], R,
   override def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(maxScan = Some(max))
 
   override def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(comment = Some(c))
+
+  override def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(slaveOk = Some(b))
 
   override def hint(index: MongoIndex[M]) = this.copy(hint = Some(index.asListMap))
 
@@ -1148,6 +1164,8 @@ class BaseEmptyQuery[M <: MongoRecord[M], R,
   override def maxScan(max: Int) = this
 
   override def comment(c: String) = this
+
+  override def setSlaveOk(b: Boolean) = this
 
   override def hint(index: MongoIndex[M]) = this
 
