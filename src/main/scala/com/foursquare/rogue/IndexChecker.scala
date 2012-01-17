@@ -1,6 +1,7 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue
 
+import com.foursquare.rogue.Rogue.{GenericBaseQuery, GenericQuery}
 import scala.collection.immutable.ListMap
 import net.liftweb.common.Loggable
 import net.liftweb.mongodb.record._
@@ -15,19 +16,11 @@ trait IndexedRecord[M <: MongoRecord[M]] {
 }
 
 /**
- * A container for query-type shorthands.
- */
-trait MongoQueryTypes {
-  type GenericQuery[M <: MongoRecord[M], R] = AbstractQuery[M, R, _, _, _, _, _]
-  type GenericBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
-}
-
-/**
  * A utility object which provides the capability to verify if the set of indexes that
  * actually exist for a MongoDB collection match the indexes that are expected by
  * a query.
  */
-object MongoIndexChecker extends Loggable with MongoQueryTypes {
+object MongoIndexChecker extends Loggable {
 
   /**
    * Flattens an arbitrary query into DNF - that is, into a list of query alternatives
@@ -135,7 +128,7 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
     lazy val indexString = indexes.map(idx => "{%s}".format(idx.toString())).mkString(", ")
     conditions.forall(clauses => {
       clauses.isEmpty || matchesUniqueIndex(clauses) ||
-          indexes.exists(idx => matchesIndex(idx.asListMap.keys.toList, clauses)) ||
+          indexes.exists(idx => matchesIndex(idx.asListMap.keys.toList, clauses) && logIndexHit(query, idx)) ||
           signalError("Query does not match an index! query: %s, indexes: %s" format (
               query.toString, indexString))
     })
@@ -204,8 +197,13 @@ object MongoIndexChecker extends Loggable with MongoQueryTypes {
    *
    * @param msg a message string describing the error.
    */
-  private def signalError(msg : String) : Boolean = {
+  private def signalError(msg: String): Boolean = {
     QueryHelpers.logger.logIndexMismatch("Indexing error: " + msg)
     false
+  }
+
+  private def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_]): Boolean = {
+    QueryHelpers.logger.logIndexHit(query, index)
+    true
   }
 }

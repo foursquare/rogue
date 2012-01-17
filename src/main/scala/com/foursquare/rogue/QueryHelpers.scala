@@ -2,6 +2,7 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.rogue.Rogue.GenericQuery
 import com.mongodb.DBObject
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
@@ -35,13 +36,15 @@ object QueryHelpers {
     def log(msg: => String, signature: => String, timeMillis: Long): Unit = log(msg, timeMillis)
     def log(msg: => String, timeMillis: Long): Unit
     def logIndexMismatch(msg: => String)
+    def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_])
     def warn(msg: => String): Unit
   }
 
   class DefaultQueryLogger extends QueryLogger {
     override def log(msg: => String, timeMillis: Long) {}
     override def warn(msg: => String) {}
-    override def logIndexMismatch(msg: => String) { }
+    override def logIndexMismatch(msg: => String) {}
+    override def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_]) {}
   }
 
   object NoopQueryLogger extends DefaultQueryLogger

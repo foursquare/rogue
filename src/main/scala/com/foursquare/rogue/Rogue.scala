@@ -30,6 +30,9 @@ trait Rogue {
     BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
   type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
 
+  type GenericQuery[M <: MongoRecord[M], R] = AbstractQuery[M, R, _, _, _, _, _]
+  type GenericBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
+
   def OrQuery[M <: MongoRecord[M]]
       (subqueries: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _]*)
       : AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause] = {

@@ -36,7 +36,7 @@ object TestModel extends TestModel with MongoMetaRecord[TestModel] with IndexedR
     TestModel.index(_.ll, TwoD, _.b, Asc))
 }
 
-class MongoIndexCheckerTest extends SpecsMatchers with MongoQueryTypes {
+class MongoIndexCheckerTest extends SpecsMatchers {
 
   @Test
   def testIndexExpectations {
