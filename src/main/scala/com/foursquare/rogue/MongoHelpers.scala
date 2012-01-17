@@ -219,8 +219,7 @@ object MongoHelpers {
         val query = modClause.query
         val cnd = buildCondition(query.condition)
         val ord = query.order.map(buildOrder)
-        val sel = query.select.map(buildSelect) getOrElse
-            buildSelectFromNames(query.meta.metaFields.view.map(_.name))
+        val sel = query.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)
         val m = buildModify(modClause.mod)
         lazy val description = buildFindAndModifyString(modClause, returnNew, upsert, remove)
 
@@ -262,8 +261,7 @@ object MongoHelpers {
       validator.validateQuery(queryClause)
       val cnd = buildCondition(queryClause.condition)
       val ord = queryClause.order.map(buildOrder)
-      val sel = queryClause.select.map(buildSelect) getOrElse
-                                    buildSelectFromNames(queryClause.meta.metaFields.view.map(_.name))
+      val sel = queryClause.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)
       val hnt = queryClause.hint.map(buildHint)
 
       lazy val description = buildQueryString(operation, queryClause)
