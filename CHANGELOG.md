@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 1.1.0
+
+- compile-time index checking (nsanch)
+- stop building select clause from all fields (jliszka)
+- QueryLogger.logIndexHit hook (jliszka)
+- use distinct values in $in and $all queries (jliszka)
+- slaveOk query modifier (nsanch)
+
 # 1.0.29
 
 - updated inline documentation (markcc)

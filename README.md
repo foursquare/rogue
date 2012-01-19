@@ -37,7 +37,7 @@ Because Rogue is designed to work with several versions of lift-mongodb-record (
 you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    val rogue           = "com.foursquare" %% "rogue"               % "1.0.29" intransitive()
+    val rogue           = "com.foursquare" %% "rogue"               % "1.1.0" intransitive()
     val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M2"
 
 You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
@@ -87,19 +87,21 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 1.0.29. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 1.1.0. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
-New in 1.0.29:
+New in 1.1.0:
 
-- updated inline documentation (markcc)
-- between takes a tuple (davidt)
-- end-to-end tests (nsanch)
-- subfield select on embedded list (nsanch)
-- regex match operator for string fields (jliszka)
+- Compile-time index checking! (nsanch)
+- QueryLogger.logIndexHit hook (jliszka)
+- use distinct values in $in and $all queries (jliszka)
+- slaveOk query modifier (nsanch)
 
 Lots of new features since 1.0.18!:
 
-- Support for the $ positional operator
+- end-to-end tests (nsanch)
+- subfield select on embedded list (nsanch)
+- regex match operator for string fields (jliszka)
+- support for the $ positional operator
 - pullWhere - $pull by query instead of exact match
 - Mongo index checking (see [here](https://github.com/foursquare/rogue/blob/master/docs/Indexing.md) for documentation)
 - $rename support
@@ -145,5 +147,6 @@ The current maintainers are:
 
 - Jason Liszka jliszka@foursquare.com
 - Jorge Ortiz jorge@foursquare.com
+- Neil Sanchala nsanch@foursquare.com
 
 Contributions welcome!
