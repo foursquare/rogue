@@ -114,14 +114,14 @@ object QueryHelpers {
     if (vs.isEmpty)
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
-      new InQueryClause(fieldName, QueryHelpers.list(vs))
+      new InQueryClause(fieldName, QueryHelpers.list(vs.toSet))
   }
 
   def allListClause[V](fieldName: String, vs: Traversable[V]) = {
     if (vs.isEmpty)
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
-      new AllQueryClause(fieldName, QueryHelpers.list(vs))
+      new AllQueryClause(fieldName, QueryHelpers.list(vs.toSet))
   }
 
   def asDBObject[T](x: T): DBObject = {
