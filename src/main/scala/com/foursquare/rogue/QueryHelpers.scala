@@ -93,8 +93,12 @@ object QueryHelpers {
     list
   }
 
-  def list[T](vs: Traversable[T]): java.util.List[T] = {
+  def validatedList[T](vs: Traversable[T]): java.util.List[T] = {
     validator.validateList(vs)
+    makeJavaList(vs)
+  }
+
+  def list[T](vs: Traversable[T]): java.util.List[T] = {
     makeJavaList(vs)
   }
 
@@ -114,14 +118,14 @@ object QueryHelpers {
     if (vs.isEmpty)
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
-      new InQueryClause(fieldName, QueryHelpers.list(vs.toSet))
+      new InQueryClause(fieldName, QueryHelpers.validatedList(vs.toSet))
   }
 
   def allListClause[V](fieldName: String, vs: Traversable[V]) = {
     if (vs.isEmpty)
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
-      new AllQueryClause(fieldName, QueryHelpers.list(vs.toSet))
+      new AllQueryClause(fieldName, QueryHelpers.validatedList(vs.toSet))
   }
 
   def asDBObject[T](x: T): DBObject = {

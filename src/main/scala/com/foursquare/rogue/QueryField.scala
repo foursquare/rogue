@@ -64,7 +64,7 @@ abstract class AbstractQueryField[V, DB, M <: MongoRecord[M]](val field: Field[V
   def eqs(v: V) = EqClause(field.name, valueToDB(v))
   def neqs(v: V) = new NeQueryClause(field.name, valueToDB(v))
   def in[L <% Traversable[V]](vs: L) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
-  def nin[L <% Traversable[V]](vs: L) = new NinQueryClause(field.name, QueryHelpers.list(valuesToDB(vs)))
+  def nin[L <% Traversable[V]](vs: L) = new NinQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
 }
 
 class QueryField[V, M <: MongoRecord[M]](field: Field[V, M])
@@ -172,7 +172,7 @@ class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T]
     QueryHelpers.inListClause(field.name, objs.map(_.id))
 
   def nin(objs: Traversable[T]) =
-    new NinQueryClause(field.name, QueryHelpers.list(objs.map(_.id)))
+    new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(_.id)))
 }
 
 class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
@@ -234,7 +234,7 @@ abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Fie
     QueryHelpers.inListClause(field.name, valuesToDB(vs))
 
   def nin(vs: Traversable[V]) =
-    new NinQueryClause(field.name, QueryHelpers.list(valuesToDB(vs)))
+    new NinQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
 
   def size(s: Int) =
     new SizeQueryClause(field.name, s)
