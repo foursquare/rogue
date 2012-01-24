@@ -581,6 +581,32 @@ trait AbstractQuery[M <: MongoRecord[M], R,
                       (implicit ev: Sel =:= Unselected):
                       AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), Ord, Selected, Lim, Sk, Or]
 
+  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
+                                                f2: M => SelectField[F2, M],
+                                                f3: M => SelectField[F3, M],
+                                                f4: M => SelectField[F4, M],
+                                                f5: M => SelectField[F5, M],
+                                                f6: M => SelectField[F6, M],
+                                                f7: M => SelectField[F7, M],
+                                                f8: M => SelectField[F8, M],
+                                                f9: M => SelectField[F9, M])
+                      (implicit ev: Sel =:= Unselected):
+                      AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or]
+
+  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
+                                                      f2: M => SelectField[F2, M],
+                                                      f3: M => SelectField[F3, M],
+                                                      f4: M => SelectField[F4, M],
+                                                      f5: M => SelectField[F5, M],
+                                                      f6: M => SelectField[F6, M],
+                                                      f7: M => SelectField[F7, M],
+                                                      f8: M => SelectField[F8, M],
+                                                      f9: M => SelectField[F9, M],
+                                                      f10: M => SelectField[F10, M])
+                      (implicit ev: Sel =:= Unselected):
+                      AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or]
+
+
   def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)
                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
@@ -640,6 +666,30 @@ trait AbstractQuery[M <: MongoRecord[M], R,
                                                      create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
+                                                         f2: M => SelectField[F2, M],
+                                                         f3: M => SelectField[F3, M],
+                                                         f4: M => SelectField[F4, M],
+                                                         f5: M => SelectField[F5, M],
+                                                         f6: M => SelectField[F6, M],
+                                                         f7: M => SelectField[F7, M],
+                                                         f8: M => SelectField[F8, M],
+                                                         f9: M => SelectField[F9, M],
+                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
+                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
+                                                              f2: M => SelectField[F2, M],
+                                                              f3: M => SelectField[F3, M],
+                                                              f4: M => SelectField[F4, M],
+                                                              f5: M => SelectField[F5, M],
+                                                              f6: M => SelectField[F6, M],
+                                                              f7: M => SelectField[F7, M],
+                                                              f8: M => SelectField[F8, M],
+                                                              f9: M => SelectField[F9, M],
+                                                              f10: M => SelectField[F10, M],
+                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
+                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
   def hint(h: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 }
 
@@ -933,6 +983,39 @@ case class BaseQuery[M <: MongoRecord[M], R,
                (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8) => (f1, f2, f3, f4, f5, f6, f7, f8))
   }
 
+  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
+                                                          f2: M => SelectField[F2, M],
+                                                          f3: M => SelectField[F3, M],
+                                                          f4: M => SelectField[F4, M],
+                                                          f5: M => SelectField[F5, M],
+                                                          f6: M => SelectField[F6, M],
+                                                          f7: M => SelectField[F7, M],
+                                                          f8: M => SelectField[F8, M],
+                                                          f9: M => SelectField[F9, M])
+                       (implicit ev: Sel =:= Unselected):
+                       BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or] = {
+    selectCase(f1, f2, f3, f4, f5, f6, f7, f8, f9,
+               (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8, f9: F9) =>
+               (f1, f2, f3, f4, f5, f6, f7, f8, f9))
+  }
+
+  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
+                                                               f2: M => SelectField[F2, M],
+                                                               f3: M => SelectField[F3, M],
+                                                               f4: M => SelectField[F4, M],
+                                                               f5: M => SelectField[F5, M],
+                                                               f6: M => SelectField[F6, M],
+                                                               f7: M => SelectField[F7, M],
+                                                               f8: M => SelectField[F8, M],
+                                                               f9: M => SelectField[F9, M],
+                                                               f10: M => SelectField[F10, M])
+                       (implicit ev: Sel =:= Unselected):
+                       BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or] = {
+    selectCase(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10,
+               (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8, f9: F9, f10: F10) =>
+               (f1, f2, f3, f4, f5, f6, f7, f8, f9, f10))
+  }
+
   def selectCase[F1, CC](f: M => SelectField[F1, M],
                          create: F1 => CC)(implicit ev: Sel =:= Unselected):
                        BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
@@ -1058,6 +1141,59 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                               xs(5).asInstanceOf[F6],
                                               xs(6).asInstanceOf[F7],
                                               xs(7).asInstanceOf[F8])
+    this.copy(select = Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
+                                                     f2: M => SelectField[F2, M],
+                                                     f3: M => SelectField[F3, M],
+                                                     f4: M => SelectField[F4, M],
+                                                     f5: M => SelectField[F5, M],
+                                                     f6: M => SelectField[F6, M],
+                                                     f7: M => SelectField[F7, M],
+                                                     f8: M => SelectField[F8, M],
+                                                     f9: M => SelectField[F9, M],
+                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
+                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+    val inst = meta.createRecord
+    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst), f8(inst), f9(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
+                                              xs(1).asInstanceOf[F2],
+                                              xs(2).asInstanceOf[F3],
+                                              xs(3).asInstanceOf[F4],
+                                              xs(4).asInstanceOf[F5],
+                                              xs(5).asInstanceOf[F6],
+                                              xs(6).asInstanceOf[F7],
+                                              xs(7).asInstanceOf[F8],
+                                              xs(8).asInstanceOf[F9])
+    this.copy(select = Some(MongoSelect(fields, transformer)))
+  }
+
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
+                                                     f2: M => SelectField[F2, M],
+                                                     f3: M => SelectField[F3, M],
+                                                     f4: M => SelectField[F4, M],
+                                                     f5: M => SelectField[F5, M],
+                                                     f6: M => SelectField[F6, M],
+                                                     f7: M => SelectField[F7, M],
+                                                     f8: M => SelectField[F8, M],
+                                                     f9: M => SelectField[F9, M],
+                                                     f10: M => SelectField[F10, M],
+                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
+                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+    val inst = meta.createRecord
+    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst),
+                      f6(inst), f7(inst), f8(inst), f9(inst), f10(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
+                                              xs(1).asInstanceOf[F2],
+                                              xs(2).asInstanceOf[F3],
+                                              xs(3).asInstanceOf[F4],
+                                              xs(4).asInstanceOf[F5],
+                                              xs(5).asInstanceOf[F6],
+                                              xs(6).asInstanceOf[F7],
+                                              xs(7).asInstanceOf[F8],
+                                              xs(8).asInstanceOf[F9],
+                                              xs(9).asInstanceOf[F10])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 }
@@ -1228,6 +1364,31 @@ class BaseEmptyQuery[M <: MongoRecord[M], R,
                        (implicit ev: Sel =:= Unselected) =
       new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), Ord, Selected, Lim, Sk, Or]
 
+  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
+                                                          f2: M => SelectField[F2, M],
+                                                          f3: M => SelectField[F3, M],
+                                                          f4: M => SelectField[F4, M],
+                                                          f5: M => SelectField[F5, M],
+                                                          f6: M => SelectField[F6, M],
+                                                          f7: M => SelectField[F7, M],
+                                                          f8: M => SelectField[F8, M],
+                                                          f9: M => SelectField[F9, M])
+                       (implicit ev: Sel =:= Unselected) =
+      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or]
+
+  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
+                                                               f2: M => SelectField[F2, M],
+                                                               f3: M => SelectField[F3, M],
+                                                               f4: M => SelectField[F4, M],
+                                                               f5: M => SelectField[F5, M],
+                                                               f6: M => SelectField[F6, M],
+                                                               f7: M => SelectField[F7, M],
+                                                               f8: M => SelectField[F8, M],
+                                                               f9: M => SelectField[F9, M],
+                                                               f10: M => SelectField[F10, M])
+                       (implicit ev: Sel =:= Unselected) =
+      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or]
+
   override def selectCase[F1, CC](f: M => SelectField[F1, M],
                                   create: F1 => CC)(implicit ev: Sel =:= Unselected) =
       new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
@@ -1293,6 +1454,32 @@ class BaseEmptyQuery[M <: MongoRecord[M], R,
                                                               f8: M => SelectField[F8, M],
                                                               create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
      (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+
+  override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
+                                                              f2: M => SelectField[F2, M],
+                                                              f3: M => SelectField[F3, M],
+                                                              f4: M => SelectField[F4, M],
+                                                              f5: M => SelectField[F5, M],
+                                                              f6: M => SelectField[F6, M],
+                                                              f7: M => SelectField[F7, M],
+                                                              f8: M => SelectField[F8, M],
+                                                              f9: M => SelectField[F9, M],
+                                                              create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
+     (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+
+  override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
+                                                              f2: M => SelectField[F2, M],
+                                                              f3: M => SelectField[F3, M],
+                                                              f4: M => SelectField[F4, M],
+                                                              f5: M => SelectField[F5, M],
+                                                              f6: M => SelectField[F6, M],
+                                                              f7: M => SelectField[F7, M],
+                                                              f8: M => SelectField[F8, M],
+                                                              f9: M => SelectField[F9, M],
+                                                              f10: M => SelectField[F10, M],
+                                                              create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
+     (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+
 }
 
 // *******************************************************
