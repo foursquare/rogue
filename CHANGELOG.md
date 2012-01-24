@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 1.1.1
+
+- select/selectCase up to 10 fields (davidtaylor)
+- only validate lists on $all and $in queries (jliszka)
+- pass query object to logging hook (jliszka)
+
 # 1.1.0
 
 - compile-time index checking (nsanch)
