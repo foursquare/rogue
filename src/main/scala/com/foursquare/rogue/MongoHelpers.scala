@@ -168,7 +168,7 @@ object MongoHelpers {
                                    format(query.meta.mongoIdentifier,
             description, System.currentTimeMillis - start), e)
       } finally {
-        logger.log(description, query.signature, System.currentTimeMillis - start)
+        logger.log(query, description, System.currentTimeMillis - start)
       }
     }
 

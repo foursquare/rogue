@@ -94,7 +94,7 @@ object MongoIndexChecker extends Loggable {
         badExpectations.forall{ case (expectation, badActual) => {
           if (clause.expectedIndexBehavior == expectation &&
               badActual.exists(_ == clause.actualIndexBehavior)) {
-            signalError(
+            signalError(query,
                 "Query is expecting %s on %s but actual behavior is %s. query = %s" format
                 (clause.expectedIndexBehavior, clause.fieldName, clause.actualIndexBehavior, query.toString))
           } else true
@@ -129,7 +129,7 @@ object MongoIndexChecker extends Loggable {
     conditions.forall(clauses => {
       clauses.isEmpty || matchesUniqueIndex(clauses) ||
           indexes.exists(idx => matchesIndex(idx.asListMap.keys.toList, clauses) && logIndexHit(query, idx)) ||
-          signalError("Query does not match an index! query: %s, indexes: %s" format (
+          signalError(query, "Query does not match an index! query: %s, indexes: %s" format (
               query.toString, indexString))
     })
   }
@@ -195,10 +195,11 @@ object MongoIndexChecker extends Loggable {
    * Utility method that allows us to signal an error from inside of a disjunctive expression.
    * e.g., "blah || blah || black || signalError(....)".
    *
+   * @param query the query involved
    * @param msg a message string describing the error.
    */
-  private def signalError(msg: String): Boolean = {
-    QueryHelpers.logger.logIndexMismatch("Indexing error: " + msg)
+  private def signalError(query: GenericBaseQuery[_, _], msg: String): Boolean = {
+    QueryHelpers.logger.logIndexMismatch(query, "Indexing error: " + msg)
     false
   }
 

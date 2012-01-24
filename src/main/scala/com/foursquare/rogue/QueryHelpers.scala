@@ -33,18 +33,17 @@ object QueryHelpers {
     (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
-    def log(msg: => String, signature: => String, timeMillis: Long): Unit = log(msg, timeMillis)
-    def log(msg: => String, timeMillis: Long): Unit
-    def logIndexMismatch(msg: => String)
+    def log(query: GenericQuery[_, _], msg: => String, timeMillis: Long): Unit
+    def logIndexMismatch(query: GenericQuery[_, _], msg: => String)
     def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_])
-    def warn(msg: => String): Unit
+    def warn(query: GenericQuery[_, _], msg: => String): Unit
   }
 
   class DefaultQueryLogger extends QueryLogger {
-    override def log(msg: => String, timeMillis: Long) {}
-    override def warn(msg: => String) {}
-    override def logIndexMismatch(msg: => String) {}
+    override def log(query: GenericQuery[_, _], msg: => String, timeMillis: Long) {}
+    override def logIndexMismatch(query: GenericQuery[_, _], msg: => String) {}
     override def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_]) {}
+    override def warn(query: GenericQuery[_, _], msg: => String) {}
   }
 
   object NoopQueryLogger extends DefaultQueryLogger
