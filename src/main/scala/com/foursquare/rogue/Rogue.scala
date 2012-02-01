@@ -71,8 +71,8 @@ trait Rogue {
   /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
    * users to write "RecordType.where(...).modify(...)".
    */
-  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M]]
-      (query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause])
+  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M], Or <: MaybeHasOrClause]
+      (query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, Or])
       : AbstractModifyQuery[M] = {
     query match {
       case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyModifyQuery[M]
@@ -83,8 +83,8 @@ trait Rogue {
     }
   }
 
-  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected]
-      (query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, HasNoOrClause])
+  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Or <: MaybeHasOrClause]
+      (query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or])
       : AbstractFindAndModifyQuery[M, R] = {
     query match {
       case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyFindAndModifyQuery[M, R]
