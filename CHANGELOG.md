@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 1.1.2
+
+- allow $or queries in modify commands
+
 # 1.1.1
 
 - select/selectCase up to 10 fields (davidtaylor)
