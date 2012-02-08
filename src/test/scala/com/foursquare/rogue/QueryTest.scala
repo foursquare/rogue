@@ -194,6 +194,9 @@ class QueryTest extends SpecsMatchers {
 
     // raw query clauses
     Venue where (_.mayor eqs 1) raw (_.add("$where", "this.a > 3")) toString() must_== """db.venues.find({ "mayor" : 1 , "$where" : "this.a > 3"})"""
+    val ids = new java.util.ArrayList[Int]() {{ add(1); add(2); add(3) }}
+    Venue where (_.mayor eqs 1) raw (b => {b.push("legid"); b.add("$in", ids)}) toString() must_== """db.venues.find({ "mayor" : 1 , "legid" : { "$in" : [ 1 , 2 , 3]}})"""
+    Venue where (_.mayor eqs 1) raw (b => {b.push("legid"); b.add("$in", ids); b.pop}) and (_.mayor_count eqs 5) toString() must_== """db.venues.find({ "mayor" : 1 , "legid" : { "$in" : [ 1 , 2 , 3]} , "mayor_count" : 5})"""
   }
 
   @Test
