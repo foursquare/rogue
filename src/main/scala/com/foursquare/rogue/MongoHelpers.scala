@@ -29,10 +29,9 @@ object MongoHelpers {
     def buildCondition(cond: AndCondition,
                        builder: BasicDBObjectBuilder,
                        signature: Boolean): DBObject = {
-      val (rawClauses, safeClauses) = cond.clauses.partition(_.isInstanceOf[RawQueryClause])
 
       // Normal clauses
-      safeClauses.groupBy(_.fieldName).toList
+      cond.clauses.groupBy(_.fieldName).toList
           .sortBy{ case (fieldName, _) => -cond.clauses.indexWhere(_.fieldName == fieldName) }
           .foreach{ case (name, cs) => {
         // Equality clauses look like { a : 3 }
@@ -40,18 +39,18 @@ object MongoHelpers {
         // and can be chained like { a : { $gt : 2, $lt: 6 }}.
         // So if there is any equality clause, apply it (only) to the builder;
         // otherwise, chain the clauses.
-        cs.filter(_.isInstanceOf[EqClause[_, _]]).headOption match {
-          case Some(eqClause) => eqClause.extend(builder, signature)
-          case None => {
+
+        cs.headOption match {
+          case Some(clause @ (_: EqClause[_,_] | _: RawQueryClause)) => {
+            clause.extend(builder, signature)
+          }
+          case _ => {
             builder.push(name)
             cs.foreach(_.extend(builder, signature))
             builder.pop
           }
         }
       }}
-
-      // Raw clauses
-      rawClauses.foreach(_.extend(builder, signature))
 
       // Optional $or clause (only one per "and" chain)
       cond.orCondition.foreach(or =>
