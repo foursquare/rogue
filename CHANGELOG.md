@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 1.1.3
+
+- fixed bug where findAndModify upsert with returnNew = false was returning Some
+- fixed bug where $regex query on a field would not allow other queries on that field
+- publishing to sonatype instead of scala-tools
+
 # 1.1.2
 
 - allow $or queries in modify commands
