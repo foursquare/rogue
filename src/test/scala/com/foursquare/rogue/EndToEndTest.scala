@@ -185,4 +185,27 @@ class EndToEndTest extends SpecsMatchers {
     Venue.where(_._id eqs v.id).setSlaveOk(true).fetch().map(_.id)        must_== List(v.id)
     Venue.where(_._id eqs v.id).setSlaveOk(false).fetch().map(_.id)       must_== List(v.id)
   }
+
+  @Test
+  def testFindAndModify {
+    val v1 = Venue.where(_.venuename eqs "v1")
+        .findAndModify(_.userid setTo 5)
+        .upsertOne(returnNew = false)
+    v1 must_== None
+
+    val v2 = Venue.where(_.venuename eqs "v2")
+        .findAndModify(_.userid setTo 5)
+        .upsertOne(returnNew = true)
+    v2.map(_.userid.value) must_== Some(5)
+
+    val v3 = Venue.where(_.venuename eqs "v2")
+        .findAndModify(_.userid setTo 6)
+        .upsertOne(returnNew = false)
+    v3.map(_.userid.value) must_== Some(5)
+
+    val v4 = Venue.where(_.venuename eqs "v2")
+        .findAndModify(_.userid setTo 7)
+        .upsertOne(returnNew = true)
+    v4.map(_.userid.value) must_== Some(7)
+  }
 }

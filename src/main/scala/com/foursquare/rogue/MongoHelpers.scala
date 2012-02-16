@@ -226,7 +226,8 @@ object MongoHelpers {
         runCommand(description, modClause.query) {
           MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
             val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), remove, m, returnNew, upsert)
-            Option(dbObj).map(f)
+            if (dbObj == null || dbObj.keySet.isEmpty) None
+            else Option(dbObj).map(f)
           }
         }
       }
