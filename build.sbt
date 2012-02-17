@@ -26,13 +26,40 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
   )
 }
 
+publishMavenStyle := true
+
+publishArtifact in Test := false
+
+pomIncludeRepository := { _ => false }
+
 publishTo <<= (version) { v =>
-  val nexus = "http://nexus.scala-tools.org/content/repositories/"
+  val nexus = "http://oss.sonatype.org/"
   if (v.endsWith("-SNAPSHOT"))
-    Some("snapshots" at nexus+"snapshots/")
+    Some("snapshots" at nexus+"content/repositories/snapshots")
   else
-    Some("releases" at nexus+"releases/")
+    Some("releases" at nexus+"service/local/staging/deploy/maven2")
 }
+
+pomExtra := (
+  <url>http://github.com/foursquare/rogue</url>
+  <licenses>
+    <license>
+      <name>Apache</name>
+      <url>http://www.opensource.org/licenses/Apache-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>git@github.com:foursquare/rogue.git</url>
+    <connection>scm:git:git@github.com:foursquare/rogue.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>jliszka</id>
+      <name>Jason Liszka</name>
+      <url>http://github.com/jliszka</url>
+    </developer>
+  </developers>)
 
 resolvers += "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/"
 
@@ -50,11 +77,11 @@ testFrameworks += new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker")
 defaultExcludes ~= (_ || "*~")
 
 credentials ++= {
-  val scalaTools = ("Sonatype Nexus Repository Manager", "nexus.scala-tools.org")
+  val sonatype = ("Sonatype Nexus Repository Manager", "oss.sonatype.org")
   def loadMavenCredentials(file: java.io.File) : Seq[Credentials] = {
     xml.XML.loadFile(file) \ "servers" \ "server" map (s => {
       val host = (s \ "id").text
-      val realm = if (host == scalaTools._2) scalaTools._1 else "Unknown"
+      val realm = if (host == sonatype._2) sonatype._1 else "Unknown"
       Credentials(realm, host, (s \ "username").text, (s \ "password").text)
     })
   }
