@@ -4,10 +4,10 @@ package com.foursquare.rogue
 
 import com.mongodb.DBObject
 import com.mongodb.BasicDBObjectBuilder
-import net.liftweb.record.Field
+import java.util.regex.Pattern
 
 class QueryClause[V](val fieldName: String, val actualIndexBehavior: MaybeIndexed, conditions: (CondOps.Value, V)*) {
-  def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
+  def extend(q: BasicDBObjectBuilder, signature: Boolean) {
     conditions foreach { case (op, v) => q.add(op.toString, if (signature) 0 else v) }
   }
   val expectedIndexBehavior: MaybeIndexed = Index
@@ -64,15 +64,48 @@ class NinQueryClause[V](fieldName: String, vs: java.util.List[V])
 class SizeQueryClause(fieldName: String, v: Int)
     extends IndexableQueryClause[Int, DocumentScan](fieldName, DocumentScan, CondOps.Size -> v)
 
+class RegexQueryClause[Ind <: MaybeIndexed](fieldName: String, actualIB: Ind, p: Pattern)
+    extends IndexableQueryClause[Pattern, Ind](fieldName, actualIB) {
+  val flagMap = Map(
+    Pattern.CANON_EQ -> "c",
+    Pattern.CASE_INSENSITIVE -> "i",
+    Pattern.COMMENTS -> "x",
+    Pattern.DOTALL -> "s",
+    Pattern.LITERAL -> "t",
+    Pattern.MULTILINE -> "m",
+    Pattern.UNICODE_CASE -> "u",
+    Pattern.UNIX_LINES -> "d"
+  )
+
+  def flagsToString(flags: Int) = {
+    (for {
+      (mask, char) <- flagMap
+      if (flags & mask) != 0
+    } yield char).mkString
+  }
+
+  override def extend(q: BasicDBObjectBuilder, signature: Boolean) {
+    q.add("$regex", if (signature) 0 else p.toString)
+    q.add("$options", if (signature) 0 else flagsToString(p.flags))
+  }
+
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = {
+    new RegexQueryClause[Ind](fieldName, actualIB, p) {
+      override val expectedIndexBehavior = b
+    }
+  }
+}
+
+
 class RawQueryClause(f: BasicDBObjectBuilder => Unit) extends IndexableQueryClause("raw", DocumentScan) {
-  override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
+  override def extend(q: BasicDBObjectBuilder, signature: Boolean) {
     f(q)
   }
   override val expectedIndexBehavior = DocumentScan
 }
 
 class EmptyQueryClause[V](fieldName: String) extends IndexableQueryClause[V, Index](fieldName, Index) {
-  override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {}
+  override def extend(q: BasicDBObjectBuilder, signature: Boolean) {}
   override def withExpectedIndexBehavior(b: MaybeIndexed) = {
     new EmptyQueryClause[V](fieldName) {
       override val expectedIndexBehavior = b

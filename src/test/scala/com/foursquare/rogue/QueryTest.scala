@@ -67,8 +67,12 @@ class QueryTest extends SpecsMatchers {
 
     // startsWith, regex
     Venue where (_.venuename startsWith "Starbucks") toString() must_== """db.venues.find({ "venuename" : { "$regex" : "^\\QStarbucks\\E" , "$options" : ""}})"""
-    Venue where (_.venuename regexWarningNotIndexed Pattern.compile("Star.*")) toString() must_== """db.venues.find({ "venuename" : { "$regex" : "Star.*" , "$options" : ""}})"""
-    Venue where (_.venuename matches Pattern.compile("Star.*")) toString() must_== """db.venues.find({ "venuename" : { "$regex" : "Star.*" , "$options" : ""}})"""
+    val p1 = Pattern.compile("Star.*")
+    Venue where (_.venuename regexWarningNotIndexed p1) toString() must_== """db.venues.find({ "venuename" : { "$regex" : "Star.*" , "$options" : ""}})"""
+    Venue where (_.venuename matches p1) toString() must_== """db.venues.find({ "venuename" : { "$regex" : "Star.*" , "$options" : ""}})"""
+    val p2 = Pattern.compile("Star.*", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE)
+    Venue where (_.venuename matches p2) toString() must_== """db.venues.find({ "venuename" : { "$regex" : "Star.*" , "$options" : "im"}})"""
+    Venue where (_.venuename matches p2) and (_.venuename nin List("a", "b")) toString() must_== """db.venues.find({ "venuename" : { "$nin" : [ "a" , "b"] , "$regex" : "Star.*" , "$options" : "im"}})"""
 
     // all, in, size, contains, at
     Venue where (_.tags all List("db", "ka"))   toString() must_== """db.venues.find({ "tags" : { "$all" : [ "db" , "ka"]}})"""
@@ -311,7 +315,7 @@ class QueryTest extends SpecsMatchers {
     VenueClaim where (_.status neqs ClaimStatus.approved) signature() must_== """db.venueclaims.find({ "status" : { "$ne" : 0}})"""
     Venue where (_.legacyid in List(123L, 456L)) signature() must_== """db.venues.find({ "legid" : { "$in" : 0}})"""
     Venue where (_._id exists true) signature() must_== """db.venues.find({ "_id" : { "$exists" : 0}})"""
-    Venue where (_.venuename startsWith "Starbucks") signature() must_== """db.venues.find({ "venuename" : 0})"""
+    Venue where (_.venuename startsWith "Starbucks") signature() must_== """db.venues.find({ "venuename" : { "$regex" : 0 , "$options" : 0}})"""
 
     // list
     Venue where (_.tags all List("db", "ka"))    signature() must_== """db.venues.find({ "tags" : { "$all" : 0}})"""
@@ -321,8 +325,8 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.popularity contains 3)        signature() must_== """db.venues.find({ "popularity" : 0})"""
     Venue where (_.popularity at 0 eqs 3)        signature() must_== """db.venues.find({ "popularity.0" : 0})"""
     Venue where (_.categories at 0 eqs oid)      signature() must_== """db.venues.find({ "categories.0" : 0})"""
-    Venue where (_.tags at 0 startsWith "kara")  signature() must_== """db.venues.find({ "tags.0" : 0})"""
-    Venue where (_.tags idx 0 startsWith "kara") signature() must_== """db.venues.find({ "tags.0" : 0})"""
+    Venue where (_.tags at 0 startsWith "kara")  signature() must_== """db.venues.find({ "tags.0" : { "$regex" : 0 , "$options" : 0}})"""
+    Venue where (_.tags idx 0 startsWith "kara") signature() must_== """db.venues.find({ "tags.0" : { "$regex" : 0 , "$options" : 0}})"""
 
     // map
     Tip where (_.counts at "foo" eqs 3) signature() must_== """db.tips.find({ "counts.foo" : 0})"""

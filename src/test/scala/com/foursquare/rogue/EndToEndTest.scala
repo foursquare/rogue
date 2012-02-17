@@ -208,4 +208,15 @@ class EndToEndTest extends SpecsMatchers {
         .upsertOne(returnNew = true)
     v4.map(_.userid.value) must_== Some(7)
   }
+
+  @Test
+  def testRegexQuery {
+    val v = baseTestVenue().save
+    Venue.where(_._id eqs v.id).and(_.venuename startsWith "test v").count must_== 1
+    Venue.where(_._id eqs v.id).and(_.venuename matches ".es. v".r).count must_== 1
+    Venue.where(_._id eqs v.id).and(_.venuename matches "Tes. v".r).count must_== 0
+    Venue.where(_._id eqs v.id).and(_.venuename matches Pattern.compile("Tes. v", Pattern.CASE_INSENSITIVE)).count must_== 1
+    Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid in List(v.legacyid.value)).count must_== 1
+    Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid nin List(v.legacyid.value)).count must_== 0
+  }
 }

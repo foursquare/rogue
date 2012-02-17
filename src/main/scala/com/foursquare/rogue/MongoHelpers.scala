@@ -7,7 +7,7 @@ import net.liftweb.mongodb._
 import net.liftweb.mongodb.record._
 import scala.collection.immutable.ListMap
 
-object MongoHelpers {
+object MongoHelpers extends Rogue {
   case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition])
 
   case class OrCondition(conditions: List[AndCondition])
@@ -18,8 +18,6 @@ object MongoHelpers {
 
   sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]],
                                                         transformer: List[_] => R)
-
-  private type PlainBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
@@ -97,7 +95,7 @@ object MongoHelpers {
       builder.get
     }
 
-    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: PlainBaseQuery[M, R]): String = {
+    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: GenericBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
@@ -111,7 +109,7 @@ object MongoHelpers {
       sb.toString
     }
 
-    def buildConditionString[R, M <: MongoRecord[M]](operation: String, query: PlainBaseQuery[M, R]): String = {
+    def buildConditionString[R, M <: MongoRecord[M]](operation: String, query: GenericBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
       sb.append(")")
@@ -143,7 +141,7 @@ object MongoHelpers {
       sb.toString
     }
 
-    def buildSignature[R, M <: MongoRecord[M]](query: PlainBaseQuery[M, R]): String = {
+    def buildSignature[R, M <: MongoRecord[M]](query: GenericBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.find(".format(query.meta.collectionName))
       sb.append(buildCondition(query.condition, signature = true).toString)
       sb.append(")")
@@ -158,7 +156,7 @@ object MongoHelpers {
     import MongoHelpers.MongoBuilder._
 
     private[rogue] def runCommand[T](description: => String,
-                                     query: PlainBaseQuery[_, _])(f: => T): T = {
+                                     query: GenericBaseQuery[_, _])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
@@ -173,7 +171,7 @@ object MongoHelpers {
     }
 
     def condition[M <: MongoRecord[M], T](operation: String,
-                                          query: PlainBaseQuery[M, _])
+                                          query: GenericBaseQuery[M, _])
                                          (f: DBObject => T): T = {
       val queryClause = transformer.transformQuery(query)
       validator.validateQuery(queryClause)
@@ -235,7 +233,7 @@ object MongoHelpers {
     }
 
     def query[M <: MongoRecord[M]](operation: String,
-                                   query: PlainBaseQuery[M, _],
+                                   query: GenericBaseQuery[M, _],
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
       doQuery(operation, query){cursor =>
@@ -246,7 +244,7 @@ object MongoHelpers {
     }
 
     def explain[M <: MongoRecord[M]](operation: String,
-                                     query: PlainBaseQuery[M, _]): String = {
+                                     query: GenericBaseQuery[M, _]): String = {
       var explanation = ""
       doQuery(operation, query){cursor =>
         explanation += cursor.explain.toString
@@ -255,7 +253,7 @@ object MongoHelpers {
     }
 
     private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
-                                   query: PlainBaseQuery[M, _])
+                                   query: GenericBaseQuery[M, _])
                                   (f: DBCursor  => Unit): Unit = {
 
       val queryClause = transformer.transformQuery(query)
