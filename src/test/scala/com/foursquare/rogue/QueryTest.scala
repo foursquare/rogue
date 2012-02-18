@@ -170,12 +170,13 @@ class QueryTest extends SpecsMatchers {
     // Comment select(_.comments.unsafeField[Long]("userid")) toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
 
     // empty queries
-    Venue where (_.mayor in List())      toString() must_== "empty query"
-    Venue where (_.tags in List())       toString() must_== "empty query"
-    Venue where (_.tags all List())      toString() must_== "empty query"
-    Comment where (_.comments in List()) toString() must_== "empty query"
-    Venue where (_.tags contains "karaoke") and (_.mayor in List()) toString() must_== "empty query"
-    Venue where (_.mayor in List()) and (_.tags contains "karaoke") toString() must_== "empty query"
+    Venue.where(_.mayor eqs 1).empty must_== false
+    Venue.where(_.mayor in List()).empty must_== true
+    Venue.where(_.tags in List()).empty must_== true
+    Venue.where(_.tags all List()).empty must_== true
+    Comment.where(_.comments in List()).empty must_== true
+    Venue.where(_.tags contains "karaoke").and(_.mayor in List()).empty must_== true
+    Venue.where(_.mayor in List()).and(_.tags contains "karaoke").empty must_== true
 
     // out of order and doesn't screw up earlier params
     Venue limit(10) where (_.mayor eqs 1) toString() must_== """db.venues.find({ "mayor" : 1}).limit(10)"""
@@ -186,7 +187,8 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") toString() must_== """db.venues.find({ "mayor" : 1 , "tags" : "karaoke"})"""
     Venue scan (_.mayor eqs 1) and (_.mayor_count eqs 5)         toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : 5})"""
     Venue scan (_.mayor eqs 1) scan (_.mayor_count lt 5)         toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$lt" : 5}})"""
-    Venue where (_.mayor in List()) scan (_.mayor_count eqs 5)   toString() must_== "empty query"
+    Venue.where(_.mayor in List()).scan(_.mayor_count eqs 5).empty must_== true
+    Venue.scan(_.mayor in List()).where(_.mayor_count eqs 5).empty must_== true
 
     // limit, limitOpt, skip, skipOpt
     Venue where (_.mayor eqs 1) limit(10)          toString() must_== """db.venues.find({ "mayor" : 1}).limit(10)"""
@@ -263,7 +265,8 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.legacyid eqs 1) modify (_.popularity addToSet 3) and (_.tags addToSet List("a", "b")) toString() must_== query + """{ "$addToSet" : { "tags" : { "$each" : [ "a" , "b"]} , "popularity" : 3}}""" + suffix
 
     // Empty query
-    Venue where (_.mayor in List()) modify (_.venuename setTo "fshq") toString() must_== "empty modify query"
+    Venue.where(_.mayor eqs 1).modify(_.venuename setTo "fshq").query.empty must_== false
+    Venue.where(_.mayor in List()).modify(_.venuename setTo "fshq").query.empty must_== true
 
     // Noop query
     Venue where (_.legacyid eqs 1) noop() toString() must_== query + "{ }" + suffix
@@ -369,12 +372,6 @@ class QueryTest extends SpecsMatchers {
 
     // select queries
     Venue where (_.mayor eqs 1) select(_.legacyid) signature() must_== """db.venues.find({ "mayor" : 0})"""
-
-    // empty queries
-    Venue where (_.mayor in List()) signature() must_== "empty query"
-    Venue where (_.tags all List()) signature() must_== "empty query"
-    Venue where (_.tags contains "karaoke") and (_.mayor in List()) signature() must_== "empty query"
-    Venue where (_.mayor in List()) and (_.tags contains "karaoke") signature() must_== "empty query"
 
     // Scan should be the same as and/where
     Venue where (_.mayor eqs 1) scan (_.tags contains "karaoke") signature() must_== """db.venues.find({ "mayor" : 0 , "tags" : 0})"""

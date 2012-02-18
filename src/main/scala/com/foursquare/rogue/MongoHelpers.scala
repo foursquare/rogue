@@ -2,12 +2,13 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.rogue.Rogue._
 import com.mongodb.{BasicDBObjectBuilder, Bytes, DBObject, DBCursor, WriteConcern}
 import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record.MongoRecord
 import scala.collection.immutable.ListMap
 
-object MongoHelpers extends Rogue {
+object MongoHelpers {
   case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition])
 
   case class OrCondition(conditions: List[AndCondition])

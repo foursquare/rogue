@@ -14,16 +14,21 @@ class QueryClause[V](val fieldName: String, val actualIndexBehavior: MaybeIndexe
   def withExpectedIndexBehavior(b: MaybeIndexed) = new QueryClause(fieldName, actualIndexBehavior, conditions: _*) {
     override val expectedIndexBehavior = b
   }
+  def empty = false
 }
 
 class IndexableQueryClause[V, Ind <: MaybeIndexed](fname: String, actualIB: Ind, conds: (CondOps.Value, V)*)
     extends QueryClause[V](fname, actualIB, conds: _*)
 
 class AllQueryClause[V](fieldName: String, vs: java.util.List[V])
-    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.All -> vs)
+    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.All -> vs) {
+  override def empty = vs.isEmpty
+}
 
 class InQueryClause[V](fieldName: String, vs: java.util.List[V])
-    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.In -> vs)
+    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.In -> vs) {
+  override def empty = vs.isEmpty
+}
 
 class GtQueryClause[V](fieldName: String, v: V)
     extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Gt -> v)

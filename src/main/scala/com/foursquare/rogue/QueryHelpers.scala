@@ -114,24 +114,18 @@ object QueryHelpers {
   }
 
   def inListClause[V](fieldName: String, vs: Traversable[V]) = {
-    if (vs.isEmpty)
-      new EmptyQueryClause[java.util.List[V]](fieldName)
-    else
-      new InQueryClause(fieldName, QueryHelpers.validatedList(vs.toSet))
+    new InQueryClause(fieldName, QueryHelpers.validatedList(vs.toSet))
   }
 
   def allListClause[V](fieldName: String, vs: Traversable[V]) = {
-    if (vs.isEmpty)
-      new EmptyQueryClause[java.util.List[V]](fieldName)
-    else
-      new AllQueryClause(fieldName, QueryHelpers.validatedList(vs.toSet))
+    new AllQueryClause(fieldName, QueryHelpers.validatedList(vs.toSet))
   }
 
   def asDBObject[T](x: T): DBObject = {
     JObjectParser.parse(Extraction.decompose(x).asInstanceOf[JObject])
   }
 
-  def orConditionFromQueries(subqueries: List[AbstractQuery[_, _, _, _, _, _, _]]) = {
+  def orConditionFromQueries(subqueries: List[BaseQuery[_, _, _, _, _, _, _]]) = {
     MongoHelpers.OrCondition(subqueries.flatMap(subquery => {
       subquery match {
         case q: BaseQuery[_, _, _, _, _, _, _] => Some(q.condition)

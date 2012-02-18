@@ -18,6 +18,9 @@ import org.bson.types.ObjectId
  *@see AbstractQuery for an example of the use of implicit conversions.
  */
 trait Rogue {
+  type AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped, Or <: MaybeHasOrClause] =
+    BaseQuery[M, R, Ord, Sel, Lim, Sk, Or]
+
   type Query[T <: MongoRecord[T]] =
     AbstractQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
 
@@ -26,9 +29,10 @@ trait Rogue {
 
   type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
 
-  type EmptyQuery[T <: MongoRecord[T]] =
-    BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
-  type ModifyQuery[T <: MongoRecord[T]] = AbstractModifyQuery[T]
+  type AbstractModifyQuery[T <: MongoRecord[T]] = BaseModifyQuery[T]
+  type ModifyQuery[T <: MongoRecord[T]] = BaseModifyQuery[T]
+
+  type AbstractFindAndModifyQuery[T <: MongoRecord[T], R] = BaseFindAndModifyQuery[T, R]
 
   type GenericQuery[M <: MongoRecord[M], R] = AbstractQuery[M, R, _, _, _, _, _]
   type GenericBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]
@@ -42,7 +46,7 @@ trait Rogue {
         val orCondition = QueryHelpers.orConditionFromQueries(q :: qs)
         BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](
           q.meta, None, None, None, None, None,
-          AndCondition(Nil, Some(orCondition)), None, None, None)
+          AndCondition(Nil, Some(orCondition)), None, None, None, false)
       }
     }
   }
@@ -57,7 +61,7 @@ trait Rogue {
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]]
       (rec: M with MongoMetaRecord[M]): BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
     BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
-      rec, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+      rec, None, None, None, None, None, AndCondition(Nil, None), None, None, None, false)
 
   implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): AbstractModifyQuery[M] =
       BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
@@ -74,25 +78,13 @@ trait Rogue {
   implicit def queryBuilderToModifyQuery[M <: MongoRecord[M], Or <: MaybeHasOrClause]
       (query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, Or])
       : AbstractModifyQuery[M] = {
-    query match {
-      case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[_, _, _, _, _, _, _] =>
-          BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, M, Unordered, Unselected, Unlimited,
-                                                      Unskipped, HasNoOrClause]],
-                             MongoModify(Nil))
-    }
+    BaseModifyQuery[M](query, MongoModify(Nil))
   }
 
   implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Or <: MaybeHasOrClause]
       (query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or])
       : AbstractFindAndModifyQuery[M, R] = {
-    query match {
-      case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyFindAndModifyQuery[M, R]
-      case q: BaseQuery[_, _, _, _, _, _, _] =>
-        BaseFindAndModifyQuery[M, R](q.asInstanceOf[BaseQuery[M, R, Ord, Sel, Unlimited,
-                                                              Unskipped, HasNoOrClause]],
-                                     MongoModify(Nil))
-    }
+    BaseFindAndModifyQuery[M, R](query, MongoModify(Nil))
   }
 
   // QueryField implicits

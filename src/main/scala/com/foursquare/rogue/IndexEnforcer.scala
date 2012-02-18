@@ -14,27 +14,27 @@ class IndexEnforcerBuilder[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] 
   type MetaM = M with MongoMetaRecord[M] with IndexedRecord[M]
 
   def useIndex[F1 <: Field[_, M]](i: MongoIndex1[M, F1, _]): IndexEnforcer1[M, NoIndexInfo, F1, HasntUsedIndex] = {
-    new IndexEnforcer1[M, NoIndexInfo, F1, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
+    new IndexEnforcer1[M, NoIndexInfo, F1, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None, false))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M]](i: MongoIndex2[M, F1, _, F2, _]): IndexEnforcer2[M, NoIndexInfo, F1, F2, HasntUsedIndex] = {
-    new IndexEnforcer2[M, NoIndexInfo, F1, F2, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
+    new IndexEnforcer2[M, NoIndexInfo, F1, F2, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None, false))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M]](i: MongoIndex3[M, F1, _, F2, _, F3, _]): IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, HasntUsedIndex] = {
-    new IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
+    new IndexEnforcer3[M, NoIndexInfo, F1, F2, F3, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None, false))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M]](i: MongoIndex4[M, F1, _, F2, _, F3, _, F4, _]): IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, HasntUsedIndex] = {
-    new IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
+    new IndexEnforcer4[M, NoIndexInfo, F1, F2, F3, F4, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None, false))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M], F5 <: Field[_, M]](i: MongoIndex5[M, F1, _, F2, _, F3, _, F4, _, F5, _]): IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, HasntUsedIndex] = {
-    new IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
+    new IndexEnforcer5[M, NoIndexInfo, F1, F2, F3, F4, F5, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None, false))
   }
 
   def useIndex[F1 <: Field[_, M], F2 <: Field[_, M], F3 <: Field[_, M], F4 <: Field[_, M], F5 <: Field[_, M], F6 <: Field[_, M]](i: MongoIndex6[M, F1, _, F2, _, F3, _, F4, _, F5, _, F6, _]): IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, HasntUsedIndex] = {
-    new IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None))
+    new IndexEnforcer6[M, NoIndexInfo, F1, F2, F3, F4, F5, F6, HasntUsedIndex](meta, new BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](meta, None, None, None, None, None, AndCondition(Nil, None), None, None, None, false))
   }
 }
 
