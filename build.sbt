@@ -74,7 +74,6 @@ scalacOptions ++= Seq("-deprecation", "-unchecked")
 
 testFrameworks += new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker")
 
-defaultExcludes ~= (_ || "*~")
 
 credentials ++= {
   val sonatype = ("Sonatype Nexus Repository Manager", "oss.sonatype.org")
