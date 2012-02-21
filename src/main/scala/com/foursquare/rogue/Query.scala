@@ -810,6 +810,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                   } yield item.get(fieldName)).toList
                 case dbo: DBObject =>
                   dbo.get(fieldName)
+                case null => null
               }
             }))
           }
