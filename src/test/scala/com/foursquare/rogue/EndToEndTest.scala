@@ -145,6 +145,13 @@ class EndToEndTest extends SpecsMatchers {
 
     val subuserids: List[Box[List[Long]]] = Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch()
     subuserids must_== List(Full(List(1234, 5678)))
+
+    // selecting a claims.userid when there is no top-level claims list should
+    // have one element in the List for the one Venue, but an Empty for that
+    // Venue since there's no list of claims there.
+    Venue.where(_._id eqs v.id).modify(_.claims unset).and(_.lastClaim unset).updateOne()
+    Venue.where(_._id eqs v.id).select(_.lastClaim.subselect(_.userid)).fetch() must_== List(Empty)
+    Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch() must_== List(Empty)
   }
 
   @Ignore("These tests are broken because DummyField doesn't know how to convert a String to an Enum")
