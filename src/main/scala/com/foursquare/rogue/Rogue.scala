@@ -2,13 +2,13 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.rogue.MongoHelpers._
+import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Calendar
-import net.liftweb.common._
-import net.liftweb.mongodb.record._
-import net.liftweb.record._
-import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, MongoCaseClassField,
-                                         MongoCaseClassListField}
+import net.liftweb.common.Box
+import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
+import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
+import net.liftweb.mongodb.record.field.{
+    BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
 
 /**
