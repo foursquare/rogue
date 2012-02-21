@@ -1,7 +1,6 @@
 .DS_Store
 .idea
 *.iml
-Main/
 lib_managed
 project/boot/*
 project/build/target/*
