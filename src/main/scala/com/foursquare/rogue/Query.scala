@@ -62,7 +62,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
     sk: Option[Int],
     maxScan: Option[Int],
     comment: Option[String],
-    hint: Option[ListMap[String, Any]],
+    hnt: Option[ListMap[String, Any]],
     condition: AndCondition,
     order: Option[MongoOrder],
     select: Option[MongoSelect[R, M]],
@@ -406,7 +406,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
    */
   def setSlaveOk(b: Boolean): BaseQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(slaveOk = Some(b))
 
-  def hint(index: MongoIndex[M]) = this.copy(hint = Some(index.asListMap))
+  def hint(index: MongoIndex[M]) = this.copy(hnt = Some(index.asListMap))
 
   /**
    * Adds a select clause to the query. The use of this method constrains the type

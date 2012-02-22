@@ -15,11 +15,9 @@ import org.bson.types.ObjectId
  * A utility trait containing typing shorthands, and a collection of implicit conversions that make query
  * syntax much simpler.
  *
- *@see AbstractQuery for an example of the use of implicit conversions.
+ *@see BaseQuery for an example of the use of implicit conversions.
  */
 trait Rogue {
-  type AbstractQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped, Or <: MaybeHasOrClause] =
-    BaseQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
   type Query[T <: MongoRecord[T]] =
     AbstractQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
@@ -29,10 +27,7 @@ trait Rogue {
 
   type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
 
-  type AbstractModifyQuery[T <: MongoRecord[T]] = BaseModifyQuery[T]
   type ModifyQuery[T <: MongoRecord[T]] = BaseModifyQuery[T]
-
-  type AbstractFindAndModifyQuery[T <: MongoRecord[T], R] = BaseFindAndModifyQuery[T, R]
 
   type GenericQuery[M <: MongoRecord[M], R] = AbstractQuery[M, R, _, _, _, _, _]
   type GenericBaseQuery[M <: MongoRecord[M], R] = BaseQuery[M, R, _, _, _, _, _]

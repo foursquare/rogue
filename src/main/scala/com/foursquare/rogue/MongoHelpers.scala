@@ -106,7 +106,7 @@ object MongoHelpers {
       query.sk.foreach(s => sb.append(".skip(%d)" format s))
       query.maxScan.foreach(m => sb.append("._addSpecial(\"$maxScan\", %d)" format m))
       query.comment.foreach(c => sb.append("._addSpecial(\"$comment\", \"%s\")" format c))
-      query.hint.foreach(h => sb.append(".hint(%s)" format buildHint(h).toString))
+      query.hnt.foreach(h => sb.append(".hint(%s)" format buildHint(h).toString))
       sb.toString
     }
 
@@ -262,7 +262,7 @@ object MongoHelpers {
       val cnd = buildCondition(queryClause.condition)
       val ord = queryClause.order.map(buildOrder)
       val sel = queryClause.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)
-      val hnt = queryClause.hint.map(buildHint)
+      val hnt = queryClause.hnt.map(buildHint)
 
       lazy val description = buildQueryString(operation, queryClause)
 
