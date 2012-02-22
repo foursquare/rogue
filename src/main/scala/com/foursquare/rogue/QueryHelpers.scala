@@ -6,8 +6,8 @@ import com.foursquare.rogue.Rogue.GenericQuery
 import com.mongodb.DBObject
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
-import net.liftweb.mongodb._
-import net.liftweb.mongodb.record._
+import net.liftweb.mongodb.{JObjectParser, ObjectIdSerializer}
+import net.liftweb.mongodb.record.{MongoId, MongoRecord}
 
 case class Degrees(value: Double)
 case class LatLong(lat: Double, long: Double)

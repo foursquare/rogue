@@ -5,14 +5,14 @@ package com.foursquare.rogue
 import com.mongodb.DBObject
 import java.util.Calendar
 import java.util.regex.Pattern
-import net.liftweb.common._
+import net.liftweb.common.{Box, Full, Empty}
 import net.liftweb.json.JsonAST.{JInt, JValue, JArray}
 import net.liftweb.http.js.JE.Num
-import net.liftweb.mongodb.record._
-import net.liftweb.record._
+import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord}
+import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
 import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
 import org.bson.types.ObjectId
-import org.joda.time._
+import org.joda.time.DateTime
 import scala.util.matching.Regex
 
 object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte",
