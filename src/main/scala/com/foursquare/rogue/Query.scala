@@ -379,6 +379,9 @@ case class BaseQuery[M <: MongoRecord[M], R,
   override def toString: String =
     MongoBuilder.buildQueryString("find", this)
 
+  def asDBObject: DBObject =
+    MongoBuilder.buildCondition(this.condition)
+
   def signature(): String =
     MongoBuilder.buildSignature(this)
 
@@ -770,6 +773,8 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
   }
 
   override def toString = MongoBuilder.buildModifyString(this)
+
+  def asDBObject = (this.query.asDBObject, MongoBuilder.buildModify(this.mod))
 }
 
 // *******************************************************
