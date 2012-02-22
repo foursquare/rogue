@@ -3,8 +3,8 @@
 package com.foursquare.rogue
 
 import com.mongodb.{BasicDBObjectBuilder, Bytes, DBObject, DBCursor, WriteConcern}
-import net.liftweb.mongodb._
-import net.liftweb.mongodb.record._
+import net.liftweb.mongodb.MongoDB
+import net.liftweb.mongodb.record.MongoRecord
 import scala.collection.immutable.ListMap
 
 object MongoHelpers extends Rogue {

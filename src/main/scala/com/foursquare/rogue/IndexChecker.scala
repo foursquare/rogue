@@ -4,7 +4,7 @@ package com.foursquare.rogue
 import com.foursquare.rogue.Rogue.{GenericBaseQuery, GenericQuery}
 import scala.collection.immutable.ListMap
 import net.liftweb.common.Loggable
-import net.liftweb.mongodb.record._
+import net.liftweb.mongodb.record.MongoRecord
 import net.liftweb.util.Props
 
 /**
