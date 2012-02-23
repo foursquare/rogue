@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 1.1.4
+
+- removed EmptyQuery, fixed handling of upserts on empty queries
+- BaseQuery.asDBObject, BaseModifyQuery.asDBObject
+- fix for subselecting when the top-level field doesn't exist (nsanch)
+- fixes for publishing to sonatype
+- bumped mongo java driver version to 2.7.3
+
 # 1.1.3
 
 - fixed bug where findAndModify upsert with returnNew = false was returning Some
