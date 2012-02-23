@@ -460,26 +460,6 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
-  def testEnforceIndexes {
-    metaRecordToIndexEnforcer(Venue).useIndex(Venue.idIdx)
-         .where(_._id)(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
-         .scan(_.legacyid eqs 4)
-         .toString() must_== """db.venues.find({ "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
-
-    Venue.useIndex(Venue.mayorIdIdx)
-         .where(_.mayor)(_ in List(2097L))
-         .and(_._id)(_ eqs new ObjectId("4eb3aeee31dafb11203d4984"))
-         .scan(_.legacyid eqs 4)
-         .toString() must_== """db.venues.find({ "mayor" : { "$in" : [ 2097]} , "_id" : { "$oid" : "4eb3aeee31dafb11203d4984"} , "legid" : 4})"""
-
-    Venue.useIndex(Venue.mayorIdClosedIdx)
-         .where(_.mayor)(_ eqs 2097)
-         .rangeScan(_._id)
-         .iscan(_.closed)(_ eqs true)
-         .toString() must_== """db.venues.find({ "mayor" : 2097 , "closed" : true})"""
-  }
-
-  @Test
   def testWhereOpt {
     val someId = Some(1L)
     val noId: Option[Long] = None

@@ -535,38 +535,39 @@ case class BaseQuery[M <: MongoRecord[M], R,
   override def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped, Or] =
     this.copy(sk = n)
 
-  private[rogue] def parseDBObject(dbo: DBObject): R = select match {
-    case Some(MongoSelect(Nil, transformer)) =>
-      // A MongoSelect clause exists, but has empty fields. Return null.
-      // This is used for .exists(), where we just want to check the number
-      // of returned results is > 0.
-      transformer(null)
-    case Some(MongoSelect(fields, transformer)) =>
-      val inst = fields.head.field.owner
-      def setInstanceFieldFromDbo(field: Field[_, M]) = {
-        inst.fieldByName(field.name) match {
-          case Full(fld) => fld.setFromAny(dbo.get(field.name))
-          case _ => {
-            val splitName = field.name.split('.').toList
-            Box.!!(splitName.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
-              obj match {
-                case dbl: BasicBSONList =>
-                  (for {
-                    index <- 0 to dbl.size - 1
-                    val item: DBObject = dbl.get(index).asInstanceOf[DBObject]
-                  } yield item.get(fieldName)).toList
-                case dbo: DBObject =>
-                  dbo.get(fieldName)
-                case null => null
-              }
-            }))
-          }
-        }
-      }
-      setInstanceFieldFromDbo(inst.fieldByName("_id").open_!)
-      transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field))))
-    case None => meta.fromDBObject(dbo).asInstanceOf[R]
-  }
+  private[rogue] def parseDBObject(dbo: DBObject): R = sys.error("TODO")
+  // private[rogue] def parseDBObject(dbo: DBObject): R = select match {
+  //   case Some(MongoSelect(Nil, transformer)) =>
+  //     // A MongoSelect clause exists, but has empty fields. Return null.
+  //     // This is used for .exists(), where we just want to check the number
+  //     // of returned results is > 0.
+  //     transformer(null)
+  //   case Some(MongoSelect(fields, transformer)) =>
+  //     val inst = fields.head.field.owner
+  //     def setInstanceFieldFromDbo(field: Field[_, M]) = {
+  //       inst.fieldByName(field.name) match {
+  //         case Full(fld) => fld.setFromAny(dbo.get(field.name))
+  //         case _ => {
+  //           val splitName = field.name.split('.').toList
+  //           Box.!!(splitName.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
+  //             obj match {
+  //               case dbl: BasicBSONList =>
+  //                 (for {
+  //                   index <- 0 to dbl.size - 1
+  //                   val item: DBObject = dbl.get(index).asInstanceOf[DBObject]
+  //                 } yield item.get(fieldName)).toList
+  //               case dbo: DBObject =>
+  //                 dbo.get(fieldName)
+  //               case null => null
+  //             }
+  //           }))
+  //         }
+  //       }
+  //     }
+  //     setInstanceFieldFromDbo(inst.fieldByName("_id").open_!)
+  //     transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field))))
+  //   case None => meta.fromDBObject(dbo).asInstanceOf[R]
+  // }
 
   private def drainBuffer[A, B](from: ListBuffer[A],
                                 to: ListBuffer[B],

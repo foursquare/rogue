@@ -5,6 +5,7 @@ package com.foursquare.rogue
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Calendar
 import net.liftweb.common.Box
+import net.liftweb.json.JsonAST.{JArray, JInt}
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
 import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
 import net.liftweb.mongodb.record.field.{
@@ -64,9 +65,6 @@ trait Rogue {
 
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
       IndexBuilder(rec)
-  implicit def metaRecordToIndexEnforcer[M <: MongoRecord[M]](meta: M with MongoMetaRecord[M] with IndexedRecord[M]): IndexEnforcerBuilder[M] =
-      new IndexEnforcerBuilder(meta)
-
 
   /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
    * users to write "RecordType.where(...).modify(...)".
@@ -100,11 +98,15 @@ trait Rogue {
 
   implicit def bsonRecordFieldToBsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]]
       (f: BsonRecordField[M, B]): BsonRecordQueryField[M, B] =
-    new BsonRecordQueryField[M, B](f)
+    new BsonRecordQueryField[M, B](f, _.asDBObject)
 
-  implicit def bsonRecordListFieldToBsonRecordListQueryField[M <: MongoRecord[M], B <: BsonRecord[B]]
-      (f: BsonRecordListField[M, B]) =
-    new BsonRecordListQueryField[M, B](f)
+  implicit def bsonRecordListFieldToBsonRecordListQueryField[
+      M <: MongoRecord[M],
+      B <: BsonRecord[B]
+  ](f: BsonRecordListField[M, B]): BsonRecordListQueryField[M, B] = {
+    val rec = f.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
+    new BsonRecordListQueryField[M, B](f, rec, _.asDBObject)
+  }
 
   implicit def calendarFieldToCalendarQueryField[M <: MongoRecord[M], F]
       (f: Field[java.util.Calendar, M]): CalendarQueryField[M] =
@@ -115,7 +117,7 @@ trait Rogue {
 
   implicit def ccListFieldToListQueryField[M <: MongoRecord[M], F]
       (f: MongoCaseClassListField[M, F]): CaseClassListQueryField[F, M] =
-    new CaseClassListQueryField[F, M](f)
+    new CaseClassListQueryField[F, M](liftField2Recordv2Field(f))
 
   implicit def doubleFieldtoNumericQueryField[M <: MongoRecord[M], F]
       (f: Field[Double, M]): NumericQueryField[Double, M] =
@@ -132,7 +134,7 @@ trait Rogue {
   implicit def foreignObjectIdFieldToForeignObjectIdQueryField[M <: MongoRecord[M],
                                                                T <: MongoRecord[T] with MongoId[T]]
       (f: Field[ObjectId, M] with HasMongoForeignObjectId[T]): ForeignObjectIdQueryField[M, T] =
-    new ForeignObjectIdQueryField(f)
+    new ForeignObjectIdQueryField[M, T](f, _.id)
 
   implicit def intFieldtoNumericQueryField[M <: MongoRecord[M], F](f: Field[Int, M]): NumericQueryField[Int, M] =
     new NumericQueryField(f)
@@ -161,18 +163,26 @@ trait Rogue {
 
   implicit def bsonRecordFieldToBsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]]
       (f: BsonRecordField[M, B]) =
-    new BsonRecordModifyField[M, B](f)
+    new BsonRecordModifyField[M, B](f, _.asDBObject)
 
-  implicit def bsonRecordListFieldToBsonRecordListModifyField[M <: MongoRecord[M], B <: BsonRecord[B]]
-      (f: BsonRecordListField[M, B])(implicit mf: Manifest[B]): BsonRecordListModifyField[M, B] =
-    new BsonRecordListModifyField[M, B](f)(mf)
+  implicit def bsonRecordListFieldToBsonRecordListModifyField[
+      M <: MongoRecord[M],
+      B <: BsonRecord[B]
+  ](
+      f: BsonRecordListField[M, B]
+  )(
+      implicit mf: Manifest[B]
+  ): BsonRecordListModifyField[M, B] = {
+    val rec = f.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
+    new BsonRecordListModifyField[M, B](f, rec, _.asDBObject)(mf)
+  }
 
   implicit def calendarFieldToCalendarModifyField[M <: MongoRecord[M]](f: Field[Calendar, M]): CalendarModifyField[M] =
     new CalendarModifyField(f)
 
   implicit def ccListFieldToListModifyField[M <: MongoRecord[M], V]
       (f: MongoCaseClassListField[M, V]): CaseClassListModifyField[V, M] =
-    new CaseClassListModifyField[V, M](f)
+    new CaseClassListModifyField[V, M](liftField2Recordv2Field(f))
 
   implicit def doubleFieldToNumericModifyField[M <: MongoRecord[M]]
       (f: Field[Double, M]): NumericModifyField[Double, M] =
@@ -209,7 +219,13 @@ trait Rogue {
 
   implicit def optionalFieldToSelectField[M <: MongoRecord[M], V]
       (f: Field[V, M] with OptionalTypedField[V]): SelectField[Box[V], M] =
-    new OptionalSelectField(f)
+    new OptionalSelectField(liftField2Recordv2Field(f))
+
+  implicit def liftField2Recordv2Field[M <: MongoRecord[M], V](f: Field[V, M]): com.foursquare.recordv2.Field[V, M] = new com.foursquare.recordv2.Field[V, M] {
+    override def name = f.name
+    override def owner = f.owner
+    override def defaultValue = f.defaultValue
+  }
 }
 
 object Rogue extends Rogue

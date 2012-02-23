@@ -3,15 +3,12 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue.{GenericBaseQuery, GenericQuery}
 import scala.collection.immutable.ListMap
-import net.liftweb.common.Loggable
-import net.liftweb.mongodb.record.MongoRecord
-import net.liftweb.util.Props
 
 /**
  * A trait that represents the fact that a record type includes a list
  * of the indexes that exist in MongoDB for that type.
  */
-trait IndexedRecord[M <: MongoRecord[M]] {
+trait IndexedRecord[M] {
   val mongoIndexList: List[MongoIndex[_]] = List()
 }
 
@@ -20,7 +17,7 @@ trait IndexedRecord[M <: MongoRecord[M]] {
  * actually exist for a MongoDB collection match the indexes that are expected by
  * a query.
  */
-object MongoIndexChecker extends Loggable {
+object MongoIndexChecker {
 
   /**
    * Flattens an arbitrary query into DNF - that is, into a list of query alternatives
@@ -48,7 +45,7 @@ object MongoIndexChecker extends Loggable {
    * @return the list of indexes, or an empty list.
    */
   def getIndexes(query: GenericBaseQuery[_, _]): List[MongoIndex[_]] = {
-    val queryMetaRecord = query.meta.asInstanceOf[MongoRecord[_]]
+    val queryMetaRecord = query.meta
     if (queryMetaRecord.isInstanceOf[IndexedRecord[_]]) {
       queryMetaRecord.asInstanceOf[IndexedRecord[_]].mongoIndexList
     } else {

@@ -2,15 +2,11 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.recordv2.Field
 import com.mongodb.DBObject
 import java.util.Calendar
 import java.util.regex.Pattern
-import net.liftweb.common.{Box, Full, Empty}
-import net.liftweb.json.JsonAST.{JInt, JValue, JArray}
-import net.liftweb.http.js.JE.Num
-import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord}
-import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
-import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
+import net.liftweb.common.Box
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import scala.util.matching.Regex
@@ -57,7 +53,7 @@ object MongoType extends Enumeration {
 // The types of fields that can be queried, and the particular query operations that each supports
 // are defined below.
 
-abstract class AbstractQueryField[V, DB, M <: MongoRecord[M]](val field: Field[V, M]) {
+abstract class AbstractQueryField[V, DB, M](val field: Field[V, M]) {
   def valueToDB(v: V): DB
   def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
 
@@ -67,7 +63,7 @@ abstract class AbstractQueryField[V, DB, M <: MongoRecord[M]](val field: Field[V
   def nin[L <% Traversable[V]](vs: L) = new NinQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
 }
 
-class QueryField[V, M <: MongoRecord[M]](field: Field[V, M])
+class QueryField[V, M](field: Field[V, M])
     extends AbstractQueryField[V, V, M](field) {
   override def valueToDB(v: V) = v
 
@@ -76,7 +72,7 @@ class QueryField[V, M <: MongoRecord[M]](field: Field[V, M])
   def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
-class CalendarQueryField[M <: MongoRecord[M]](val field: Field[java.util.Calendar, M]) {
+class CalendarQueryField[M](val field: Field[java.util.Calendar, M]) {
   def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
 
   def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
@@ -86,12 +82,12 @@ class CalendarQueryField[M <: MongoRecord[M]](val field: Field[java.util.Calenda
   def between(range: (DateTime, DateTime)) = new StrictBetweenQueryClause(field.name, range._1.toDate, range._2.toDate)
 }
 
-class EnumerationQueryField[M <: MongoRecord[M], E <: Enumeration#Value](field: Field[E, M])
+class EnumerationQueryField[M, E <: Enumeration#Value](field: Field[E, M])
     extends AbstractQueryField[E, String, M](field) {
   override def valueToDB(e: E) = e.toString
 }
 
-class GeoQueryField[M <: MongoRecord[M]](field: Field[LatLong, M])
+class GeoQueryField[M](field: Field[LatLong, M])
     extends AbstractQueryField[LatLong, java.util.List[Double], M](field) {
   override def valueToDB(ll: LatLong) =
     QueryHelpers.list(List(ll.lat, ll.long))
@@ -112,7 +108,7 @@ class GeoQueryField[M <: MongoRecord[M]](field: Field[LatLong, M])
     new WithinBoxClause(field.name, lat1, lng1, lat2, lng2)
 }
 
-abstract class AbstractNumericQueryField[V, DB, M <: MongoRecord[M]](field: Field[V, M])
+abstract class AbstractNumericQueryField[V, DB, M](field: Field[V, M])
     extends AbstractQueryField[V, DB, M](field) {
   def lt(v: V) = new LtQueryClause(field.name, valueToDB(v))
 
@@ -137,12 +133,12 @@ abstract class AbstractNumericQueryField[V, DB, M <: MongoRecord[M]](field: Fiel
     new ModQueryClause(field.name, QueryHelpers.list(List(by, eq)))
 }
 
-class NumericQueryField[V, M <: MongoRecord[M]](field: Field[V, M])
+class NumericQueryField[V, M](field: Field[V, M])
     extends AbstractNumericQueryField[V, V, M](field) {
   override def valueToDB(v: V) = v
 }
 
-class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId, M])
+class ObjectIdQueryField[M](override val field: Field[ObjectId, M])
     extends NumericQueryField(field) {
   def before(d: DateTime) =
     new LtQueryClause(field.name, new ObjectId(d.toDate, 0, 0))
@@ -157,25 +153,32 @@ class ObjectIdQueryField[M <: MongoRecord[M]](override val field: Field[ObjectId
     new StrictBetweenQueryClause(field.name, new ObjectId(range._1.toDate, 0, 0), new ObjectId(range._2.toDate, 0, 0))
 }
 
-class ForeignObjectIdQueryField[M <: MongoRecord[M], T <: MongoRecord[T]
-    with MongoId[T]](override val field: Field[ObjectId, M]
-    with HasMongoForeignObjectId[T])
-    extends ObjectIdQueryField[M](field) {
+class ForeignObjectIdQueryField[M, T](
+    override val field: Field[ObjectId, M],
+    val getId: T => ObjectId
+) extends ObjectIdQueryField[M](field) {
+  // The implicit parameter is solely to get around the fact that because of
+  // erasure, this method and the method in AbstractQueryField look the same.
+  def eqs(obj: T)(implicit ev: T =:= T) =
+    EqClause(field.name, getId(obj))
 
-  def eqs(obj: T) =
-    EqClause(field.name, obj.id)
+  // The implicit parameter is solely to get around the fact that because of
+  // erasure, this method and the method in AbstractQueryField look the same.
+  def neqs(obj: T)(implicit ev: T =:= T) =
+    new NeQueryClause(field.name, getId(obj))
 
-  def neqs(obj: T) =
-    new NeQueryClause(field.name, obj.id)
+  // The implicit parameter is solely to get around the fact that because of
+  // erasure, this method and the method in AbstractQueryField look the same.
+  def in(objs: Traversable[T])(implicit ev: T =:= T) =
+    QueryHelpers.inListClause(field.name, objs.map(getId))
 
-  def in(objs: Traversable[T]) =
-    QueryHelpers.inListClause(field.name, objs.map(_.id))
-
-  def nin(objs: Traversable[T]) =
-    new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(_.id)))
+  // The implicit parameter is solely to get around the fact that because of
+  // erasure, this method and the method in AbstractQueryField look the same.
+  def nin(objs: Traversable[T])(implicit ev: T =:= T) =
+    new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(getId)))
 }
 
-class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
+class StringQueryField[M](val field: Field[String, M]) {
   def startsWith(s: String): RegexQueryClause[PartialIndexScan] =
     new RegexQueryClause[PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
 
@@ -189,21 +192,21 @@ class StringQueryField[M <: MongoRecord[M]](val field: Field[String, M]) {
     matches(p)
 }
 
-class CaseClassQueryField[V, M <: MongoRecord[M]](val field: MongoCaseClassField[M, V]) {
-  def unsafeField[F](name: String): SelectableDummyField[F, M] =
-    new SelectableDummyField[F, M](field.owner, field.name + "." + name)
+class CaseClassQueryField[V, M](val field: Field[V, M]) {
+  // def unsafeField[F](name: String): SelectableDummyField[F, M] =
+  //   new SelectableDummyField[F, M](field.owner, field.name + "." + name)
 }
 
-class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[B, M] with MandatoryTypedField[B])
+class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject)
     extends AbstractNumericQueryField[B, DBObject, M](field) {
-  override def valueToDB(b: B) = b.asDBObject
+  override def valueToDB(b: B) = asDBObject(b)
 
-  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
-    val rec = field.defaultValue // a hack to get at the embedded record
-    new SelectableDummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
-  }
-
-  def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
+  // def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
+  //   val rec = field.defaultValue // a hack to get at the embedded record
+  //   new SelectableDummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
+  // }
+  // 
+  // def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
 }
 
 // This class is a hack to get $pull working for lists of objects. In that case,
@@ -212,18 +215,18 @@ class BsonRecordQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field
 // whereas for normal queries, the same query would look like:
 //   { "field.subfield" : { "$gt" : 3 }}
 // So, normally, we need to just have one level of nesting, but here we want two.
-class BsonRecordQueryFieldInPullContext[M <: MongoRecord[M], B <: BsonRecord[B]]
-    (field: Field[B, M] with MandatoryTypedField[B])
+class BsonRecordQueryFieldInPullContext[M, B]
+    (field: Field[B, M], asDBObject: B => DBObject)
     extends AbstractNumericQueryField[B, DBObject, M](field) {
-  override def valueToDB(b: B) = b.asDBObject
+  override def valueToDB(b: B) = asDBObject(b)
 
-  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
-    val rec = field.defaultValue // a hack to get at the embedded record
-    new SelectableDummyField[V, M](field.owner, subfield(rec).name)
-  }
+  // def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
+  //   val rec = field.defaultValue // a hack to get at the embedded record
+  //   new SelectableDummyField[V, M](field.owner, subfield(rec).name)
+  // }
 }
 
-abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Field[List[V], M]) {
+abstract class AbstractListQueryField[V, DB, M](val field: Field[List[V], M]) {
   def valueToDB(v: V): DB
   def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
 
@@ -245,46 +248,44 @@ abstract class AbstractListQueryField[V, DB, M <: MongoRecord[M]](val field: Fie
   def notcontains(v: V) =
     new NeQueryClause(field.name, valueToDB(v))
 
-  def at(i: Int): DummyField[V, M] =
-    new DummyField[V, M](field.owner, field.name + "." + i.toString)
+  // def at(i: Int): DummyField[V, M] =
+  //   new DummyField[V, M](field.owner, field.name + "." + i.toString)
 
-  def idx(i: Int): DummyField[V, M] = at(i)
+  // def idx(i: Int): DummyField[V, M] = at(i)
 }
 
-class ListQueryField[V, M <: MongoRecord[M]](field: Field[List[V], M])
+class ListQueryField[V, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, V, M](field) {
   override def valueToDB(v: V) = v
 }
 
-class CaseClassListQueryField[V, M <: MongoRecord[M]](field: MongoCaseClassListField[M, V])
+class CaseClassListQueryField[V, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
 
-  def unsafeField[F](name: String): DummyField[F, M] =
-    new DummyField[F, M](field.owner, field.name + "." + name)
+  // def unsafeField[F](name: String): DummyField[F, M] =
+  //   new DummyField[F, M](field.owner, field.name + "." + name)
 }
 
-class BsonRecordListQueryField[M <: MongoRecord[M], B <: BsonRecord[B]](field: BsonRecordListField[M, B])
+class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObject: B => DBObject)
     extends AbstractListQueryField[B, DBObject, M](field) {
-  override def valueToDB(b: B) = b.asDBObject
+  override def valueToDB(b: B) = asDBObject(b)
 
-  def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
-    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
-    new DummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
-  }
+  // def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
+  //   new DummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
+  // }
 
-  def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
-    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
-    new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
-  }
+  // def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
+  //   new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
+  // }
 }
 
-class MapQueryField[V, M <: MongoRecord[M]](val field: Field[Map[String, V], M]) {
-  def at(key: String): SelectableDummyField[V, M] =
-    new SelectableDummyField[V, M](field.owner, field.name + "." + key)
+class MapQueryField[V, M](val field: Field[Map[String, V], M]) {
+  // def at(key: String): SelectableDummyField[V, M] =
+  //   new SelectableDummyField[V, M](field.owner, field.name + "." + key)
 }
 
-class EnumerationListQueryField[V <: Enumeration#Value, M <: MongoRecord[M]](field: Field[List[V], M])
+class EnumerationListQueryField[V <: Enumeration#Value, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, String, M](field) {
   override def valueToDB(v: V) = v.toString
 }
@@ -295,31 +296,31 @@ class EnumerationListQueryField[V <: Enumeration#Value, M <: MongoRecord[M]](fie
 // ********************************************************************************
 
 
-abstract class AbstractModifyField[V, DB, M <: MongoRecord[M]](val field: Field[V, M]) {
+abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
   def valueToDB(v: V): DB
   def setTo(v: V) = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
   def unset = new ModifyClause(ModOps.Unset, field.name -> 1)
   def rename(newName: String) = new ModifyClause(ModOps.Rename, field.name -> newName)
 }
 
-class ModifyField[V, M <: MongoRecord[M]](field: Field[V, M])
+class ModifyField[V, M](field: Field[V, M])
     extends AbstractModifyField[V, V, M](field) {
   def valueToDB(v: V) = v
 }
 
-class CalendarModifyField[M <: MongoRecord[M]](field: Field[Calendar, M])
+class CalendarModifyField[M](field: Field[Calendar, M])
     extends AbstractModifyField[Calendar, java.util.Date, M](field) {
   override def valueToDB(c: Calendar) = c.getTime
 
   def setTo(d: DateTime) = new ModifyClause(ModOps.Set, field.name -> d.toDate)
 }
 
-class EnumerationModifyField[M <: MongoRecord[M], E <: Enumeration#Value](field: Field[E, M])
+class EnumerationModifyField[M, E <: Enumeration#Value](field: Field[E, M])
     extends AbstractModifyField[E, String, M](field) {
   override def valueToDB(e: E) = e.toString
 }
 
-class GeoModifyField[M <: MongoRecord[M]](field: Field[LatLong, M])
+class GeoModifyField[M](field: Field[LatLong, M])
     extends AbstractModifyField[LatLong, java.util.List[Double], M](field) {
   override def valueToDB(ll: LatLong) =
     QueryHelpers.list(List(ll.lat, ll.long))
@@ -329,7 +330,7 @@ class GeoModifyField[M <: MongoRecord[M]](field: Field[LatLong, M])
                      field.name -> QueryHelpers.list(List(lat, long)))
 }
 
-class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
+class NumericModifyField[V, M](val field: Field[V, M]) {
   def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
 
   def bitAnd(v: V) = new ModifyBitAndClause(field.name, v)
@@ -337,17 +338,17 @@ class NumericModifyField[V, M <: MongoRecord[M]](val field: Field[V, M]) {
   def bitOr(v: V) = new ModifyBitOrClause(field.name, v)
 }
 
-class BsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[B, M])
+class BsonRecordModifyField[M, B](field: Field[B, M], asDBObject: B => DBObject)
     extends AbstractModifyField[B, DBObject, M](field) {
-  override def valueToDB(b: B) = b.asDBObject
+  override def valueToDB(b: B) = asDBObject(b)
 }
 
-class MapModifyField[V, M <: MongoRecord[M]](field: Field[Map[String, V], M])
+class MapModifyField[V, M](field: Field[Map[String, V], M])
     extends AbstractModifyField[Map[String, V], java.util.Map[String, V], M](field) {
   override def valueToDB(m: Map[String, V]) = QueryHelpers.makeJavaMap(m)
 }
 
-abstract class AbstractListModifyField[V, DB, M <: MongoRecord[M]](val field: Field[List[V], M]) {
+abstract class AbstractListModifyField[V, DB, M](val field: Field[List[V], M]) {
   def valueToDB(v: V): DB
 
   def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
@@ -385,64 +386,62 @@ abstract class AbstractListModifyField[V, DB, M <: MongoRecord[M]](val field: Fi
     new ModifyClause(ModOps.PullAll,
                      field.name -> QueryHelpers.list(valuesToDB(vs)))
 
-  def $: Field[V, M] = new DummyField[V, M](field.owner, field.name + ".$")
+  // def $: Field[V, M] = new DummyField[V, M](field.owner, field.name + ".$")
 
-  def pullWhere(clauseFuncs: (Field[V, M] => QueryClause[_])*) =
-    new ModifyPullWithPredicateClause(field.name,
-                                      clauseFuncs.map(cf => cf(new DummyField[V, M](field.owner, field.name))): _*)
+  // def pullWhere(clauseFuncs: (Field[V, M] => QueryClause[_])*) =
+  //   new ModifyPullWithPredicateClause(field.name,
+  //                                     clauseFuncs.map(cf => cf(new DummyField[V, M](field.owner, field.name))): _*)
 }
 
-class ListModifyField[V, M <: MongoRecord[M]](field: Field[List[V], M])
+class ListModifyField[V, M](field: Field[List[V], M])
     extends AbstractListModifyField[V, V, M](field) {
   override def valueToDB(v: V) = v
 }
 
-class CaseClassListModifyField[V, M <: MongoRecord[M]](field: MongoCaseClassListField[M, V])
+class CaseClassListModifyField[V, M](field: Field[List[V], M])
     extends AbstractListModifyField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
 }
 
-class EnumerationListModifyField[V <: Enumeration#Value, M <: MongoRecord[M]](field: Field[List[V], M])
+class EnumerationListModifyField[V <: Enumeration#Value, M](field: Field[List[V], M])
     extends AbstractListModifyField[V, String, M](field) {
   override def valueToDB(v: V) = v.toString
 }
 
-class BsonRecordListModifyField[M <: MongoRecord[M], B <: BsonRecord[B]](field: Field[List[B], M])(implicit mf: Manifest[B])
+class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObject: B => DBObject)(implicit mf: Manifest[B])
     extends AbstractListModifyField[B, DBObject, M](field) {
-  override def valueToDB(b: B) = b.asDBObject
+  override def valueToDB(b: B) = asDBObject(b)
 
-  override def $: BsonRecordField[M, B] = {
-    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
-    new BsonRecordField[M, B](field.owner, rec.meta)(mf) {
-      override def name = field.name + ".$"
-    }
-  }
+  // override def $: BsonRecordField[M, B] = {
+  //   new BsonRecordField[M, B](field.owner, rec.meta)(mf) {
+  //     override def name = field.name + ".$"
+  //   }
+  // }
 
-  def pullObjectWhere[V](clauseFuncs: BsonRecordQueryFieldInPullContext[M, B] => QueryClause[_]*) = {
-    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
-    new ModifyPullObjWithPredicateClause(
-        field.name,
-      clauseFuncs.map(cf => cf(
-        new BsonRecordQueryFieldInPullContext(
-          new MandatoryDummyField[B, M](field.owner, field.name, rec)))): _*)
-  }
+  // def pullObjectWhere[V](clauseFuncs: BsonRecordQueryFieldInPullContext[M, B] => QueryClause[_]*) = {
+  //   new ModifyPullObjWithPredicateClause(
+  //       field.name,
+  //     clauseFuncs.map(cf => cf(
+  //       new BsonRecordQueryFieldInPullContext(
+  //         new MandatoryDummyField[B, M](field.owner, field.name, rec)))): _*)
+  // }
 }
 
 // ********************************************************************************
 // *** Select fields
 // ********************************************************************************
 
-abstract class SelectField[V, M <: MongoRecord[M]](val field: Field[_, M]) {
+abstract class SelectField[V, M](val field: Field[_, M]) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
   def apply(v: Any): Any
 }
 
-class MandatorySelectField[V, M <: MongoRecord[M]](override val field: Field[V, M] with MandatoryTypedField[V])
+class MandatorySelectField[V, M](override val field: Field[V, M])
     extends SelectField[V, M](field) {
   override def apply(v: Any): Any = v.asInstanceOf[Box[V]].openOr(field.defaultValue)
 }
 
-class OptionalSelectField[V, M <: MongoRecord[M]](override val field: Field[V, M] with OptionalTypedField[V])
+class OptionalSelectField[V, M](override val field: Field[V, M])
     extends SelectField[Box[V], M](field) {
   override def apply(v: Any): Any = v.asInstanceOf[Box[V]]
 }
@@ -451,34 +450,36 @@ class OptionalSelectField[V, M <: MongoRecord[M]](override val field: Field[V, M
 // *** Dummy field
 // ********************************************************************************
 
-trait AbstractDummyField[V, M <: MongoRecord[M]] extends Field[V, M] {
-  override val asJValue = JInt(0)
-  override val asJs = Num(0)
-  override val toForm = Empty
-  override def toBoxMyType(v: ValueType): Box[V] = Empty
-  override def toValueType(v: Box[MyType]) = null.asInstanceOf[ValueType]
-  override def defaultValueBox = Empty
-  override def set(v: ValueType) = v
-  override def get = null.asInstanceOf[ValueType]
-  override def is = get
-  override def apply(v: V) = owner
-  override def setFromAny(a: Any) = Empty
-  override def setFromString(s: String) = Empty
-  override def setFromJValue(jv: JValue) = Empty
-  override def liftSetFilterToBox(in: Box[MyType]): Box[MyType] = Empty
-}
+// trait AbstractDummyField[V, M] extends Field[V, M]
 
-class DummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String)
-    extends AbstractDummyField[V, M]
+// trait AbstractDummyField[V, M <: MongoRecord[M]] extends Field[V, M] {
+//   override val asJValue = JInt(0)
+//   override val asJs = Num(0)
+//   override val toForm = Empty
+//   override def toBoxMyType(v: ValueType): Box[V] = Empty
+//   override def toValueType(v: Box[MyType]) = null.asInstanceOf[ValueType]
+//   override def defaultValueBox = Empty
+//   override def set(v: ValueType) = v
+//   override def get = null.asInstanceOf[ValueType]
+//   override def is = get
+//   override def apply(v: V) = owner
+//   override def setFromAny(a: Any) = Empty
+//   override def setFromString(s: String) = Empty
+//   override def setFromJValue(jv: JValue) = Empty
+//   override def liftSetFilterToBox(in: Box[MyType]): Box[MyType] = Empty
+// }
 
-class SelectableDummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String)
-    extends OptionalTypedField[V]
-    with AbstractDummyField[V, M]
-
-class MandatoryDummyField[V, M <: MongoRecord[M]](override val owner: M,
-                                                  override val name: String,
-                                                  override val defaultValue: V)
-    extends MandatoryTypedField[V] with AbstractDummyField[V, M] {
-  override def set(v: MyType) = v
-  override def toBoxMyType(v: ValueType): Full[V] = Full(v)
-}
+// class DummyField[V, M](override val owner: M, override val name: String, override val defaultValue: V)
+//     extends AbstractDummyField[V, M]
+// 
+// class SelectableDummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String)
+//     extends OptionalTypedField[V]
+//     with AbstractDummyField[V, M]
+// 
+// class MandatoryDummyField[V, M <: MongoRecord[M]](override val owner: M,
+//                                                   override val name: String,
+//                                                   override val defaultValue: V)
+//     extends MandatoryTypedField[V] with AbstractDummyField[V, M] {
+//   override def set(v: MyType) = v
+//   override def toBoxMyType(v: ValueType): Full[V] = Full(v)
+// }
