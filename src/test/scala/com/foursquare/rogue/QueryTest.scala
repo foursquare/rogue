@@ -107,10 +107,10 @@ class QueryTest extends SpecsMatchers {
     Venue where (_._id between Tuple2(d1, d2)) toString() must_== """db.venues.find({ "_id" : { "$gt" : { "$oid" : "%s"} , "$lt" : { "$oid" : "%s"}}})""".format(oid1.toString, oid2.toString)
 
     // DateTime before, after, between
-    Venue where (_.last_updated before d2)        toString() must_== """db.venues.find({ "last_updated" : { "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}})"""
-    Venue where (_.last_updated after d1)         toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"}}})"""
-    Venue where (_.last_updated between (d1, d2)) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}})"""
-    Venue where (_.last_updated between Tuple2(d1, d2)) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00Z"}}})"""
+    Venue where (_.last_updated before d2)        toString() must_== """db.venues.find({ "last_updated" : { "$lt" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
+    Venue where (_.last_updated after d1)         toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00.000Z"}}})"""
+    Venue where (_.last_updated between (d1, d2)) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
+    Venue where (_.last_updated between Tuple2(d1, d2)) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
 
     // Case class list field
     Comment where (_.comments.unsafeField[Int]("z") eqs 123) toString() must_== """db.comments.find({ "comments.z" : 123})"""
@@ -220,8 +220,8 @@ class QueryTest extends SpecsMatchers {
     VenueClaim where (_.userid eqs 1) modify (_.status setTo ClaimStatus.approved) toString() must_== query2 + """{ "$set" : { "status" : "Approved"}}""" + suffix
 
     // Calendar
-    Venue where (_.legacyid eqs 1) modify (_.last_updated setTo d1) toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00Z"}}}""" + suffix
-    Venue where (_.legacyid eqs 1) modify (_.last_updated setTo d1.toGregorianCalendar) toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00Z"}}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.last_updated setTo d1) toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.last_updated setTo d1.toGregorianCalendar) toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
 
     // LatLong
     val ll = LatLong(37.4, -73.9)
@@ -502,7 +502,7 @@ class QueryTest extends SpecsMatchers {
     // whereOpt: date
     val someDate = Some(new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC))
     val noDate: Option[DateTime] = None
-    Venue.whereOpt(someDate)(_.last_updated after _) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00Z"}}})"""
+    Venue.whereOpt(someDate)(_.last_updated after _) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00.000Z"}}})"""
     Venue.whereOpt(noDate)(_.last_updated after _) toString() must_== """db.venues.find({ })"""
 
     // andOpt
