@@ -1,6 +1,6 @@
 name := "rogue"
 
-version := "1.1.4"
+version := "1.1.5-SNAPSHOT"
 
 organization := "com.foursquare"
 
