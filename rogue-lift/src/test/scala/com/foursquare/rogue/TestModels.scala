@@ -96,11 +96,20 @@ class VenueClaimBson extends BsonRecord[VenueClaimBson] {
   def meta = VenueClaimBson
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
+  object source extends BsonRecordField(this, SourceBson)
 }
 object VenueClaimBson extends VenueClaimBson with BsonMetaRecord[VenueClaimBson] {
-  override def fieldOrder = List(status, userid)
+  override def fieldOrder = List(status, userid, source)
 }
 
+class SourceBson extends BsonRecord[SourceBson] {
+  def meta = SourceBson
+  object name extends StringField(this, 100)
+  object url extends StringField(this, 200)
+}
+object SourceBson extends SourceBson with BsonMetaRecord[SourceBson] {
+  override def fieldOrder = List(name, url)
+}
 
 case class OneComment(timestamp: String, userid: Long, comment: String)
 class Comment extends MongoRecord[Comment] with MongoId[Comment] {
