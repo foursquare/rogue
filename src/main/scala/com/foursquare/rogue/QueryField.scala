@@ -260,17 +260,17 @@ class CaseClassListQueryField[V, M <: BsonRecord[M]](field: MongoCaseClassListFi
     extends AbstractListQueryField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
 
-  def unsafeField[F](name: String): DummyField[F, M] =
-    new DummyField[F, M](field.owner, field.name + "." + name)
+  def unsafeField[F](name: String): SelectableDummyField[List[F], M] =
+    new SelectableDummyField[List[F], M](field.owner, field.name + "." + name)
 }
 
 class BsonRecordListQueryField[M <: BsonRecord[M], B <: BsonRecord[B]](field: BsonRecordListField[M, B])
     extends AbstractListQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
 
-  def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
+  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
     val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
-    new DummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
+    new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
   }
 
   def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
