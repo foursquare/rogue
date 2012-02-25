@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.1.5
+
+- fixed handling of subfields of list fields
+- allow nested subfields for BsonRecordFields
+
 # 1.1.4
 
 - removed EmptyQuery, fixed handling of upserts on empty queries
