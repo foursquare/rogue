@@ -261,16 +261,16 @@ class CaseClassListQueryField[V, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
 
-  def unsafeField[F](name: String): DummyField[F, M] =
-    new DummyField[F, M](field.name + "." + name, field.owner)
+  def unsafeField[F](name: String): SelectableDummyField[List[F], M] =
+    new SelectableDummyField[List[F], M](field.name + "." + name, field.owner)
 }
 
 class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObject: B => DBObject)
     extends AbstractListQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
-  def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
-    new DummyField[V, M](field.name + "." + subfield(rec).name, field.owner)
+  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
+    new SelectableDummyField[List[V], M](field.name + "." + subfield(rec).name, field.owner)
   }
 
   def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {

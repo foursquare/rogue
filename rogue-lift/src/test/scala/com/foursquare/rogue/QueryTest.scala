@@ -113,13 +113,13 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.last_updated between Tuple2(d1, d2)) toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lt" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
 
     // Case class list field
-    Comment where (_.comments.unsafeField[Int]("z") eqs 123) toString() must_== """db.comments.find({ "comments.z" : 123})"""
-    Comment where (_.comments.unsafeField[String]("comment") eqs "hi") toString() must_== """db.comments.find({ "comments.comment" : "hi"})"""
+    Comment where (_.comments.unsafeField[Int]("z") contains 123) toString() must_== """db.comments.find({ "comments.z" : 123})"""
+    Comment where (_.comments.unsafeField[String]("comment") contains "hi") toString() must_== """db.comments.find({ "comments.comment" : "hi"})"""
 
     // BsonRecordField subfield queries
-    Venue where (_.claims.subfield(_.status) eqs ClaimStatus.approved) toString() must_== """db.venues.find({ "claims.status" : "Approved"})"""
+    Venue where (_.claims.subfield(_.status) contains ClaimStatus.approved) toString() must_== """db.venues.find({ "claims.status" : "Approved"})"""
     Venue where (_.lastClaim.subfield(_.userid) eqs 123)               toString()      must_== """db.venues.find({ "lastClaim.uid" : 123})"""
-    Venue where (_.claims.subfield(_.source.subfield(_.name)) eqs "twitter") toString() must_== """db.venues.find({ "claims.source.name" : "twitter"})"""
+    Venue where (_.claims.subfield(_.source.subfield(_.name)) contains "twitter") toString() must_== """db.venues.find({ "claims.source.name" : "twitter"})"""
 
     // Enumeration list
     OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) toString() must_== """db.oauthconsumers.find({ "privileges" : "Award badges"})"""
@@ -165,7 +165,7 @@ class QueryTest extends SpecsMatchers {
     Tip where (_.legacyid eqs 1) select (_.counts at "foo") toString() must_== """db.tips.find({ "legid" : 1}, { "counts.foo" : 1})"""
     Venue where (_.legacyid eqs 1) select (_.geolatlng.unsafeField[Double]("lat")) toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
     Venue where (_.legacyid eqs 1) select (_.lastClaim.subfield(_.status)) toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
-    Venue where (_.legacyid eqs 1) select(_.claims.subselect(_.userid)) toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
+    Venue where (_.legacyid eqs 1) select(_.claims.subfield(_.userid)) toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
 
     // TODO: case class list fields
     // Comment select(_.comments.unsafeField[Long]("userid")) toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
@@ -331,8 +331,8 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.last_updated before d2) signature() must_== """db.venues.find({ "last_updated" : { "$lt" : 0}})"""
 
     // Case class list field
-    Comment where (_.comments.unsafeField[Int]("z") eqs 123)           signature() must_== """db.comments.find({ "comments.z" : 0})"""
-    Comment where (_.comments.unsafeField[String]("comment") eqs "hi") signature() must_== """db.comments.find({ "comments.comment" : 0})"""
+    Comment where (_.comments.unsafeField[Int]("z") contains 123)           signature() must_== """db.comments.find({ "comments.z" : 0})"""
+    Comment where (_.comments.unsafeField[String]("comment") contains "hi") signature() must_== """db.comments.find({ "comments.comment" : 0})"""
 
     // Enumeration list
     OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) signature() must_== """db.oauthconsumers.find({ "privileges" : 0})"""
@@ -432,7 +432,7 @@ class QueryTest extends SpecsMatchers {
   @Test
   def testDollarSelector {
     Venue.where(_.legacyid eqs 1)
-         .and(_.claims.subfield(_.userid) eqs 2)
+         .and(_.claims.subfield(_.userid) contains 2)
          .modify(_.claims.$.subfield(_.status) setTo ClaimStatus.approved)
          .toString() must_== """db.venues.update({ "legid" : 1 , "claims.uid" : 2}, { "$set" : { "claims.$.status" : "Approved"}}, false, false)"""
 
