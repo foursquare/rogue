@@ -12,6 +12,7 @@ abstract sealed class Unordered extends MaybeOrdered
 
 abstract sealed class MaybeSelected
 abstract sealed class Selected extends MaybeSelected
+abstract sealed class SelectedOne extends Selected
 abstract sealed class Unselected extends MaybeSelected
 
 abstract sealed class MaybeLimited

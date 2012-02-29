@@ -1,7 +1,7 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue
 
-import com.foursquare.rogue.Rogue._
+import com.foursquare.rogue.LiftRogue._
 
 import java.util.regex.Pattern
 import net.liftweb.common.{Box, Empty, Full}
@@ -51,11 +51,12 @@ class EndToEndTest extends SpecsMatchers {
 
   @After
   def cleanupTestData: Unit = {
-    Venue.bulkDelete_!!()
-    Venue.count() must_== 0
+    val db = ConcreteLiftQueryExecutor
+    Venue.bulkDelete_!!!
+    Venue.count must_== 0
 
-    VenueClaim.bulkDelete_!!()
-    VenueClaim.count() must_== 0
+    VenueClaim.bulkDelete_!!!
+    VenueClaim.count must_== 0
 
     RogueTestMongo.disconnectFromMongo
   }

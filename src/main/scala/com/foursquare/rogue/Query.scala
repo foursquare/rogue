@@ -3,12 +3,10 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers.{
-    AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect, QueryExecutor}
+    AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect, LegacyQueryExecutor}
 import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
 import net.liftweb.common.{Box, Full}
-import net.liftweb.mongodb.MongoDB
-import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
-import net.liftweb.record.Field
+import net.liftweb.mongodb.record.MongoRecord
 import org.bson.types.BasicBSONList
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListMap
@@ -51,402 +49,405 @@ import scala.collection.immutable.ListMap
  *    an or-clause. The type system will guarantee that the query and its or-connected query
  *    have the same types.
  */
-trait AbstractQuery[M <: MongoRecord[M], R,
-                    Ord <: MaybeOrdered,
-                    Sel <: MaybeSelected,
-                    Lim <: MaybeLimited,
-                    Sk <: MaybeSkipped,
-                    Or <: MaybeHasOrClause] {
+// trait AbstractQuery[M <: MongoRecord[M], R,
+//                     Ord <: MaybeOrdered,
+//                     Sel <: MaybeSelected,
+//                     Lim <: MaybeLimited,
+//                     Sk <: MaybeSkipped,
+//                     Or <: MaybeHasOrClause] {
 
-  def meta: M with MongoMetaRecord[M]
-  def master: MongoMetaRecord[M]
+//   def meta: M with MongoMetaRecord[M]
+//   def master: MongoMetaRecord[M]
 
-  /**
-   * Adds a where clause to a query.
-   */
-  def where[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   /**
+//    * Adds a where clause to a query.
+//    */
+//   def where[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  /**
-   * Adds another and-connected clause to the query.
-   */
-  def and[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   /**
+//    * Adds another and-connected clause to the query.
+//    */
+//   def and[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  /**
-   * Adds a scan clause to a query.
-   */
-  def scan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   /**
+//    * Adds a scan clause to a query.
+//    */
+//   def scan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  /**
-   * Adds an iscan clause to a query.
-   */
-  def iscan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   /**
+//    * Adds an iscan clause to a query.
+//    */
+//   def iscan[F](clause: M => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
-  def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
-  def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
-  def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  def raw(f: BasicDBObjectBuilder => Unit): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   def raw(f: BasicDBObjectBuilder => Unit): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  /**
-   * Chains an "or" subquery to the current query.
-   *
-   * <p> The use of the implicit parameter here is key to how the Rogue type checking
-   * mechanics work. In order to attach an "or" clause to a query, the query as it exists
-   * must <em>not</em> yet have an or-clause. So the implicit parameter, which carries
-   * the phantom type information, must be "HasNoOrClause" before this is called. After it's called,
-   * you can see that the "MaybeHasOrClause" type parameter is changed, and is now specifically
-   * bound to "HasOrClause", rather than to a type variable.</p>
-   */
-  def or(subqueries: (M with MongoMetaRecord[M] =>
-                      AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
-                      (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
+//   /**
+//    * Chains an "or" subquery to the current query.
+//    *
+//    * <p> The use of the implicit parameter here is key to how the Rogue type checking
+//    * mechanics work. In order to attach an "or" clause to a query, the query as it exists
+//    * must <em>not</em> yet have an or-clause. So the implicit parameter, which carries
+//    * the phantom type information, must be "HasNoOrClause" before this is called. After it's called,
+//    * you can see that the "MaybeHasOrClause" type parameter is changed, and is now specifically
+//    * bound to "HasOrClause", rather than to a type variable.</p>
+//    */
+//   def or(subqueries: (M with MongoMetaRecord[M] =>
+//                       AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
+//                       (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
-   /**
-    * Like "or", this uses the Rogue phantom-type/implicit parameter mechanics. To call this
-    * method, the query must <em>not</em> yet have an ordering clause attached. This is captured
-    * by the implicit parameter being constrained to be "Unordered". After this is called, the
-    * type signature of the returned query is updated so that the "MaybeOrdered" type parameter is
-    * now Ordered.
-    */
-  def orderAsc[V](field: M => QueryField[V, M])
-                      (implicit ev: Ord =:= Unordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
-  def orderDesc[V](field: M => QueryField[V, M])
-                      (implicit ev: Ord =:= Unordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
-  def andAsc[V](field: M => QueryField[V, M])
-                      (implicit ev: Ord =:= Ordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
-  def andDesc[V](field: M => QueryField[V, M])
-                      (implicit ev: Ord =:= Ordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//    /**
+//     * Like "or", this uses the Rogue phantom-type/implicit parameter mechanics. To call this
+//     * method, the query must <em>not</em> yet have an ordering clause attached. This is captured
+//     * by the implicit parameter being constrained to be "Unordered". After this is called, the
+//     * type signature of the returned query is updated so that the "MaybeOrdered" type parameter is
+//     * now Ordered.
+//     */
+//   def orderAsc[V](field: M => QueryField[V, M])
+//                       (implicit ev: Ord =:= Unordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//   def orderDesc[V](field: M => QueryField[V, M])
+//                       (implicit ev: Ord =:= Unordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//   def andAsc[V](field: M => QueryField[V, M])
+//                       (implicit ev: Ord =:= Ordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//   def andDesc[V](field: M => QueryField[V, M])
+//                       (implicit ev: Ord =:= Ordered): AbstractQuery[M, R, Ordered, Sel, Lim, Sk, Or]
 
-  /**
-   * Places a limit on the size of the returned result.
-   *
-   * <p> Like "or", this uses the Rogue phantom-type/implicit parameter mechanics. To call this
-   * method, the query must <em>not</em> yet have a limit clause attached. This is captured
-   * by the implicit parameter being constrained to be "Unlimited". After this is called, the
-   * type signature of the returned query is updated so that the "MaybeLimited" type parameter is
-   * now Limited.</p>
-   */
-  def limit(n: Int)(implicit ev: Lim =:= Unlimited): AbstractQuery[M, R, Ord, Sel, Limited, Sk, Or]
+//   /**
+//    * Places a limit on the size of the returned result.
+//    *
+//    * <p> Like "or", this uses the Rogue phantom-type/implicit parameter mechanics. To call this
+//    * method, the query must <em>not</em> yet have a limit clause attached. This is captured
+//    * by the implicit parameter being constrained to be "Unlimited". After this is called, the
+//    * type signature of the returned query is updated so that the "MaybeLimited" type parameter is
+//    * now Limited.</p>
+//    */
+//   def limit(n: Int)(implicit ev: Lim =:= Unlimited): AbstractQuery[M, R, Ord, Sel, Limited, Sk, Or]
 
-  def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited): AbstractQuery[M, R, Ord, Sel, Limited, Sk, Or]
+//   def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited): AbstractQuery[M, R, Ord, Sel, Limited, Sk, Or]
 
-  /**
-   * Adds a skip to the query.
-   *
-   * <p> Like {@link or}, this uses the Rogue phantom-type/implicit parameter mechanics. To call this
-   * method, the query must <em>not</em> yet have a skip clause attached. This is captured
-   * by the implicit parameter being constrained to be {@link Unskipped}. After this is called, the
-   * type signature of the returned query is updated so that the {@link MaybeSkipped} type parameter is
-   * now {@link Skipped}.</p>
-   */
-  def skip(n: Int)(implicit ev: Sk =:= Unskipped): AbstractQuery[M, R, Ord, Sel, Lim, Skipped, Or]
+//   /**
+//    * Adds a skip to the query.
+//    *
+//    * <p> Like {@link or}, this uses the Rogue phantom-type/implicit parameter mechanics. To call this
+//    * method, the query must <em>not</em> yet have a skip clause attached. This is captured
+//    * by the implicit parameter being constrained to be {@link Unskipped}. After this is called, the
+//    * type signature of the returned query is updated so that the {@link MaybeSkipped} type parameter is
+//    * now {@link Skipped}.</p>
+//    */
+//   def skip(n: Int)(implicit ev: Sk =:= Unskipped): AbstractQuery[M, R, Ord, Sel, Lim, Skipped, Or]
 
-  def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped): AbstractQuery[M, R, Ord, Sel, Lim, Skipped, Or]
+//   def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped): AbstractQuery[M, R, Ord, Sel, Lim, Skipped, Or]
 
-  /**
-   * Gets the size of the query result. This should only be called on queries that do not
-   * have limits or skips.
-   */
-  def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long
+//   /**
+//    * Gets the size of the query result. This should only be called on queries that do not
+//    * have limits or skips.
+//    */
+//   def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long
 
-  /**
-   * Returns the number of distinct values returned by a query. The query must not have
-   * limit or skip clauses.
-   */
-  def countDistinct[V](field: M => QueryField[V, M])
-                      (implicit ev1: Lim =:= Unlimited,
-                       ev2: Sk =:= Unskipped): Long
+//   /**
+//    * Returns the number of distinct values returned by a query. The query must not have
+//    * limit or skip clauses.
+//    */
+//   def countDistinct[V](field: M => QueryField[V, M])
+//                       (implicit ev1: Lim =:= Unlimited,
+//                        ev2: Sk =:= Unskipped): Long
 
-  /**
-   * Checks if there are any records that match this query.
-   */
-  def exists()(implicit ev1: Lim =:= Unlimited,
-               ev2: Sk =:= Unskipped): Boolean
+//   /**
+//    * Checks if there are any records that match this query.
+//    */
+//   def exists()(implicit ev1: Lim =:= Unlimited,
+//                ev2: Sk =:= Unskipped): Boolean
 
-  /**
-   * Executes a function on each record value returned by a query.
-   * @param f a function to be invoked on each fetched record.
-   * @return nothing.
-   */
-  def foreach(f: R => Unit): Unit
+//   /**
+//    * Executes a function on each record value returned by a query.
+//    * @param f a function to be invoked on each fetched record.
+//    * @return nothing.
+//    */
+//   def foreach(f: R => Unit): Unit
 
-  /**
-   * Execute the query, returning all of the records that match the query.
-   * @return a list containing the records that match the query
-   */
-  def fetch(): List[R]
+//   /**
+//    * Execute the query, returning all of the records that match the query.
+//    * @return a list containing the records that match the query
+//    */
+//   def fetch(): List[R]
 
-  /**
-   * Execute a query, returning no more than a specified number of result records. The
-   * query must not have a limit clause.
-   * @param limit the maximum number of records to return.
-   */
-  def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R]
+//   /**
+//    * Execute a query, returning no more than a specified number of result records. The
+//    * query must not have a limit clause.
+//    * @param limit the maximum number of records to return.
+//    */
+//   def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R]
 
-  /**
-   * fetch a batch of results, and execute a function on each element of the list.
-   * @param f the function to invoke on the records that match the query.
-   * @return a list containing the results of invoking the function on each record.
-   */
-  def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T]
+//   /**
+//    * fetch a batch of results, and execute a function on each element of the list.
+//    * @param f the function to invoke on the records that match the query.
+//    * @return a list containing the results of invoking the function on each record.
+//    */
+//   def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T]
 
-  /**
-   * Fetches the first record that matches the query. The query must not contain a "limited" clause.
-   * @return an option record containing either the first result that matches the
-   *     query, or None if there are no records that match.
-   */
-  def get()(implicit ev: Lim =:= Unlimited): Option[R]
+//   /**
+//    * Fetches the first record that matches the query. The query must not contain a "limited" clause.
+//    * @return an option record containing either the first result that matches the
+//    *     query, or None if there are no records that match.
+//    */
+//   def get()(implicit ev: Lim =:= Unlimited): Option[R]
 
-  /**
-   * Fetches the records that match the query in paginated form. The query must not contain
-   * a "limit" clause.
-   * @param countPerPage the number of records to be contained in each page of the result.
-   */
-  def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited,
-                                  ev2: Sk =:= Unskipped): BasePaginatedQuery[M, R]
+//   /**
+//    * Fetches the records that match the query in paginated form. The query must not contain
+//    * a "limit" clause.
+//    * @param countPerPage the number of records to be contained in each page of the result.
+//    */
+//   def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited,
+//                                   ev2: Sk =:= Unskipped): BasePaginatedQuery[M, R]
 
-  def noop()(implicit ev1: Sel =:= Unselected,
-             ev2: Lim =:= Unlimited,
-             ev3: Sk =:= Unskipped): AbstractModifyQuery[M]
+//   def noop()(implicit ev1: Sel =:= Unselected,
+//              ev2: Lim =:= Unlimited,
+//              ev3: Sk =:= Unskipped): AbstractModifyQuery[M]
 
-  /**
-   * Delete all of the records that match the query. The query must not contain any "skip",
-   * "limit", or "select" clauses. Sends the delete operation to mongo, and returns - does
-   * <em>not</em> wait for the delete to be finished.
-   */
-  def bulkDelete_!!()(implicit ev1: Sel =:= Unselected,
-                      ev2: Lim =:= Unlimited,
-                      ev3: Sk =:= Unskipped): Unit
+//   /**
+//    * Delete all of the records that match the query. The query must not contain any "skip",
+//    * "limit", or "select" clauses. Sends the delete operation to mongo, and returns - does
+//    * <em>not</em> wait for the delete to be finished.
+//    */
+//   def bulkDelete_!!()(implicit ev1: Sel =:= Unselected,
+//                       ev2: Lim =:= Unlimited,
+//                       ev3: Sk =:= Unskipped): Unit
 
-  /**
-   * Delete all of the recurds that match the query. The query must not contain any "skip",
-   * "limit", or "select" clauses. Sends the delete operation to mongo, and waits for the
-   * delete operation to complete before returning to the caller.
-   */
-  def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected,
-                                                   ev2: Lim =:= Unlimited,
-                                                   ev3: Sk =:= Unskipped): Unit
+//   /**
+//    * Delete all of the recurds that match the query. The query must not contain any "skip",
+//    * "limit", or "select" clauses. Sends the delete operation to mongo, and waits for the
+//    * delete operation to complete before returning to the caller.
+//    */
+//   def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected,
+//                                                    ev2: Lim =:= Unlimited,
+//                                                    ev3: Sk =:= Unskipped): Unit
 
-  /**
-   * Finds the first record that matches the query (if any), fetches it, and then deletes it.
-   * A copy of the deleted record is returned to the caller.
-   */
-  def findAndDeleteOne(): Option[R]
+//   /**
+//    * Finds the first record that matches the query (if any), fetches it, and then deletes it.
+//    * A copy of the deleted record is returned to the caller.
+//    */
+//   def findAndDeleteOne(): Option[R]
 
-  def signature(): String
+//   def signature(): String
 
-  /**
-   * Return a string containing details about how the query would be executed in mongo.
-   * In particular, this is useful for finding out what indexes will be used by the query.
-   */
-  def explain(): String
+//   /**
+//    * Return a string containing details about how the query would be executed in mongo.
+//    * In particular, this is useful for finding out what indexes will be used by the query.
+//    */
+//   def explain(): String
 
-  def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  /**
-   * Set a flag to indicate whether this query may hit secondaries. This only
-   * really makes sense if you're using replica sets. If this field is
-   * unspecified, rogue will leave the option untouched, so you'll use
-   * secondaries or not depending on how you configure the mongo java driver.
-   * Also, this only works if you're doing a query -- findAndModify, updates,
-   * and deletes always go to the primaries.
-   *
-   * For more info, see
-   * http://www.mongodb.org/display/DOCS/Querying#Querying-slaveOk%28QueryingSecondaries%29.
-   */
-  def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+//   /**
+//    * Set a flag to indicate whether this query may hit secondaries. This only
+//    * really makes sense if you're using replica sets. If this field is
+//    * unspecified, rogue will leave the option untouched, so you'll use
+//    * secondaries or not depending on how you configure the mongo java driver.
+//    * Also, this only works if you're doing a query -- findAndModify, updates,
+//    * and deletes always go to the primaries.
+//    *
+//    * For more info, see
+//    * http://www.mongodb.org/display/DOCS/Querying#Querying-slaveOk%28QueryingSecondaries%29.
+//    */
+//   def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
-  /**
-   * Adds a select clause to the query. The use of this method constrains the type
-   * signature of the query to force the "Sel" field to be type "Selected".
-   *
-   * <p> The use of the implicit parameter here is key to how the Rogue type checking
-   * mechanics work. In order to attach a "select" clause to a query, the query as it exists
-   * must <em>not</em> have a select clause yet. So the implicit parameter, which carries
-   * the phantom type information, must be "Unselected" before this is called. After it's called,
-   * you can see that the "MaybeSelected" type parameter is changed, and is now specifically
-   * bound to "Selected", rather than to a type variable.</p>
-   */
-  def select[F1](f: M => SelectField[F1, M])
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, F1, Ord, Selected, Lim, Sk, Or]
+//   /**
+//    * Adds a select clause to the query. The use of this method constrains the type
+//    * signature of the query to force the "Sel" field to be type "Selected".
+//    *
+//    * <p> The use of the implicit parameter here is key to how the Rogue type checking
+//    * mechanics work. In order to attach a "select" clause to a query, the query as it exists
+//    * must <em>not</em> have a select clause yet. So the implicit parameter, which carries
+//    * the phantom type information, must be "Unselected" before this is called. After it's called,
+//    * you can see that the "MaybeSelected" type parameter is changed, and is now specifically
+//    * bound to "Selected", rather than to a type variable.</p>
+//    */
+//   def select[F1](f: M => SelectField[F1, M])
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, F1, Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2](f1: M => SelectField[F1, M],
-                     f2: M => SelectField[F2, M])
-                    (implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2](f1: M => SelectField[F1, M],
+//                      f2: M => SelectField[F2, M])
+//                     (implicit ev: Sel =:= Unselected): AbstractQuery[M, (F1, F2), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3](f1: M => SelectField[F1, M],
-                         f2: M => SelectField[F2, M],
-                         f3: M => SelectField[F3, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3](f1: M => SelectField[F1, M],
+//                          f2: M => SelectField[F2, M],
+//                          f3: M => SelectField[F3, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3, F4](f1: M => SelectField[F1, M],
-                             f2: M => SelectField[F2, M],
-                             f3: M => SelectField[F3, M],
-                             f4: M => SelectField[F4, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3, F4](f1: M => SelectField[F1, M],
+//                              f2: M => SelectField[F2, M],
+//                              f3: M => SelectField[F3, M],
+//                              f4: M => SelectField[F4, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M],
-                                 f2: M => SelectField[F2, M],
-                                 f3: M => SelectField[F3, M],
-                                 f4: M => SelectField[F4, M],
-                                 f5: M => SelectField[F5, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M],
+//                                  f2: M => SelectField[F2, M],
+//                                  f3: M => SelectField[F3, M],
+//                                  f4: M => SelectField[F4, M],
+//                                  f5: M => SelectField[F5, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M],
-                                     f2: M => SelectField[F2, M],
-                                     f3: M => SelectField[F3, M],
-                                     f4: M => SelectField[F4, M],
-                                     f5: M => SelectField[F5, M],
-                                     f6: M => SelectField[F6, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M],
+//                                      f2: M => SelectField[F2, M],
+//                                      f3: M => SelectField[F3, M],
+//                                      f4: M => SelectField[F4, M],
+//                                      f5: M => SelectField[F5, M],
+//                                      f6: M => SelectField[F6, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3, F4, F5, F6, F7](f1: M => SelectField[F1, M],
-                                         f2: M => SelectField[F2, M],
-                                         f3: M => SelectField[F3, M],
-                                         f4: M => SelectField[F4, M],
-                                         f5: M => SelectField[F5, M],
-                                         f6: M => SelectField[F6, M],
-                                         f7: M => SelectField[F7, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3, F4, F5, F6, F7](f1: M => SelectField[F1, M],
+//                                          f2: M => SelectField[F2, M],
+//                                          f3: M => SelectField[F3, M],
+//                                          f4: M => SelectField[F4, M],
+//                                          f5: M => SelectField[F5, M],
+//                                          f6: M => SelectField[F6, M],
+//                                          f7: M => SelectField[F7, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3, F4, F5, F6, F7, F8](f1: M => SelectField[F1, M],
-                                             f2: M => SelectField[F2, M],
-                                             f3: M => SelectField[F3, M],
-                                             f4: M => SelectField[F4, M],
-                                             f5: M => SelectField[F5, M],
-                                             f6: M => SelectField[F6, M],
-                                             f7: M => SelectField[F7, M],
-                                             f8: M => SelectField[F8, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3, F4, F5, F6, F7, F8](f1: M => SelectField[F1, M],
+//                                              f2: M => SelectField[F2, M],
+//                                              f3: M => SelectField[F3, M],
+//                                              f4: M => SelectField[F4, M],
+//                                              f5: M => SelectField[F5, M],
+//                                              f6: M => SelectField[F6, M],
+//                                              f7: M => SelectField[F7, M],
+//                                              f8: M => SelectField[F8, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
-                                                f2: M => SelectField[F2, M],
-                                                f3: M => SelectField[F3, M],
-                                                f4: M => SelectField[F4, M],
-                                                f5: M => SelectField[F5, M],
-                                                f6: M => SelectField[F6, M],
-                                                f7: M => SelectField[F7, M],
-                                                f8: M => SelectField[F8, M],
-                                                f9: M => SelectField[F9, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
+//                                                 f2: M => SelectField[F2, M],
+//                                                 f3: M => SelectField[F3, M],
+//                                                 f4: M => SelectField[F4, M],
+//                                                 f5: M => SelectField[F5, M],
+//                                                 f6: M => SelectField[F6, M],
+//                                                 f7: M => SelectField[F7, M],
+//                                                 f8: M => SelectField[F8, M],
+//                                                 f9: M => SelectField[F9, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or]
 
-  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
-                                                      f2: M => SelectField[F2, M],
-                                                      f3: M => SelectField[F3, M],
-                                                      f4: M => SelectField[F4, M],
-                                                      f5: M => SelectField[F5, M],
-                                                      f6: M => SelectField[F6, M],
-                                                      f7: M => SelectField[F7, M],
-                                                      f8: M => SelectField[F8, M],
-                                                      f9: M => SelectField[F9, M],
-                                                      f10: M => SelectField[F10, M])
-                      (implicit ev: Sel =:= Unselected):
-                      AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or]
+//   def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
+//                                                       f2: M => SelectField[F2, M],
+//                                                       f3: M => SelectField[F3, M],
+//                                                       f4: M => SelectField[F4, M],
+//                                                       f5: M => SelectField[F5, M],
+//                                                       f6: M => SelectField[F6, M],
+//                                                       f7: M => SelectField[F7, M],
+//                                                       f8: M => SelectField[F8, M],
+//                                                       f9: M => SelectField[F9, M],
+//                                                       f10: M => SelectField[F10, M])
+//                       (implicit ev: Sel =:= Unselected):
+//                       AbstractQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or]
 
 
-  def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, CC](f: M => SelectField[F1, M], create: F1 => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, CC](f1: M => SelectField[F1, M],
-                             f2: M => SelectField[F2, M],
-                             create: (F1, F2) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, CC](f1: M => SelectField[F1, M],
+//                              f2: M => SelectField[F2, M],
+//                              create: (F1, F2) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M],
-                                 f2: M => SelectField[F2, M],
-                                 f3: M => SelectField[F3, M],
-                                 create: (F1, F2, F3) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M],
+//                                  f2: M => SelectField[F2, M],
+//                                  f3: M => SelectField[F3, M],
+//                                  create: (F1, F2, F3) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M],
-                                     f2: M => SelectField[F2, M],
-                                     f3: M => SelectField[F3, M],
-                                     f4: M => SelectField[F4, M],
-                                     create: (F1, F2, F3, F4) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M],
+//                                      f2: M => SelectField[F2, M],
+//                                      f3: M => SelectField[F3, M],
+//                                      f4: M => SelectField[F4, M],
+//                                      create: (F1, F2, F3, F4) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M],
-                                         f2: M => SelectField[F2, M],
-                                         f3: M => SelectField[F3, M],
-                                         f4: M => SelectField[F4, M],
-                                         f5: M => SelectField[F5, M],
-                                         create: (F1, F2, F3, F4, F5) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M],
+//                                          f2: M => SelectField[F2, M],
+//                                          f3: M => SelectField[F3, M],
+//                                          f4: M => SelectField[F4, M],
+//                                          f5: M => SelectField[F5, M],
+//                                          create: (F1, F2, F3, F4, F5) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M],
-                                             f2: M => SelectField[F2, M],
-                                             f3: M => SelectField[F3, M],
-                                             f4: M => SelectField[F4, M],
-                                             f5: M => SelectField[F5, M],
-                                             f6: M => SelectField[F6, M],
-                                             create: (F1, F2, F3, F4, F5, F6) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M],
+//                                              f2: M => SelectField[F2, M],
+//                                              f3: M => SelectField[F3, M],
+//                                              f4: M => SelectField[F4, M],
+//                                              f5: M => SelectField[F5, M],
+//                                              f6: M => SelectField[F6, M],
+//                                              create: (F1, F2, F3, F4, F5, F6) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, CC](f1: M => SelectField[F1, M],
-                                                 f2: M => SelectField[F2, M],
-                                                 f3: M => SelectField[F3, M],
-                                                 f4: M => SelectField[F4, M],
-                                                 f5: M => SelectField[F5, M],
-                                                 f6: M => SelectField[F6, M],
-                                                 f7: M => SelectField[F7, M],
-                                                 create: (F1, F2, F3, F4, F5, F6, F7) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, F3, F4, F5, F6, F7, CC](f1: M => SelectField[F1, M],
+//                                                  f2: M => SelectField[F2, M],
+//                                                  f3: M => SelectField[F3, M],
+//                                                  f4: M => SelectField[F4, M],
+//                                                  f5: M => SelectField[F5, M],
+//                                                  f6: M => SelectField[F6, M],
+//                                                  f7: M => SelectField[F7, M],
+//                                                  create: (F1, F2, F3, F4, F5, F6, F7) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, CC](f1: M => SelectField[F1, M],
-                                                     f2: M => SelectField[F2, M],
-                                                     f3: M => SelectField[F3, M],
-                                                     f4: M => SelectField[F4, M],
-                                                     f5: M => SelectField[F5, M],
-                                                     f6: M => SelectField[F6, M],
-                                                     f7: M => SelectField[F7, M],
-                                                     f8: M => SelectField[F8, M],
-                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, CC](f1: M => SelectField[F1, M],
+//                                                      f2: M => SelectField[F2, M],
+//                                                      f3: M => SelectField[F3, M],
+//                                                      f4: M => SelectField[F4, M],
+//                                                      f5: M => SelectField[F5, M],
+//                                                      f6: M => SelectField[F6, M],
+//                                                      f7: M => SelectField[F7, M],
+//                                                      f8: M => SelectField[F8, M],
+//                                                      create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
-                                                         f2: M => SelectField[F2, M],
-                                                         f3: M => SelectField[F3, M],
-                                                         f4: M => SelectField[F4, M],
-                                                         f5: M => SelectField[F5, M],
-                                                         f6: M => SelectField[F6, M],
-                                                         f7: M => SelectField[F7, M],
-                                                         f8: M => SelectField[F8, M],
-                                                         f9: M => SelectField[F9, M],
-                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
+//                                                          f2: M => SelectField[F2, M],
+//                                                          f3: M => SelectField[F3, M],
+//                                                          f4: M => SelectField[F4, M],
+//                                                          f5: M => SelectField[F5, M],
+//                                                          f6: M => SelectField[F6, M],
+//                                                          f7: M => SelectField[F7, M],
+//                                                          f8: M => SelectField[F8, M],
+//                                                          f9: M => SelectField[F9, M],
+//                                                      create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
-                                                              f2: M => SelectField[F2, M],
-                                                              f3: M => SelectField[F3, M],
-                                                              f4: M => SelectField[F4, M],
-                                                              f5: M => SelectField[F5, M],
-                                                              f6: M => SelectField[F6, M],
-                                                              f7: M => SelectField[F7, M],
-                                                              f8: M => SelectField[F8, M],
-                                                              f9: M => SelectField[F9, M],
-                                                              f10: M => SelectField[F10, M],
-                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
-                      (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
-  def hint(h: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
-}
+//   def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
+//                                                               f2: M => SelectField[F2, M],
+//                                                               f3: M => SelectField[F3, M],
+//                                                               f4: M => SelectField[F4, M],
+//                                                               f5: M => SelectField[F5, M],
+//                                                               f6: M => SelectField[F6, M],
+//                                                               f7: M => SelectField[F7, M],
+//                                                               f8: M => SelectField[F8, M],
+//                                                               f9: M => SelectField[F9, M],
+//                                                               f10: M => SelectField[F10, M],
+//                                                      create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
+//                       (implicit ev: Sel =:= Unselected): AbstractQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   def hint(h: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or]
+// }
 
-case class BaseQuery[M <: MongoRecord[M], R,
-                     Ord <: MaybeOrdered,
-                     Sel <: MaybeSelected,
-                     Lim <: MaybeLimited,
-                     Sk <: MaybeSkipped,
-                     Or <: MaybeHasOrClause](
-    override val meta: M with MongoMetaRecord[M],
+case class BaseQuery[
+    M,
+    R,
+    Ord <: MaybeOrdered,
+    Sel <: MaybeSelected,
+    Lim <: MaybeLimited,
+    Sk <: MaybeSkipped,
+    Or <: MaybeHasOrClause
+](
+    val meta: M,
     lim: Option[Int],
     sk: Option[Int],
     maxScan: Option[Int],
@@ -455,18 +456,19 @@ case class BaseQuery[M <: MongoRecord[M], R,
     condition: AndCondition,
     order: Option[MongoOrder],
     select: Option[MongoSelect[R, M]],
-    slaveOk: Option[Boolean]) extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
+    slaveOk: Option[Boolean]
+) {
 
   // The meta field on the MongoMetaRecord (as an instance of MongoRecord)
   // points to the master MongoMetaRecord. This is here in case you have a
   // second MongoMetaRecord pointing to the slave.
-  override lazy val master = meta.meta
+  // lazy val master = meta.meta
 
   private def addClause[F](clause: M => QueryClause[F],
                            expectedIndexBehavior: MaybeIndexed):
                        AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = {
     clause(meta) match {
-      case cl: EmptyQueryClause[_] => new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, Or]
+      // case cl: EmptyQueryClause[_] => new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, Or]
       case cl => {
         val newClause = cl.withExpectedIndexBehavior(expectedIndexBehavior)
         this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
@@ -474,13 +476,13 @@ case class BaseQuery[M <: MongoRecord[M], R,
     }
   }
 
-  override def where[F](clause: M => QueryClause[F]) =
+  def where[F](clause: M => QueryClause[F]) =
     addClause(clause, expectedIndexBehavior = Index)
-  override def and[F](clause: M => QueryClause[F]) =
+  def and[F](clause: M => QueryClause[F]) =
     addClause(clause, expectedIndexBehavior = Index)
-  override def iscan[F](clause: M => QueryClause[F]) =
+  def iscan[F](clause: M => QueryClause[F]) =
     addClause(clause, expectedIndexBehavior = IndexScan)
-  override def scan[F](clause: M => QueryClause[F]) =
+  def scan[F](clause: M => QueryClause[F]) =
     addClause(clause, expectedIndexBehavior = DocumentScan)
 
   private def addClauseOpt[V, F](opt: Option[V])
@@ -492,191 +494,85 @@ case class BaseQuery[M <: MongoRecord[M], R,
     }
   }
 
-  override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
+  def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
     addClauseOpt(opt)(clause, expectedIndexBehavior = Index)
-  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
+  def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
     addClauseOpt(opt)(clause, expectedIndexBehavior = Index)
-  override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
+  def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
     addClauseOpt(opt)(clause, expectedIndexBehavior = IndexScan)
-  override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
+  def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
     addClauseOpt(opt)(clause, expectedIndexBehavior = DocumentScan)
 
-  override def raw(f: BasicDBObjectBuilder => Unit) = {
+  def raw(f: BasicDBObjectBuilder => Unit) = {
     val newClause = new RawQueryClause(f)
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }
 
-  override def or(subqueries: (M with MongoMetaRecord[M] =>
-                              AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
+  def or(subqueries: (Rogue.Query[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
                        (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
-    val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
-    this.copy(condition = condition.copy(orCondition = Some(orCondition)))
+    // val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
+    // this.copy(condition = condition.copy(orCondition = Some(orCondition)))
+    sys.error("TODO")
   }
 
-  override def orderAsc[V](field: M => QueryField[V, M])
+  def orderAsc[V](field: M => QueryField[V, M])
                        (implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
     this.copy(order = Some(MongoOrder(List((field(meta).field.name, true)))))
-  override def orderDesc[V](field: M => QueryField[V, M])
+  def orderDesc[V](field: M => QueryField[V, M])
                        (implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
     this.copy(order = Some(MongoOrder(List((field(meta).field.name, false)))))
-  override def andAsc[V](field: M => QueryField[V, M])
+  def andAsc[V](field: M => QueryField[V, M])
                        (implicit ev: Ord =:= Ordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
     this.copy(order = Some(MongoOrder((field(meta).field.name, true) :: order.get.terms)))
-  override def andDesc[V](field: M => QueryField[V, M])
+  def andDesc[V](field: M => QueryField[V, M])
                        (implicit ev: Ord =:= Ordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
     this.copy(order = Some(MongoOrder((field(meta).field.name, false) :: order.get.terms)))
 
-  override def limit(n: Int)(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk, Or] =
+  def limit(n: Int)(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk, Or] =
     this.copy(lim = Some(n))
-  override def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk, Or] =
+  def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk, Or] =
     this.copy(lim = n)
-  override def skip(n: Int)(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped, Or] =
+  def skip(n: Int)(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped, Or] =
     this.copy(sk = Some(n))
-  override def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped, Or] =
+  def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped, Or] =
     this.copy(sk = n)
 
-  private[rogue] def parseDBObject(dbo: DBObject): R = sys.error("TODO")
-  // private[rogue] def parseDBObject(dbo: DBObject): R = select match {
-  //   case Some(MongoSelect(Nil, transformer)) =>
-  //     // A MongoSelect clause exists, but has empty fields. Return null.
-  //     // This is used for .exists(), where we just want to check the number
-  //     // of returned results is > 0.
-  //     transformer(null)
-  //   case Some(MongoSelect(fields, transformer)) =>
-  //     val inst = fields.head.field.owner
-  //     def setInstanceFieldFromDbo(field: Field[_, M]) = {
-  //       inst.fieldByName(field.name) match {
-  //         case Full(fld) => fld.setFromAny(dbo.get(field.name))
-  //         case _ => {
-  //           val splitName = field.name.split('.').toList
-  //           Box.!!(splitName.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
-  //             obj match {
-  //               case dbl: BasicBSONList =>
-  //                 (for {
-  //                   index <- 0 to dbl.size - 1
-  //                   val item: DBObject = dbl.get(index).asInstanceOf[DBObject]
-  //                 } yield item.get(fieldName)).toList
-  //               case dbo: DBObject =>
-  //                 dbo.get(fieldName)
-  //               case null => null
-  //             }
-  //           }))
-  //         }
-  //       }
-  //     }
-  //     setInstanceFieldFromDbo(inst.fieldByName("_id").open_!)
-  //     transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field))))
-  //   case None => meta.fromDBObject(dbo).asInstanceOf[R]
-  // }
-
-  private def drainBuffer[A, B](from: ListBuffer[A],
-                                to: ListBuffer[B],
-                                f: List[A] => List[B], size: Int): Unit = {
-    if (from.size >= size) {
-      to ++= f(from.toList)
-      from.clear
-    }
-  }
-
-  override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    QueryExecutor.condition("count", this)(meta.count(_))
-
-  override def countDistinct[V](field: M => QueryField[V, M])
-                       (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    QueryExecutor.condition("countDistinct", this)(meta.countDistinct(field(meta).field.name, _))
-
-  override def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean =
-    this.copy(select = Some(MongoSelect[Null, M](Nil, _ => null))).limit(1).fetch().size > 0
-
-  override def foreach(f: R => Unit): Unit =
-    QueryExecutor.query("find", this, None)(dbo => f(parseDBObject(dbo)))
-
-  override def fetch(): List[R] = {
-    val rv = new ListBuffer[R]
-    QueryExecutor.query("find", this, None)(dbo => rv += parseDBObject(dbo))
-    rv.toList
-  }
-  override def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] =
-    this.limit(limit).fetch()
-  override def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] = {
-    val rv = new ListBuffer[T]
-    val buf = new ListBuffer[R]
-
-    QueryExecutor.query("find", this, Some(batchSize)) { dbo =>
-      buf += parseDBObject(dbo)
-      drainBuffer(buf, rv, f, batchSize)
-    }
-    drainBuffer(buf, rv, f, 1)
-
-    rv.toList
-  }
-
-  override def get()(implicit ev: Lim =:= Unlimited): Option[R] =
-    fetch(1).headOption
-
-  override def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
-    new BasePaginatedQuery(this.copy(), countPerPage)
-  }
-
-  override def noop()(implicit ev1: Sel =:= Unselected,
+  def noop()(implicit ev1: Sel =:= Unselected,
                       ev2: Lim =:= Unlimited,
-                      ev3: Sk =:= Unskipped) = BaseModifyQuery(this, MongoModify(Nil))
-
-  // Always do modifications against master (not meta, which could point to slave)
-  override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected,
-                               ev2: Lim =:= Unlimited,
-                               ev3: Sk =:= Unskipped): Unit =
-    QueryExecutor.condition("remove", this)(master.bulkDelete_!!(_))
-
-  override def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected,
-                                                            ev2: Lim =:= Unlimited,
-                                                            ev3: Sk =:= Unskipped): Unit =
-    QueryExecutor.condition("remove", this) { qry =>
-      MongoDB.useCollection(master.mongoIdentifier, master.collectionName) { coll =>
-        coll.remove(qry, concern)
-      }
-    }
-
-  override def findAndDeleteOne(): Option[R] = {
-    val mod = BaseFindAndModifyQuery(this, MongoModify(Nil))
-    QueryExecutor.findAndModify(mod, returnNew=false, upsert=false, remove=true)(this.parseDBObject _)
-  }
+                      ev3: Sk =:= Unskipped): BaseModifyQuery[M] = BaseModifyQuery(this, MongoModify(Nil)) // TODO: Does this work?
 
   override def toString: String =
-    MongoBuilder.buildQueryString("find", this)
+    sys.error("TODO") // MongoBuilder.buildQueryString("find", this)
 
-  override def signature(): String =
-    MongoBuilder.buildSignature(this)
+  def signature(): String =
+    sys.error("TODO") // MongoBuilder.buildSignature(this)
 
-  override def explain(): String =
-    QueryExecutor.explain("find", this)
+  def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(maxScan = Some(max))
 
-  override def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(maxScan = Some(max))
+  def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(comment = Some(c))
 
-  override def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(comment = Some(c))
+  def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(slaveOk = Some(b))
 
-  override def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(slaveOk = Some(b))
+  def hint(index: MongoIndex[M]) = this.copy(hint = Some(index.asListMap))
 
-  override def hint(index: MongoIndex[M]) = this.copy(hint = Some(index.asListMap))
-
-  override def select[F1](f: M => SelectField[F1, M])
+  def select[F1](f: M => SelectField[F1, M])
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, F1, Ord, Selected, Lim, Sk, Or] = {
     selectCase(f, (f: F1) => f)
   }
 
-  override def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])
+  def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2), Ord, Selected, Lim, Sk, Or] = {
     selectCase(f1, f2, (f1: F1, f2: F2) => (f1, f2))
   }
 
-  override def select[F1, F2, F3](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3](f1: M => SelectField[F1, M],
                                   f2: M => SelectField[F2, M],
                                   f3: M => SelectField[F3, M])
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk, Or] = {
     selectCase(f1, f2, f3, (f1: F1, f2: F2, f3: F3) => (f1, f2, f3))
   }
 
-  override def select[F1, F2, F3, F4](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3, F4](f1: M => SelectField[F1, M],
                                       f2: M => SelectField[F2, M],
                                       f3: M => SelectField[F3, M],
                                       f4: M => SelectField[F4, M])
@@ -684,7 +580,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
     selectCase(f1, f2, f3, f4, (f1: F1, f2: F2, f3: F3, f4: F4) => (f1, f2, f3, f4))
   }
 
-  override def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M],
                                           f2: M => SelectField[F2, M],
                                           f3: M => SelectField[F3, M],
                                           f4: M => SelectField[F4, M],
@@ -694,7 +590,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
     selectCase(f1, f2, f3, f4, f5, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5) => (f1, f2, f3, f4, f5))
   }
 
-  override def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M],
                                               f2: M => SelectField[F2, M],
                                               f3: M => SelectField[F3, M],
                                               f4: M => SelectField[F4, M],
@@ -705,7 +601,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
     selectCase(f1, f2, f3, f4, f5, f6, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6) => (f1, f2, f3, f4, f5, f6))
   }
 
-  override def select[F1, F2, F3, F4, F5, F6, F7](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3, F4, F5, F6, F7](f1: M => SelectField[F1, M],
                                                   f2: M => SelectField[F2, M],
                                                   f3: M => SelectField[F3, M],
                                                   f4: M => SelectField[F4, M],
@@ -718,7 +614,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7) => (f1, f2, f3, f4, f5, f6, f7))
   }
 
-  override def select[F1, F2, F3, F4, F5, F6, F7, F8](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3, F4, F5, F6, F7, F8](f1: M => SelectField[F1, M],
                                                       f2: M => SelectField[F2, M],
                                                       f3: M => SelectField[F3, M],
                                                       f4: M => SelectField[F4, M],
@@ -732,7 +628,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8) => (f1, f2, f3, f4, f5, f6, f7, f8))
   }
 
-  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
                                                           f2: M => SelectField[F2, M],
                                                           f3: M => SelectField[F3, M],
                                                           f4: M => SelectField[F4, M],
@@ -748,7 +644,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                (f1, f2, f3, f4, f5, f6, f7, f8, f9))
   }
 
-  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
+  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
                                                                f2: M => SelectField[F2, M],
                                                                f3: M => SelectField[F3, M],
                                                                f4: M => SelectField[F4, M],
@@ -768,7 +664,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
   def selectCase[F1, CC](f: M => SelectField[F1, M],
                          create: F1 => CC)(implicit ev: Sel =:= Unselected):
                        BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f(inst))
     val transformer = (xs: List[_]) => create(xs.head.asInstanceOf[F1])
     this.copy(select = Some(MongoSelect(fields, transformer)))
@@ -778,7 +674,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                              f2: M => SelectField[F2, M],
                              create: (F1, F2) => CC)
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2])
     this.copy(select = Some(MongoSelect(fields, transformer)))
@@ -789,12 +685,12 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                  f3: M => SelectField[F3, M],
                                  create: (F1, F2, F3) => CC)
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
                                               xs(2).asInstanceOf[F3])
-    this.copy(select = Some(MongoSelect(fields, transformer)))
+    this.copy(select = Some(MongoSelect[CC, M](fields, transformer)))
   }
 
   def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M],
@@ -804,7 +700,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                      create: (F1, F2, F3, F4) => CC)
                          (implicit ev: Sel =:= Unselected):
                        BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
@@ -820,7 +716,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                          f5: M => SelectField[F5, M],
                                          create: (F1, F2, F3, F4, F5) => CC)
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
@@ -838,7 +734,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                              f6: M => SelectField[F6, M],
                                              create: (F1, F2, F3, F4, F5, F6) => CC)
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
@@ -858,7 +754,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                                  f7: M => SelectField[F7, M],
                                                  create: (F1, F2, F3, F4, F5, F6, F7) => CC)
                        (   implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
@@ -880,7 +776,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                                      f8: M => SelectField[F8, M],
                                                      create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst), f8(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
@@ -904,7 +800,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                                      f9: M => SelectField[F9, M],
                                                      create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst), f8(inst), f9(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
@@ -930,7 +826,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
                                                      f10: M => SelectField[F10, M],
                                                      create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
-    val inst = meta.createRecord
+    val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst),
                       f6(inst), f7(inst), f8(inst), f9(inst), f10(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
@@ -947,332 +843,337 @@ case class BaseQuery[M <: MongoRecord[M], R,
   }
 }
 
-class BaseEmptyQuery[M <: MongoRecord[M], R,
-                     Ord <: MaybeOrdered,
-                     Sel <: MaybeSelected,
-                     Lim <: MaybeLimited,
-                     Sk <: MaybeSkipped,
-                     Or <: MaybeHasOrClause] extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
-  override lazy val meta = throw new Exception("tried to read meta field of an EmptyQuery")
+// class BaseEmptyQuery[M <: MongoRecord[M], R,
+//                      Ord <: MaybeOrdered,
+//                      Sel <: MaybeSelected,
+//                      Lim <: MaybeLimited,
+//                      Sk <: MaybeSkipped,
+//                      Or <: MaybeHasOrClause] extends AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] {
+//   override lazy val meta = throw new Exception("tried to read meta field of an EmptyQuery")
 
-  override lazy val master = throw new Exception("tried to read master field of an EmptyQuery")
+//   override lazy val master = throw new Exception("tried to read master field of an EmptyQuery")
 
-  override def where[F](clause: M => QueryClause[F]) = this
+//   override def where[F](clause: M => QueryClause[F]) = this
 
-  override def and[F](clause: M => QueryClause[F]) = this
+//   override def and[F](clause: M => QueryClause[F]) = this
 
-  override def iscan[F](clause: M => QueryClause[F]) = this
+//   override def iscan[F](clause: M => QueryClause[F]) = this
 
-  override def scan[F](clause: M => QueryClause[F]) = this
+//   override def scan[F](clause: M => QueryClause[F]) = this
 
-  override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+//   override def whereOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
 
-  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+//   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
 
-  override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+//   override def iscanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
 
-  override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
+//   override def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) = this
 
-  override def raw(f: BasicDBObjectBuilder => Unit) = this
+//   override def raw(f: BasicDBObjectBuilder => Unit) = this
 
-  override def or(subqueries: (M with MongoMetaRecord[M] =>
-                               AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
-                       (implicit ev: Or =:= HasNoOrClause) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
+//   override def or(subqueries: (M with MongoMetaRecord[M] =>
+//                                AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
+//                        (implicit ev: Or =:= HasNoOrClause) = new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause]
 
-  override def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
-    new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//   override def orderAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
+//     new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
 
-  override def orderDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
-    new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//   override def orderDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Unordered) =
+//     new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
 
-  override def andAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered) =
-    new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//   override def andAsc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered) =
+//     new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
 
-  override def andDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered) =
-    new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
+//   override def andDesc[V](field: M => QueryField[V, M])(implicit ev: Ord =:= Ordered) =
+//     new BaseEmptyQuery[M, R, Ordered, Sel, Lim, Sk, Or]
 
-  override def limit(n: Int)(implicit ev: Lim =:= Unlimited) =
-    new BaseEmptyQuery[M, R, Ord, Sel, Limited, Sk, Or]
+//   override def limit(n: Int)(implicit ev: Lim =:= Unlimited) =
+//     new BaseEmptyQuery[M, R, Ord, Sel, Limited, Sk, Or]
 
-  override def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited) =
-    new BaseEmptyQuery[M, R, Ord, Sel, Limited, Sk, Or]
+//   override def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited) =
+//     new BaseEmptyQuery[M, R, Ord, Sel, Limited, Sk, Or]
 
-  override def skip(n: Int)(implicit ev: Sk =:= Unskipped) =
-    new BaseEmptyQuery[M, R, Ord, Sel, Lim, Skipped, Or]
+//   override def skip(n: Int)(implicit ev: Sk =:= Unskipped) =
+//     new BaseEmptyQuery[M, R, Ord, Sel, Lim, Skipped, Or]
 
-  override def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped) =
-    new BaseEmptyQuery[M, R, Ord, Sel, Lim, Skipped, Or]
+//   override def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped) =
+//     new BaseEmptyQuery[M, R, Ord, Sel, Lim, Skipped, Or]
 
-  override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
+//   override def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
 
-  override def countDistinct[V](field: M => QueryField[V, M])
-                       (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
-  override def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean = false
+//   override def countDistinct[V](field: M => QueryField[V, M])
+//                        (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long = 0
+//   override def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean = false
 
-  override def foreach(f: R => Unit): Unit = ()
+//   override def foreach(f: R => Unit): Unit = ()
 
-  override def fetch(): List[R] = Nil
+//   override def fetch(): List[R] = Nil
 
-  override def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] = Nil
+//   override def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] = Nil
 
-  override def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] = Nil
+//   override def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] = Nil
 
-  override def get()(implicit ev: Lim =:= Unlimited): Option[R] = None
+//   override def get()(implicit ev: Lim =:= Unlimited): Option[R] = None
 
-  override def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
-    val emptyQuery = new BaseEmptyQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or]
-    new BasePaginatedQuery(emptyQuery, countPerPage)
-  }
+//   override def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
+//     val emptyQuery = new BaseEmptyQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or]
+//     new BasePaginatedQuery(emptyQuery, countPerPage)
+//   }
 
-  override def noop()(implicit ev1: Sel =:= Unselected,
-                      ev2: Lim =:= Unlimited,
-                      ev3: Sk =:= Unskipped) =
-    new EmptyModifyQuery[M]
+//   override def noop()(implicit ev1: Sel =:= Unselected,
+//                       ev2: Lim =:= Unlimited,
+//                       ev3: Sk =:= Unskipped) =
+//     new EmptyModifyQuery[M]
 
-  override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected,
-                               ev2: Lim =:= Unlimited,
-                               ev3: Sk =:= Unskipped): Unit = ()
+//   override def bulkDelete_!!()(implicit ev1: Sel =:= Unselected,
+//                                ev2: Lim =:= Unlimited,
+//                                ev3: Sk =:= Unskipped): Unit = ()
 
-  override def blockingBulkDelete_!!(concern: WriteConcern)
-                       (implicit ev1: Sel =:= Unselected,
-                        ev2: Lim =:= Unlimited,
-                        ev3: Sk =:= Unskipped): Unit = ()
+//   override def blockingBulkDelete_!!(concern: WriteConcern)
+//                        (implicit ev1: Sel =:= Unselected,
+//                         ev2: Lim =:= Unlimited,
+//                         ev3: Sk =:= Unskipped): Unit = ()
 
-  override def findAndDeleteOne(): Option[R] = None
+//   override def findAndDeleteOne(): Option[R] = None
 
-  override def toString = "empty query"
+//   override def toString = "empty query"
 
-  override def signature = "empty query"
+//   override def signature = "empty query"
 
-  override def explain = "{}"
+//   override def explain = "{}"
 
-  override def maxScan(max: Int) = this
+//   override def maxScan(max: Int) = this
 
-  override def comment(c: String) = this
+//   override def comment(c: String) = this
 
-  override def setSlaveOk(b: Boolean) = this
+//   override def setSlaveOk(b: Boolean) = this
 
-  override def hint(index: MongoIndex[M]) = this
+//   override def hint(index: MongoIndex[M]) = this
 
-  override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, F1, Ord, Selected, Lim, Sk, Or]
+//   override def select[F1](f: M => SelectField[F1, M])(implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, F1, Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2](f1: M => SelectField[F1, M],
-                              f2: M => SelectField[F2, M])
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, (F1, F2), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2](f1: M => SelectField[F1, M],
+//                               f2: M => SelectField[F2, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, (F1, F2), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3](f1: M => SelectField[F1, M],
-                                  f2: M => SelectField[F2, M],
-                                  f3: M => SelectField[F3, M])
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3](f1: M => SelectField[F1, M],
+//                                   f2: M => SelectField[F2, M],
+//                                   f3: M => SelectField[F3, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3, F4](f1: M => SelectField[F1, M],
-                                      f2: M => SelectField[F2, M],
-                                      f3: M => SelectField[F3, M],
-                                      f4: M => SelectField[F4, M])
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3, F4](f1: M => SelectField[F1, M],
+//                                       f2: M => SelectField[F2, M],
+//                                       f3: M => SelectField[F3, M],
+//                                       f4: M => SelectField[F4, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M],
-                                          f2: M => SelectField[F2, M],
-                                          f3: M => SelectField[F3, M],
-                                          f4: M => SelectField[F4, M],
-                                          f5: M => SelectField[F5, M])
-                       (implicit ev: Sel =:= Unselected) =
-     new BaseEmptyQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M],
+//                                           f2: M => SelectField[F2, M],
+//                                           f3: M => SelectField[F3, M],
+//                                           f4: M => SelectField[F4, M],
+//                                           f5: M => SelectField[F5, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M],
-                                              f2: M => SelectField[F2, M],
-                                              f3: M => SelectField[F3, M],
-                                              f4: M => SelectField[F4, M],
-                                              f5: M => SelectField[F5, M],
-                                              f6: M => SelectField[F6, M])
-                       (implicit ev: Sel =:= Unselected) =
-     new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M],
+//                                               f2: M => SelectField[F2, M],
+//                                               f3: M => SelectField[F3, M],
+//                                               f4: M => SelectField[F4, M],
+//                                               f5: M => SelectField[F5, M],
+//                                               f6: M => SelectField[F6, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3, F4, F5, F6, F7](f1: M => SelectField[F1, M],
-                                                  f2: M => SelectField[F2, M],
-                                                  f3: M => SelectField[F3, M],
-                                                  f4: M => SelectField[F4, M],
-                                                  f5: M => SelectField[F5, M],
-                                                  f6: M => SelectField[F6, M],
-                                                  f7: M => SelectField[F7, M])
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3, F4, F5, F6, F7](f1: M => SelectField[F1, M],
+//                                                   f2: M => SelectField[F2, M],
+//                                                   f3: M => SelectField[F3, M],
+//                                                   f4: M => SelectField[F4, M],
+//                                                   f5: M => SelectField[F5, M],
+//                                                   f6: M => SelectField[F6, M],
+//                                                   f7: M => SelectField[F7, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3, F4, F5, F6, F7, F8](f1: M => SelectField[F1, M],
-                                                      f2: M => SelectField[F2, M],
-                                                      f3: M => SelectField[F3, M],
-                                                      f4: M => SelectField[F4, M],
-                                                      f5: M => SelectField[F5, M],
-                                                      f6: M => SelectField[F6, M],
-                                                      f7: M => SelectField[F7, M],
-                                                      f8: M => SelectField[F8, M])
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3, F4, F5, F6, F7, F8](f1: M => SelectField[F1, M],
+//                                                       f2: M => SelectField[F2, M],
+//                                                       f3: M => SelectField[F3, M],
+//                                                       f4: M => SelectField[F4, M],
+//                                                       f5: M => SelectField[F5, M],
+//                                                       f6: M => SelectField[F6, M],
+//                                                       f7: M => SelectField[F7, M],
+//                                                       f8: M => SelectField[F8, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
-                                                          f2: M => SelectField[F2, M],
-                                                          f3: M => SelectField[F3, M],
-                                                          f4: M => SelectField[F4, M],
-                                                          f5: M => SelectField[F5, M],
-                                                          f6: M => SelectField[F6, M],
-                                                          f7: M => SelectField[F7, M],
-                                                          f8: M => SelectField[F8, M],
-                                                          f9: M => SelectField[F9, M])
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
+//                                                           f2: M => SelectField[F2, M],
+//                                                           f3: M => SelectField[F3, M],
+//                                                           f4: M => SelectField[F4, M],
+//                                                           f5: M => SelectField[F5, M],
+//                                                           f6: M => SelectField[F6, M],
+//                                                           f7: M => SelectField[F7, M],
+//                                                           f8: M => SelectField[F8, M],
+//                                                           f9: M => SelectField[F9, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or]
 
-  override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
-                                                               f2: M => SelectField[F2, M],
-                                                               f3: M => SelectField[F3, M],
-                                                               f4: M => SelectField[F4, M],
-                                                               f5: M => SelectField[F5, M],
-                                                               f6: M => SelectField[F6, M],
-                                                               f7: M => SelectField[F7, M],
-                                                               f8: M => SelectField[F8, M],
-                                                               f9: M => SelectField[F9, M],
-                                                               f10: M => SelectField[F10, M])
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or]
+//   override def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
+//                                                                f2: M => SelectField[F2, M],
+//                                                                f3: M => SelectField[F3, M],
+//                                                                f4: M => SelectField[F4, M],
+//                                                                f5: M => SelectField[F5, M],
+//                                                                f6: M => SelectField[F6, M],
+//                                                                f7: M => SelectField[F7, M],
+//                                                                f8: M => SelectField[F8, M],
+//                                                                f9: M => SelectField[F9, M],
+//                                                                f10: M => SelectField[F10, M])
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, CC](f: M => SelectField[F1, M],
-                                  create: F1 => CC)(implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, CC](f: M => SelectField[F1, M],
+//                                   create: F1 => CC)(implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, CC](f1: M => SelectField[F1, M],
-                                      f2: M => SelectField[F2, M],
-                                      create: (F1, F2) => CC)
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, CC](f1: M => SelectField[F1, M],
+//                                       f2: M => SelectField[F2, M],
+//                                       create: (F1, F2) => CC)
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M],
-                                          f2: M => SelectField[F2, M],
-                                          f3: M => SelectField[F3, M],
-                                          create: (F1, F2, F3) => CC)
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M],
+//                                           f2: M => SelectField[F2, M],
+//                                           f3: M => SelectField[F3, M],
+//                                           create: (F1, F2, F3) => CC)
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M],
-                                              f2: M => SelectField[F2, M],
-                                              f3: M => SelectField[F3, M],
-                                              f4: M => SelectField[F4, M],
-                                              create: (F1, F2, F3, F4) => CC)
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M],
+//                                               f2: M => SelectField[F2, M],
+//                                               f3: M => SelectField[F3, M],
+//                                               f4: M => SelectField[F4, M],
+//                                               create: (F1, F2, F3, F4) => CC)
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M],
-                                                  f2: M => SelectField[F2, M],
-                                                  f3: M => SelectField[F3, M],
-                                                  f4: M => SelectField[F4, M],
-                                                  f5: M => SelectField[F5, M],
-                                                  create: (F1, F2, F3, F4, F5) => CC)
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M],
+//                                                   f2: M => SelectField[F2, M],
+//                                                   f3: M => SelectField[F3, M],
+//                                                   f4: M => SelectField[F4, M],
+//                                                   f5: M => SelectField[F5, M],
+//                                                   create: (F1, F2, F3, F4, F5) => CC)
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M],
-                                                      f2: M => SelectField[F2, M],
-                                                      f3: M => SelectField[F3, M],
-                                                      f4: M => SelectField[F4, M],
-                                                      f5: M => SelectField[F5, M],
-                                                      f6: M => SelectField[F6, M],
-                                                      create: (F1, F2, F3, F4, F5, F6) => CC)
-                       (implicit ev: Sel =:= Unselected) =
-     new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M],
+//                                                       f2: M => SelectField[F2, M],
+//                                                       f3: M => SelectField[F3, M],
+//                                                       f4: M => SelectField[F4, M],
+//                                                       f5: M => SelectField[F5, M],
+//                                                       f6: M => SelectField[F6, M],
+//                                                       create: (F1, F2, F3, F4, F5, F6) => CC)
+//                        (implicit ev: Sel =:= Unselected) =
+//      new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, F4, F5, F6, F7, CC](f1: M => SelectField[F1, M],
-                                                          f2: M => SelectField[F2, M],
-                                                          f3: M => SelectField[F3, M],
-                                                          f4: M => SelectField[F4, M],
-                                                          f5: M => SelectField[F5, M],
-                                                          f6: M => SelectField[F6, M],
-                                                          f7: M => SelectField[F7, M],
-                                                          create: (F1, F2, F3, F4, F5, F6, F7) => CC)
-                       (implicit ev: Sel =:= Unselected) =
-      new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, F4, F5, F6, F7, CC](f1: M => SelectField[F1, M],
+//                                                           f2: M => SelectField[F2, M],
+//                                                           f3: M => SelectField[F3, M],
+//                                                           f4: M => SelectField[F4, M],
+//                                                           f5: M => SelectField[F5, M],
+//                                                           f6: M => SelectField[F6, M],
+//                                                           f7: M => SelectField[F7, M],
+//                                                           create: (F1, F2, F3, F4, F5, F6, F7) => CC)
+//                        (implicit ev: Sel =:= Unselected) =
+//       new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, CC](f1: M => SelectField[F1, M],
-                                                              f2: M => SelectField[F2, M],
-                                                              f3: M => SelectField[F3, M],
-                                                              f4: M => SelectField[F4, M],
-                                                              f5: M => SelectField[F5, M],
-                                                              f6: M => SelectField[F6, M],
-                                                              f7: M => SelectField[F7, M],
-                                                              f8: M => SelectField[F8, M],
-                                                              create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
-     (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, CC](f1: M => SelectField[F1, M],
+//                                                               f2: M => SelectField[F2, M],
+//                                                               f3: M => SelectField[F3, M],
+//                                                               f4: M => SelectField[F4, M],
+//                                                               f5: M => SelectField[F5, M],
+//                                                               f6: M => SelectField[F6, M],
+//                                                               f7: M => SelectField[F7, M],
+//                                                               f8: M => SelectField[F8, M],
+//                                                               create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
+//      (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
-                                                              f2: M => SelectField[F2, M],
-                                                              f3: M => SelectField[F3, M],
-                                                              f4: M => SelectField[F4, M],
-                                                              f5: M => SelectField[F5, M],
-                                                              f6: M => SelectField[F6, M],
-                                                              f7: M => SelectField[F7, M],
-                                                              f8: M => SelectField[F8, M],
-                                                              f9: M => SelectField[F9, M],
-                                                              create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
-     (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
+//                                                               f2: M => SelectField[F2, M],
+//                                                               f3: M => SelectField[F3, M],
+//                                                               f4: M => SelectField[F4, M],
+//                                                               f5: M => SelectField[F5, M],
+//                                                               f6: M => SelectField[F6, M],
+//                                                               f7: M => SelectField[F7, M],
+//                                                               f8: M => SelectField[F8, M],
+//                                                               f9: M => SelectField[F9, M],
+//                                                               create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
+//      (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-  override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
-                                                              f2: M => SelectField[F2, M],
-                                                              f3: M => SelectField[F3, M],
-                                                              f4: M => SelectField[F4, M],
-                                                              f5: M => SelectField[F5, M],
-                                                              f6: M => SelectField[F6, M],
-                                                              f7: M => SelectField[F7, M],
-                                                              f8: M => SelectField[F8, M],
-                                                              f9: M => SelectField[F9, M],
-                                                              f10: M => SelectField[F10, M],
-                                                              create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
-     (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
+//   override def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
+//                                                               f2: M => SelectField[F2, M],
+//                                                               f3: M => SelectField[F3, M],
+//                                                               f4: M => SelectField[F4, M],
+//                                                               f5: M => SelectField[F5, M],
+//                                                               f6: M => SelectField[F6, M],
+//                                                               f7: M => SelectField[F7, M],
+//                                                               f8: M => SelectField[F8, M],
+//                                                               f9: M => SelectField[F9, M],
+//                                                               f10: M => SelectField[F10, M],
+//                                                               create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
+//      (implicit ev: Sel =:= Unselected) = new BaseEmptyQuery[M, CC, Ord, Selected, Lim, Sk, Or]
 
-}
+// }
 
 // *******************************************************
 // *** Modify Queries
 // *******************************************************
 
-trait AbstractModifyQuery[M <: MongoRecord[M]] {
-  def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
+// trait AbstractModifyQuery[M <: MongoRecord[M]] {
+//   def modify[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
 
-  def and[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
+//   def and[F](clause: M => ModifyClause[F]): AbstractModifyQuery[M]
 
-  def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
+//   def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
 
-  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
+//   def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractModifyQuery[M]
 
-  def updateMulti(): Unit
+//   def updateMulti(): Unit
 
-  def updateOne(): Unit
+//   def updateOne(): Unit
 
-  def upsertOne(): Unit
+//   def upsertOne(): Unit
 
-  // These must be overloads and not default arguments because Scala does not allow a caller to omit parentheses
-  // when there are default arguments. As many existing uses of these methods omit the parentheses, these overloads
-  // are necessary to avoid breaking callers.
-  def updateMulti(writeConcern: WriteConcern): Unit
+//   // These must be overloads and not default arguments because Scala does not allow a caller to omit parentheses
+//   // when there are default arguments. As many existing uses of these methods omit the parentheses, these overloads
+//   // are necessary to avoid breaking callers.
+//   def updateMulti(writeConcern: WriteConcern): Unit
 
-  def updateOne(writeConcern: WriteConcern): Unit
+//   def updateOne(writeConcern: WriteConcern): Unit
 
-  def upsertOne(writeConcern: WriteConcern): Unit
-}
+//   def upsertOne(writeConcern: WriteConcern): Unit
+// }
 
-case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: MaybeOrdered,
-                                                                 _ <: MaybeSelected,
-                                                                 _ <: MaybeLimited,
-                                                                 _ <: MaybeSkipped,
-                                                                 _ <: MaybeHasOrClause],
-                                                mod: MongoModify) extends AbstractModifyQuery[M] {
+case class BaseModifyQuery[M](
+  	query: BaseQuery[
+        M,
+        _,
+        _ <: MaybeOrdered,
+        _ <: MaybeSelected,
+        _ <: MaybeLimited,
+        _ <: MaybeSkipped,
+        _ <: MaybeHasOrClause],
+    mod: MongoModify
+) {
 
   private def addClause[F](clause: M => ModifyClause[F]) = {
     this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
 
-  override def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
-  override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def and[F](clause: M => ModifyClause[F]) = addClause(clause)
 
   private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
     opt match {
@@ -1281,90 +1182,76 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
     }
   }
 
-  override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
 
-  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
 
-  // These methods always do modifications against master (not query.meta, which could point to a slave).
-  override def updateMulti(): Unit =
-      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = None)
-
-  override def updateOne(): Unit =
-      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = None)
-
-  override def upsertOne(): Unit =
-      QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = None)
-
-  override def updateMulti(writeConcern: WriteConcern): Unit =
-      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = Some(writeConcern))
-
-  override def updateOne(writeConcern: WriteConcern): Unit =
-      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = Some(writeConcern))
-
-  override def upsertOne(writeConcern: WriteConcern): Unit =
-      QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = Some(writeConcern))
-
-  override def toString = MongoBuilder.buildModifyString(this)
+  override def toString: String = sys.error("TODO") // MongoBuilder.buildModifyString(this)
 }
 
-class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
-  override def modify[F](clause: M => ModifyClause[F]) = this
+// class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
+//   override def modify[F](clause: M => ModifyClause[F]) = this
 
-  override def and[F](clause: M => ModifyClause[F]) = this
+//   override def and[F](clause: M => ModifyClause[F]) = this
 
-  override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+//   override def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
-  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+//   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
-  override def updateMulti(): Unit = ()
+//   override def updateMulti(): Unit = ()
 
-  override def updateOne(): Unit = ()
+//   override def updateOne(): Unit = ()
 
-  override def upsertOne(): Unit = ()
+//   override def upsertOne(): Unit = ()
 
-  def updateMulti(writeConcern: WriteConcern): Unit = ()
+//   def updateMulti(writeConcern: WriteConcern): Unit = ()
 
-  def updateOne(writeConcern: WriteConcern): Unit = ()
+//   def updateOne(writeConcern: WriteConcern): Unit = ()
 
-  def upsertOne(writeConcern: WriteConcern): Unit = ()
+//   def upsertOne(writeConcern: WriteConcern): Unit = ()
 
-  override def toString = "empty modify query"
-}
+//   override def toString = "empty modify query"
+// }
 
 // *******************************************************
 // *** FindAndModify Queries
 // *******************************************************
 
-trait AbstractFindAndModifyQuery[M <: MongoRecord[M], R] {
-  def findAndModify[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+// trait AbstractFindAndModifyQuery[M <: MongoRecord[M], R] {
+//   def findAndModify[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
 
-  def and[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+//   def and[F](clause: M => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
 
-  def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+//   def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
 
-  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
+//   def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]): AbstractFindAndModifyQuery[M, R]
 
-  def updateOne(returnNew: Boolean = false): Option[R]
+//   def updateOne(returnNew: Boolean = false): Option[R]
 
-  def upsertOne(returnNew: Boolean = false): Option[R]
-}
+//   def upsertOne(returnNew: Boolean = false): Option[R]
+// }
 
-case class BaseFindAndModifyQuery[M <: MongoRecord[M], R](query: BaseQuery[M, R, _ <: MaybeOrdered,
-                                                                           _ <: MaybeSelected,
-                                                                           _ <: MaybeLimited,
-                                                                           _ <: MaybeSkipped,
-                                                                           _ <: MaybeHasOrClause],
-                                                          mod: MongoModify) extends AbstractFindAndModifyQuery[M, R] {
+case class BaseFindAndModifyQuery[M, R](
+    query: BaseQuery[
+        M,
+        R,
+        _ <: MaybeOrdered,
+        _ <: MaybeSelected,
+        _ <: MaybeLimited,
+        _ <: MaybeSkipped,
+        _ <: MaybeHasOrClause],
+    mod: MongoModify
+) {
 
   private def addClause[F](clause: M => ModifyClause[F]) = {
     this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
 
-  override def findAndModify[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def findAndModify[F](clause: M => ModifyClause[F]) = addClause(clause)
 
-  override def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def and[F](clause: M => ModifyClause[F]) = addClause(clause)
 
   private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
     opt match {
@@ -1373,51 +1260,43 @@ case class BaseFindAndModifyQuery[M <: MongoRecord[M], R](query: BaseQuery[M, R,
     }
   }
 
-  override def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
 
-  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
 
-  // Always do modifications against master (not query.meta, which could point to slave)
-  override def updateOne(returnNew: Boolean = false): Option[R] = {
-    QueryExecutor.findAndModify(this, returnNew, upsert=false, remove=false)(query.parseDBObject _)
-  }
-  override def upsertOne(returnNew: Boolean = false): Option[R] = {
-    QueryExecutor.findAndModify(this, returnNew, upsert=true, remove=false)(query.parseDBObject _)
-  }
-
-  override def toString = MongoBuilder.buildFindAndModifyString(this, false, false, false)
+  override def toString: String = sys.error("TODO") // MongoBuilder.buildFindAndModifyString(this, false, false, false)
 }
 
-class EmptyFindAndModifyQuery[M <: MongoRecord[M], R] extends AbstractFindAndModifyQuery[M, R] {
-  override def findAndModify[F](clause: M => ModifyClause[F]) = this
+// class EmptyFindAndModifyQuery[M <: MongoRecord[M], R] extends AbstractFindAndModifyQuery[M, R] {
+//   override def findAndModify[F](clause: M => ModifyClause[F]) = this
 
-  override def and[F](clause: M => ModifyClause[F]) = this
+//   override def and[F](clause: M => ModifyClause[F]) = this
 
-  override def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+//   override def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
-  override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
+//   override def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = this
 
-  override def updateOne(returnNew: Boolean = false): Option[Nothing] = None
+//   override def updateOne(returnNew: Boolean = false): Option[Nothing] = None
 
-  override def upsertOne(returnNew: Boolean = false): Option[Nothing] = None
+//   override def upsertOne(returnNew: Boolean = false): Option[Nothing] = None
 
-  override def toString = "empty findAndModify query"
-}
+//   override def toString = "empty findAndModify query"
+// }
 
-class BasePaginatedQuery[M <: MongoRecord[M], R]
-        (q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
-         val countPerPage: Int, val pageNum: Int = 1) {
-  def copy() = new BasePaginatedQuery(q, countPerPage, pageNum)
+// class BasePaginatedQuery[M <: MongoRecord[M], R]
+//         (q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
+//          val countPerPage: Int, val pageNum: Int = 1) {
+//   def copy() = new BasePaginatedQuery(q, countPerPage, pageNum)
 
-  def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, countPerPage, p)
+//   def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, countPerPage, p)
 
-  def setCountPerPage(c: Int) = if (c == countPerPage) this else new BasePaginatedQuery(q, c, pageNum)
+//   def setCountPerPage(c: Int) = if (c == countPerPage) this else new BasePaginatedQuery(q, c, pageNum)
 
-  lazy val countAll: Long = q.count
+//   lazy val countAll: Long = q.count
 
-  def fetch(): List[R] = q.skip(countPerPage * (pageNum - 1)).limit(countPerPage).fetch()
+//   def fetch(): List[R] = q.skip(countPerPage * (pageNum - 1)).limit(countPerPage).fetch()
 
-  def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
-}
+//   def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
+// }

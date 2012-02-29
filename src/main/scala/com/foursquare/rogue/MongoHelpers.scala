@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import com.mongodb.{BasicDBObjectBuilder, Bytes, DBObject, DBCursor, WriteConcern}
 import net.liftweb.mongodb.MongoDB
-import net.liftweb.mongodb.record.MongoRecord
+import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
 import scala.collection.immutable.ListMap
 
 object MongoHelpers extends Rogue {
@@ -16,8 +16,7 @@ object MongoHelpers extends Rogue {
 
   sealed case class MongoModify(clauses: List[ModifyClause[_]])
 
-  sealed case class MongoSelect[R, M <: MongoRecord[M]](fields: List[SelectField[_, M]],
-                                                        transformer: List[_] => R)
+  sealed case class MongoSelect[R, M](fields: List[SelectField[_, M]], transformer: List[_] => R)
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
@@ -73,7 +72,7 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
-    def buildSelect[R, M <: MongoRecord[M]](s: MongoSelect[R, M]): DBObject = {
+    def buildSelect[R, M <: MongoRecord[_]](s: MongoSelect[R, M]): DBObject = {
       buildSelectFromNames(s.fields.view.map(_.field.name))
     }
 
@@ -87,7 +86,7 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
-    def buildHint[R, M <: MongoRecord[M]](h: ListMap[String, Any]): DBObject = {
+    def buildHint[R, M <: MongoRecord[_]](h: ListMap[String, Any]): DBObject = {
       val builder = BasicDBObjectBuilder.start
       h.foreach{ case (field, attr) => {
         builder.add(field, attr)
@@ -95,7 +94,7 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
-    def buildQueryString[R, M <: MongoRecord[M]](operation: String, query: GenericBaseQuery[M, R]): String = {
+    def buildQueryString[R, M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String, query: GenericBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
@@ -109,14 +108,14 @@ object MongoHelpers extends Rogue {
       sb.toString
     }
 
-    def buildConditionString[R, M <: MongoRecord[M]](operation: String, query: GenericBaseQuery[M, R]): String = {
+    def buildConditionString[R, M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String, query: GenericBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(query.meta.collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
       sb.append(")")
       sb.toString
     }
 
-    def buildModifyString[R, M <: MongoRecord[M]](modify: BaseModifyQuery[M],
+    def buildModifyString[R, M <: MongoRecord[_] with MongoMetaRecord[_]](modify: BaseModifyQuery[M],
                                                   upsert: Boolean = false, multi: Boolean = false): String = {
       "db.%s.update(%s, %s, %s, %s)".format(
         modify.query.meta.collectionName,
@@ -127,7 +126,7 @@ object MongoHelpers extends Rogue {
       )
     }
 
-    def buildFindAndModifyString[R, M <: MongoRecord[M]](mod: BaseFindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
+    def buildFindAndModifyString[R, M <: MongoRecord[_] with MongoMetaRecord[_]](mod: BaseFindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
       val query = mod.query
       val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(
           query.meta.collectionName, buildCondition(query.condition)))
@@ -141,7 +140,7 @@ object MongoHelpers extends Rogue {
       sb.toString
     }
 
-    def buildSignature[R, M <: MongoRecord[M]](query: GenericBaseQuery[M, R]): String = {
+    def buildSignature[R, M <: MongoRecord[_] with MongoMetaRecord[_]](query: GenericBaseQuery[M, R]): String = {
       val sb = new StringBuilder("db.%s.find(".format(query.meta.collectionName))
       sb.append(buildCondition(query.condition, signature = true).toString)
       sb.append(")")
@@ -150,13 +149,13 @@ object MongoHelpers extends Rogue {
     }
   }
 
-  object QueryExecutor {
+  object LegacyQueryExecutor {
 
     import QueryHelpers._
     import MongoHelpers.MongoBuilder._
 
-    private[rogue] def runCommand[T](description: => String,
-                                     query: GenericBaseQuery[_, _])(f: => T): T = {
+    private[rogue] def runCommand[T, M <: MongoRecord[_] with MongoMetaRecord[_]](description: => String,
+                                     query: GenericBaseQuery[M, _])(f: => T): T = {
       val start = System.currentTimeMillis
       try {
         f
@@ -170,7 +169,7 @@ object MongoHelpers extends Rogue {
       }
     }
 
-    def condition[M <: MongoRecord[M], T](operation: String,
+    def condition[M <: MongoRecord[_] with MongoMetaRecord[_], T](operation: String,
                                           query: GenericBaseQuery[M, _])
                                          (f: DBObject => T): T = {
       val queryClause = transformer.transformQuery(query)
@@ -183,7 +182,7 @@ object MongoHelpers extends Rogue {
       }
     }
 
-    def modify[M <: MongoRecord[M], T](mod: BaseModifyQuery[M],
+    def modify[M <: MongoRecord[_] with MongoMetaRecord[_], T](mod: BaseModifyQuery[M],
                                        upsert: Boolean,
                                        multi: Boolean,
                                        writeConcern: Option[WriteConcern] = None): Unit = {
@@ -195,8 +194,8 @@ object MongoHelpers extends Rogue {
         lazy val description = buildModifyString(modClause, upsert = upsert, multi = multi)
 
         runCommand(description, modClause.query) {
-          MongoDB.useSession(mod.query.master.mongoIdentifier) { db =>
-            val coll = db.getCollection(mod.query.master.collectionName)
+          MongoDB.useSession(mod.query/* TODO: .master*/.meta.mongoIdentifier) { db =>
+            val coll = db.getCollection(mod.query/* TODO .master */.meta.collectionName)
             writeConcern match {
               case Some(theWriteConcern) => coll.update(q, m, upsert, multi, theWriteConcern)
               case None => coll.update(q, m, upsert, multi)
@@ -206,7 +205,7 @@ object MongoHelpers extends Rogue {
       }
     }
 
-    def findAndModify[M <: MongoRecord[M], R](mod: BaseFindAndModifyQuery[M, R],
+    def findAndModify[M <: MongoRecord[_] with MongoMetaRecord[_], R](mod: BaseFindAndModifyQuery[M, R],
                                               returnNew: Boolean,
                                               upsert: Boolean,
                                               remove: Boolean)
@@ -232,7 +231,7 @@ object MongoHelpers extends Rogue {
       else None
     }
 
-    def query[M <: MongoRecord[M]](operation: String,
+    def query[M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String,
                                    query: GenericBaseQuery[M, _],
                                    batchSize: Option[Int])
                                   (f: DBObject => Unit): Unit = {
@@ -243,7 +242,7 @@ object MongoHelpers extends Rogue {
       }
     }
 
-    def explain[M <: MongoRecord[M]](operation: String,
+    def explain[M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String,
                                      query: GenericBaseQuery[M, _]): String = {
       var explanation = ""
       doQuery(operation, query){cursor =>
@@ -252,7 +251,7 @@ object MongoHelpers extends Rogue {
       explanation
     }
 
-    private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
+    private[rogue] def doQuery[M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String,
                                    query: GenericBaseQuery[M, _])
                                   (f: DBCursor  => Unit): Unit = {
 

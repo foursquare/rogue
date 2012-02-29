@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.recordv2.Field
+import com.foursquare.recordv2.{Field, OptionalField, RequiredField, Selectable}
 import com.mongodb.DBObject
 import java.util.Calendar
 import java.util.regex.Pattern
@@ -193,20 +193,19 @@ class StringQueryField[M](val field: Field[String, M]) {
 }
 
 class CaseClassQueryField[V, M](val field: Field[V, M]) {
-  // def unsafeField[F](name: String): SelectableDummyField[F, M] =
-  //   new SelectableDummyField[F, M](field.owner, field.name + "." + name)
+  def unsafeField[F](name: String): SelectableDummyField[F, M] =
+    new SelectableDummyField[F, M](field.name + "." + name, field.owner)
 }
 
-class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject)
+class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, defaultValue: B)
     extends AbstractNumericQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
-  // def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
-  //   val rec = field.defaultValue // a hack to get at the embedded record
-  //   new SelectableDummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
-  // }
-  // 
-  // def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
+  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
+    new SelectableDummyField[V, M](field.name + "." + subfield(defaultValue).name, field.owner)
+  }
+
+  def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
 }
 
 // This class is a hack to get $pull working for lists of objects. In that case,
@@ -216,14 +215,13 @@ class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject)
 //   { "field.subfield" : { "$gt" : 3 }}
 // So, normally, we need to just have one level of nesting, but here we want two.
 class BsonRecordQueryFieldInPullContext[M, B]
-    (field: Field[B, M], asDBObject: B => DBObject)
+    (field: Field[B, M], rec: B, asDBObject: B => DBObject)
     extends AbstractNumericQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
-  // def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
-  //   val rec = field.defaultValue // a hack to get at the embedded record
-  //   new SelectableDummyField[V, M](field.owner, subfield(rec).name)
-  // }
+  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
+    new SelectableDummyField[V, M](subfield(rec).name, field.owner)
+  }
 }
 
 abstract class AbstractListQueryField[V, DB, M](val field: Field[List[V], M]) {
@@ -248,10 +246,10 @@ abstract class AbstractListQueryField[V, DB, M](val field: Field[List[V], M]) {
   def notcontains(v: V) =
     new NeQueryClause(field.name, valueToDB(v))
 
-  // def at(i: Int): DummyField[V, M] =
-  //   new DummyField[V, M](field.owner, field.name + "." + i.toString)
+  def at(i: Int): DummyField[V, M] =
+    new DummyField[V, M](field.name + "." + i.toString, field.owner)
 
-  // def idx(i: Int): DummyField[V, M] = at(i)
+  def idx(i: Int): DummyField[V, M] = at(i)
 }
 
 class ListQueryField[V, M](field: Field[List[V], M])
@@ -263,26 +261,26 @@ class CaseClassListQueryField[V, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, DBObject, M](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
 
-  // def unsafeField[F](name: String): DummyField[F, M] =
-  //   new DummyField[F, M](field.owner, field.name + "." + name)
+  def unsafeField[F](name: String): DummyField[F, M] =
+    new DummyField[F, M](field.name + "." + name, field.owner)
 }
 
 class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObject: B => DBObject)
     extends AbstractListQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
-  // def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
-  //   new DummyField[V, M](field.owner, field.name + "." + subfield(rec).name)
-  // }
+  def subfield[V](subfield: B => Field[V, B]): DummyField[V, M] = {
+    new DummyField[V, M](field.name + "." + subfield(rec).name, field.owner)
+  }
 
-  // def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
-  //   new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
-  // }
+  def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
+    new SelectableDummyField[List[V], M](field.name + "." + subfield(rec).name, field.owner)
+  }
 }
 
 class MapQueryField[V, M](val field: Field[Map[String, V], M]) {
-  // def at(key: String): SelectableDummyField[V, M] =
-  //   new SelectableDummyField[V, M](field.owner, field.name + "." + key)
+  def at(key: String): SelectableDummyField[V, M] =
+    new SelectableDummyField(field.name + "." + key, field.owner)
 }
 
 class EnumerationListQueryField[V <: Enumeration#Value, M](field: Field[List[V], M])
@@ -386,11 +384,11 @@ abstract class AbstractListModifyField[V, DB, M](val field: Field[List[V], M]) {
     new ModifyClause(ModOps.PullAll,
                      field.name -> QueryHelpers.list(valuesToDB(vs)))
 
-  // def $: Field[V, M] = new DummyField[V, M](field.owner, field.name + ".$")
+  def $: Field[V, M] = new DummyField[V, M](field.name + ".$", field.owner)
 
-  // def pullWhere(clauseFuncs: (Field[V, M] => QueryClause[_])*) =
-  //   new ModifyPullWithPredicateClause(field.name,
-  //                                     clauseFuncs.map(cf => cf(new DummyField[V, M](field.owner, field.name))): _*)
+  def pullWhere(clauseFuncs: (Field[V, M] => QueryClause[_])*) =
+    new ModifyPullWithPredicateClause(field.name,
+                                      clauseFuncs.map(cf => cf(new DummyField[V, M](field.name, field.owner))): _*)
 }
 
 class ListModifyField[V, M](field: Field[List[V], M])
@@ -418,30 +416,33 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
   //   }
   // }
 
-  // def pullObjectWhere[V](clauseFuncs: BsonRecordQueryFieldInPullContext[M, B] => QueryClause[_]*) = {
-  //   new ModifyPullObjWithPredicateClause(
-  //       field.name,
-  //     clauseFuncs.map(cf => cf(
-  //       new BsonRecordQueryFieldInPullContext(
-  //         new MandatoryDummyField[B, M](field.owner, field.name, rec)))): _*)
-  // }
+  def pullObjectWhere[V](clauseFuncs: BsonRecordQueryFieldInPullContext[M, B] => QueryClause[_]*) = {
+    new ModifyPullObjWithPredicateClause(
+        field.name,
+      clauseFuncs.map(cf => cf(
+        new BsonRecordQueryFieldInPullContext(
+          new RequiredDummyField[B, M](field.name, field.owner, rec),
+          rec,
+          asDBObject
+        ))): _*)
+  }
 }
 
 // ********************************************************************************
 // *** Select fields
 // ********************************************************************************
 
-abstract class SelectField[V, M](val field: Field[_, M]) {
+abstract class SelectField[V, M](val field: Field[_, M] with Selectable) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
   def apply(v: Any): Any
 }
 
-class MandatorySelectField[V, M](override val field: Field[V, M])
+class MandatorySelectField[V, M](override val field: RequiredField[V, M])
     extends SelectField[V, M](field) {
   override def apply(v: Any): Any = v.asInstanceOf[Box[V]].openOr(field.defaultValue)
 }
 
-class OptionalSelectField[V, M](override val field: Field[V, M])
+class OptionalSelectField[V, M](override val field: OptionalField[V, M])
     extends SelectField[Box[V], M](field) {
   override def apply(v: Any): Any = v.asInstanceOf[Box[V]]
 }
@@ -449,6 +450,12 @@ class OptionalSelectField[V, M](override val field: Field[V, M])
 // ********************************************************************************
 // *** Dummy field
 // ********************************************************************************
+
+class DummyField[V, R](override val name: String, override val owner: R) extends Field[V, R]
+
+class SelectableDummyField[V, R](override val name: String, override val owner: R) extends OptionalField[V, R]
+
+class RequiredDummyField[V, R](override val name: String, override val owner: R, override val defaultValue: V) extends RequiredField[V, R]
 
 // trait AbstractDummyField[V, M] extends Field[V, M]
 

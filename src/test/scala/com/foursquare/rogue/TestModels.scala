@@ -1,7 +1,7 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue
 
-import com.foursquare.rogue.Rogue._
+import com.foursquare.rogue.LiftRogue._
 
 import com.mongodb.{Mongo, ServerAddress}
 import net.liftweb.mongodb.{MongoDB, MongoIdentifier}

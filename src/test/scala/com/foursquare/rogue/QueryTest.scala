@@ -1,7 +1,7 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue
 
-import com.foursquare.rogue.Rogue._
+import com.foursquare.rogue.LiftRogue._
 
 import java.util.regex.Pattern
 import net.liftweb.mongodb.record._
@@ -699,7 +699,7 @@ class QueryTest extends SpecsMatchers {
         new PrintWriter(stringWriter))
 
     interpreter.interpret("""import com.foursquare.rogue._""")
-    interpreter.interpret("""import com.foursquare.rogue.Rogue._""")
+    interpreter.interpret("""import com.foursquare.rogue.LiftRogue._""")
     interpreter.interpret("""import org.bson.types.ObjectId""")
     interpreter.interpret("""import org.joda.time.DateTime""")
 
