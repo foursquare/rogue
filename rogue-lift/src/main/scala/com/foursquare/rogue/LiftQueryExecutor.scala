@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.rogue.MongoHelpers.{LegacyQueryExecutor, MongoModify, MongoSelect}
+import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
 import com.mongodb.{DBObject, ReadPreference, WriteConcern}
 import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
 import scala.collection.mutable.ListBuffer
@@ -15,7 +15,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
 
   protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       meta: M,
-      select: Option[MongoSelect[R, M]]
+      select: Option[MongoSelect[R]]
   ): LiftRogueSerializer[R]
 
   override def count[M <: MongoRecord[_] with MongoMetaRecord[_], Lim <: MaybeLimited, Sk <: MaybeSkipped](

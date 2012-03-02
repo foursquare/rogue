@@ -67,7 +67,7 @@ class EndToEndTest extends SpecsMatchers {
     val vc = baseTestVenueClaim(v.id).save
 
     // eqs
-    Venue.where(_._id eqs v.id).fetch().map(_.id)                         must_== List(v.id)
+    metaRecordToQueryBuilder(Venue).where(_._id eqs v.id).fetch().map(_.id)                         must_== List(v.id)
     Venue.where(_.mayor eqs v.mayor.value).fetch().map(_.id)              must_== List(v.id)
     Venue.where(_.mayor eqs v.mayor.value).fetch().map(_.id)              must_== List(v.id)
     Venue.where(_.venuename eqs v.venuename.value).fetch().map(_.id)      must_== List(v.id)

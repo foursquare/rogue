@@ -18,15 +18,15 @@ import net.liftweb.mongodb.record.field.{
 import org.bson.types.ObjectId
 
 trait LiftRogue extends Rogue {
-  def OrQuery[M <: MongoRecord[M]]
-      (subqueries: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _]*)
-      : AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause] = {
+  def OrQuery[M <: MongoRecord[M], R]
+      (subqueries: AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, _]*)
+      : AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, HasOrClause] = {
     subqueries.toList match {
       case Nil => throw new RogueException("No subqueries supplied to OrQuery", null)
       case q :: qs => {
         val orCondition = QueryHelpers.orConditionFromQueries(q :: qs)
-        BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](
-          q.meta, None, None, None, None, None,
+        BaseQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](
+          q.meta, q.collectionName, None, None, None, None, None,
           AndCondition(Nil, Some(orCondition)), None, None, None)
       }
     }
@@ -38,10 +38,10 @@ trait LiftRogue extends Rogue {
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]]
       (rec: M with MongoMetaRecord[M]): BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
     BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
-      rec, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+      rec, rec.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
 
   implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): AbstractModifyQuery[M] =
-      BaseModifyQuery(metaRecordToQueryBuilder(rec), MongoModify(Nil))
+      BaseModifyQuery[M](metaRecordToQueryBuilder[M](rec), MongoModify(Nil))
 
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
       IndexBuilder(rec)
@@ -276,3 +276,13 @@ trait LiftRogue extends Rogue {
 }
 
 object LiftRogue extends LiftRogue
+
+// object LiftQueryS {
+//   def apply[
+//       R <: MongoRecord[R]
+//   ](
+//       meta: R with MongoMetaRecord[R]
+//   ): BaseQuery[R, R, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
+//     BaseQuery[R, R, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
+//       meta, meta.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+// }

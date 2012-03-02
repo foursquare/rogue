@@ -432,7 +432,7 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
 // *** Select fields
 // ********************************************************************************
 
-abstract class SelectField[V, M](val field: Field[_, M] with Selectable) {
+abstract class SelectField[V, +M](val field: Field[_, M] with Selectable) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
   def apply(v: Any): Any
 }

@@ -17,9 +17,13 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     case _       => "2.4-M2"
   }
   Seq(
-    "net.liftweb"             %% "lift-mongodb-record" % liftVersion  % "compile" intransitive(),
+    // "net.liftweb"             %% "lift-mongodb-record" % liftVersion  % "compile" intransitive(),
     "net.liftweb"             %% "lift-mongodb"        % liftVersion  % "compile" intransitive(),
-    "net.liftweb"             %% "lift-record"         % liftVersion  % "compile",
+    // "net.liftweb"             %% "lift-record"         % liftVersion  % "compile",
+    "net.liftweb"             %% "lift-common"         % liftVersion  % "compile",
+    "net.liftweb"             %% "lift-json"           % liftVersion  % "compile",
+    "joda-time"                % "joda-time"           % "2.0"        % "provided",
+    "org.joda"                 % "joda-convert"        % "1.2"        % "provided",
     "org.mongodb"              % "mongo-java-driver"   % "2.7.2"      % "compile",
     "junit"                    % "junit"               % "4.5"        % "test",
     "com.novocode"             % "junit-interface"     % "0.6"        % "test",

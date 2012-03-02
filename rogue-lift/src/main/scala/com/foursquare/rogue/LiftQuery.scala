@@ -18,6 +18,13 @@ case class LiftQuery[
     query: BaseQuery[M, R, Ord, Sel, Lim, Sk, Or],
     db: LiftQueryExecutor
 ) {
+  // def or(subqueries: (M => AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, _])*)
+  //                      (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
+  //   val queries = subqueries.toList.map(q => q(query.meta))
+  //   val orCondition = QueryHelpers.orConditionFromQueries(queries)
+  //   query.copy(condition = query.condition.copy(orCondition = Some(orCondition)))
+  // }
+
   def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
     db.count(query)
 
@@ -26,7 +33,7 @@ case class LiftQuery[
     db.countDistinct(query)(field)
 
   def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean =
-    db.fetch(query.copy(select = Some(MongoSelect[Null, M](Nil, _ => null))).limit(1)).size > 0
+    db.fetch(query.copy(select = Some(MongoSelect[Null](Nil, _ => null))).limit(1)).size > 0
 
   def foreach(f: R => Unit): Unit =
     db.foreach(query)(f)

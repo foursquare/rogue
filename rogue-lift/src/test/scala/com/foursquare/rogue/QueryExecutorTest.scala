@@ -3,7 +3,7 @@ package com.foursquare.rogue
 
 import org.junit._
 import org.specs.SpecsMatchers
-import com.foursquare.rogue.MongoHelpers.{AndCondition, LegacyQueryExecutor}
+import com.foursquare.rogue.MongoHelpers.AndCondition
 import net.liftweb.mongodb.record.{MongoId, MongoRecord, MongoMetaRecord}
 
 class LegacyQueryExecutorTest extends SpecsMatchers {
@@ -18,7 +18,7 @@ class LegacyQueryExecutorTest extends SpecsMatchers {
   @Test
   def testExeptionInRunCommandIsDecorated {
     val query = BaseQuery[Dummy.type, Dummy, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
-      Dummy, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+      Dummy, "Dummy", None, None, None, None, None, AndCondition(Nil, None), None, None, None)
     (LegacyQueryExecutor.runCommand("hello", query){
       throw new RuntimeException("bang")
       "hi"

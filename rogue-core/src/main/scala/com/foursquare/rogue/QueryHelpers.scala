@@ -7,12 +7,9 @@ import com.mongodb.DBObject
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
 import net.liftweb.mongodb.{JObjectParser, ObjectIdSerializer}
-import net.liftweb.mongodb.record.{MongoId, MongoRecord}
 
 case class Degrees(value: Double)
 case class LatLong(lat: Double, long: Double)
-
-trait HasMongoForeignObjectId[RefType <: MongoRecord[RefType] with MongoId[RefType]]
 
 object QueryHelpers {
   class DBObjectSerializer extends Serializer[DBObject] {
@@ -53,17 +50,17 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
-    def validateQuery[M <: MongoRecord[_]](query: BaseQuery[M, _, _, _, _, _, _]): Unit
-    def validateModify[M <: MongoRecord[_]](modify: BaseModifyQuery[M]): Unit
-    def validateFindAndModify[M <: MongoRecord[_], R](modify: BaseFindAndModifyQuery[M, R]): Unit
+    def validateQuery[M](query: BaseQuery[M, _, _, _, _, _, _]): Unit
+    def validateModify[M](modify: BaseModifyQuery[M]): Unit
+    def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): Unit
   }
 
   class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
-    override def validateQuery[M <: MongoRecord[_]](query: BaseQuery[M, _, _, _, _, _, _]) {}
-    override def validateModify[M <: MongoRecord[_]](modify: BaseModifyQuery[M]) {}
-    override def validateFindAndModify[M <: MongoRecord[_], R](modify: BaseFindAndModifyQuery[M, R]) {}
+    override def validateQuery[M](query: BaseQuery[M, _, _, _, _, _, _]) {}
+    override def validateModify[M](modify: BaseModifyQuery[M]) {}
+    override def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]) {}
   }
 
   object NoopQueryValidator extends DefaultQueryValidator
@@ -71,15 +68,15 @@ object QueryHelpers {
   var validator: QueryValidator = NoopQueryValidator
 
   trait QueryTransformer {
-    def transformQuery[M <: MongoRecord[_]](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _]
-    def transformModify[M <: MongoRecord[_]](modify: BaseModifyQuery[M]): BaseModifyQuery[M]
-    def transformFindAndModify[M <: MongoRecord[_], R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R]
+    def transformQuery[M](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _]
+    def transformModify[M](modify: BaseModifyQuery[M]): BaseModifyQuery[M]
+    def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R]
   }
 
   class DefaultQueryTransformer extends QueryTransformer {
-    override def transformQuery[M <: MongoRecord[_]](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _] = { query }
-    override def transformModify[M <: MongoRecord[_]](modify: BaseModifyQuery[M]): BaseModifyQuery[M] = { modify }
-    override def transformFindAndModify[M <: MongoRecord[_], R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R] = { modify }
+    override def transformQuery[M](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _] = { query }
+    override def transformModify[M](modify: BaseModifyQuery[M]): BaseModifyQuery[M] = { modify }
+    override def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R] = { modify }
   }
 
   object NoopQueryTransformer extends DefaultQueryTransformer

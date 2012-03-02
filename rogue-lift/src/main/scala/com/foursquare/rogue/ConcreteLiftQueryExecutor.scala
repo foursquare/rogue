@@ -17,7 +17,7 @@ class ConcreteLiftQueryExecutor extends LiftQueryExecutor {
 
   override protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       meta: M,
-      select: Option[MongoSelect[R, M]]
+      select: Option[MongoSelect[R]]
   ): LiftRogueSerializer[R] = {
     new LiftRogueSerializer[R] {
       override def fromDBObject(dbo: DBObject): R = select match {

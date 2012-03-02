@@ -3,10 +3,9 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers.{
-    AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect, LegacyQueryExecutor}
+    AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect}
 import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
 import net.liftweb.common.{Box, Full}
-import net.liftweb.mongodb.record.MongoRecord
 import org.bson.types.BasicBSONList
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListMap
@@ -447,7 +446,8 @@ case class BaseQuery[
     Sk <: MaybeSkipped,
     Or <: MaybeHasOrClause
 ](
-    val meta: M,
+    meta: M,
+    collectionName: String,
     lim: Option[Int],
     sk: Option[Int],
     maxScan: Option[Int],
@@ -455,7 +455,7 @@ case class BaseQuery[
     hint: Option[ListMap[String, Any]],
     condition: AndCondition,
     order: Option[MongoOrder],
-    select: Option[MongoSelect[R, M]],
+    select: Option[MongoSelect[R]],
     slaveOk: Option[Boolean]
 ) {
 
@@ -508,11 +508,22 @@ case class BaseQuery[
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }
 
-  def or(subqueries: (Rogue.Query[M] => AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, _])*)
+  def or(subqueries: (AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] => AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, _])*)
                        (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
-    // val orCondition = QueryHelpers.orConditionFromQueries(subqueries.toList.map(q => q(meta)))
-    // this.copy(condition = condition.copy(orCondition = Some(orCondition)))
-    sys.error("TODO")
+    val queryBuilder =
+      this.copy[M, R, Ord, Sel, Lim, Sk, Or](
+        lim = None,
+        sk = None,
+        maxScan = None,
+        comment = None,
+        hint = None,
+        condition = AndCondition(Nil, None),
+        order = None,
+        select = None,
+        slaveOk = None)
+    val queries = subqueries.toList.map(q => q(queryBuilder))
+    val orCondition = QueryHelpers.orConditionFromQueries(queries)
+    this.copy(condition = condition.copy(orCondition = Some(orCondition)))
   }
 
   def orderAsc[V](field: M => QueryField[V, M])
@@ -542,10 +553,10 @@ case class BaseQuery[
                       ev3: Sk =:= Unskipped): BaseModifyQuery[M] = BaseModifyQuery(this, MongoModify(Nil)) // TODO: Does this work?
 
   override def toString: String =
-    sys.error("TODO") // MongoBuilder.buildQueryString("find", this)
+    MongoBuilder.buildQueryString("find", collectionName, this)
 
   def signature(): String =
-    sys.error("TODO") // MongoBuilder.buildSignature(this)
+    MongoBuilder.buildSignature(collectionName, this)
 
   def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(maxScan = Some(max))
 
@@ -690,7 +701,7 @@ case class BaseQuery[
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
                                               xs(1).asInstanceOf[F2],
                                               xs(2).asInstanceOf[F3])
-    this.copy(select = Some(MongoSelect[CC, M](fields, transformer)))
+    this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
   def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M],
@@ -1188,7 +1199,7 @@ case class BaseModifyQuery[M](
   def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
 
-  override def toString: String = sys.error("TODO") // MongoBuilder.buildModifyString(this)
+  override def toString: String = MongoBuilder.buildModifyString(query.collectionName, this)
 }
 
 // class EmptyModifyQuery[M <: MongoRecord[M]] extends AbstractModifyQuery[M] {
@@ -1266,7 +1277,7 @@ case class BaseFindAndModifyQuery[M, R](
   def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
       addClauseOpt(opt)(clause)
 
-  override def toString: String = sys.error("TODO") // MongoBuilder.buildFindAndModifyString(this, false, false, false)
+  override def toString: String = MongoBuilder.buildFindAndModifyString(query.collectionName, this, false, false, false)
 }
 
 // class EmptyFindAndModifyQuery[M <: MongoRecord[M], R] extends AbstractFindAndModifyQuery[M, R] {
