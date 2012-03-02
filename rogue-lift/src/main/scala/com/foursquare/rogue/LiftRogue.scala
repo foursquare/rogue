@@ -109,9 +109,11 @@ trait LiftRogue extends Rogue {
 
   implicit def metaRecordToLiftQuery[M <: MongoRecord[M]](
       rec: M with MongoMetaRecord[M]
-  ): LiftQuery[M with MongoMetaRecord[_], M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
-    sys.error("TODO")
-    // queryToLiftQuery(metaRecordToQueryBuilder(rec))
+  ): LiftQuery[M with MongoMetaRecord[_], M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
+    val queryBuilder = metaRecordToQueryBuilder(rec)
+    val liftQuery = queryToLiftQuery(queryBuilder)
+    liftQuery
+  }
 
   implicit def fieldToQueryField[M <: MongoRecord[M], F](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
 
@@ -131,10 +133,12 @@ trait LiftRogue extends Rogue {
   ](
       f: RField[B, M]
   ): BsonRecordQueryField[M, B] = {
-    sys.error("TODO")
     // // a hack to get at the embedded record
-    // val rec = f.defaultValue 
-    // new BsonRecordQueryField[M, B](f, _.asDBObject, rec)
+    val owner = f.owner
+    val field = owner.fieldByName(f.name).openOr(sys.error("TODO")).asInstanceOf[BsonRecordField[M, B]]
+    val rec: B = field.defaultValue
+    // val rec: B = sys.error("TODO") // f.defaultValue
+    new BsonRecordQueryField[M, B](f, _.asDBObject, rec)
   }
 
   implicit def bsonRecordListFieldToBsonRecordListQueryField[
@@ -199,7 +203,7 @@ trait LiftRogue extends Rogue {
   implicit def fieldToModifyField[M <: MongoRecord[M], F](f: Field[F, M]): ModifyField[F, M] = new ModifyField(f)
 
   implicit def bsonRecordFieldToBsonRecordModifyField[M <: MongoRecord[M], B <: BsonRecord[B]]
-      (f: BsonRecordField[M, B]) =
+      (f: BsonRecordField[M, B]): BsonRecordModifyField[M, B] =
     new BsonRecordModifyField[M, B](f, _.asDBObject)
 
   implicit def bsonRecordListFieldToBsonRecordListModifyField[

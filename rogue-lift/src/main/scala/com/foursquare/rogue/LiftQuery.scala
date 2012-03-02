@@ -51,8 +51,7 @@ case class LiftQuery[
     db.fetchOne(query)
 
   def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
-    sys.error("TODO")
-    // new BasePaginatedQuery(this.copy(), countPerPage)
+    new BasePaginatedQuery(query.copy(), db, countPerPage)
   }
 
   // Always do modifications against master (not meta, which could point to slave)
@@ -108,4 +107,23 @@ case class LiftFindAndModifyQuery[M <: MongoRecord[_] with MongoMetaRecord[_], R
 
   def upsertOne(returnNew: Boolean = false): Option[R] =
     db.findAndUpsertOne(query, returnNew)
+}
+
+class BasePaginatedQuery[M <: MongoRecord[_] with MongoMetaRecord[_], R](
+    q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
+    db: LiftQueryExecutor,
+    val countPerPage: Int,
+    val pageNum: Int = 1
+) {
+  def copy() = new BasePaginatedQuery(q, db, countPerPage, pageNum)
+
+  def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, db, countPerPage, p)
+
+  def setCountPerPage(c: Int) = if (c == countPerPage) this else new BasePaginatedQuery(q, db, c, pageNum)
+
+  lazy val countAll: Long = db.count(q)
+
+  def fetch(): List[R] = db.fetch(q.skip(countPerPage * (pageNum - 1)).limit(countPerPage))
+
+  def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
 }

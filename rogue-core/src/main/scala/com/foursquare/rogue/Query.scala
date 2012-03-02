@@ -1295,19 +1295,3 @@ case class BaseFindAndModifyQuery[M, R](
 
 //   override def toString = "empty findAndModify query"
 // }
-
-// class BasePaginatedQuery[M <: MongoRecord[M], R]
-//         (q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
-//          val countPerPage: Int, val pageNum: Int = 1) {
-//   def copy() = new BasePaginatedQuery(q, countPerPage, pageNum)
-
-//   def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, countPerPage, p)
-
-//   def setCountPerPage(c: Int) = if (c == countPerPage) this else new BasePaginatedQuery(q, c, pageNum)
-
-//   lazy val countAll: Long = q.count
-
-//   def fetch(): List[R] = q.skip(countPerPage * (pageNum - 1)).limit(countPerPage).fetch()
-
-//   def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
-// }
