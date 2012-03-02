@@ -2,6 +2,7 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
+import com.foursquare.rogue.Rogue.Iter._
 
 import java.util.regex.Pattern
 import net.liftweb.common.{Box, Empty, Full}
@@ -225,5 +226,63 @@ class EndToEndTest extends SpecsMatchers {
     Venue.where(_._id eqs v.id).and(_.venuename matches Pattern.compile("Tes. v", Pattern.CASE_INSENSITIVE)).count must_== 1
     Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid in List(v.legacyid.value)).count must_== 1
     Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid nin List(v.legacyid.value)).count must_== 0
+  }
+
+  @Test
+  def testIteratees {
+    // Insert some data
+    val vs = for (i <- 1 to 10) yield {
+      baseTestVenue().legacyid(i).save
+    }
+    val ids = vs.map(_.id)
+
+    val items1 = Venue.where(_._id in ids)
+        .iterate[List[Venue]](Nil){ case (accum, event) => {
+      if (accum.length >= 3) {
+        Return(accum)
+      } else {
+        event match {
+          case Item(i) if i.legacyid.value % 2 == 0 => Continue(i :: accum)
+          case Item(_) => Continue(accum)
+          case EOF => Return(accum)
+        }
+      }
+    }}
+
+    items1.map(_.legacyid.value) must_== List(6, 4, 2)
+
+    val items2 = Venue.where(_._id in ids)
+        .iterateBatch[List[Venue]](2, Nil){ case (accum, event) => {
+      if (accum.length >= 3) {
+        Return(accum)
+      } else {
+        event match {
+          case Item(items) => {
+            Continue(accum ++ items.filter(_.legacyid.value % 3 == 1))
+          }
+          case EOF => Return(accum)
+        }
+      }
+    }}
+
+    items2.map(_.legacyid.value) must_== List(1, 4, 7)
+
+    def findIndexOfWithLimit(id: Long, limit: Int) = {
+      Venue.where(_._id in ids).iterate(1){ case (idx, event) => {
+        if (idx >= limit) {
+          Return(-1)
+        } else {
+          event match {
+            case Item(i) if i.legacyid.value == id => Return(idx)
+            case Item(i) => Continue(idx+1)
+            case EOF => Return(-2)
+          }
+        }
+      }}
+    }
+
+    findIndexOfWithLimit(5, 2) must_== -1
+    findIndexOfWithLimit(5, 7) must_== 5
+    findIndexOfWithLimit(11, 12) must_== -2
   }
 }

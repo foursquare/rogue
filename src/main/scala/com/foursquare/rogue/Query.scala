@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers.{
     AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect, QueryExecutor}
-import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
+import com.mongodb.{BasicDBObjectBuilder, DBCursor, DBObject, WriteConcern}
 import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
@@ -311,6 +311,22 @@ case class BaseQuery[M <: MongoRecord[M], R,
       drainBuffer(buf, rv, f, 1)
 
       rv.toList
+    }
+  }
+
+  def iterate[S](state: S)(handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]): S = {
+    if (this.empty) {
+      handler(state, Rogue.Iter.EOF).state
+    } else {
+      QueryExecutor.iterate("find", this, state)(handler)
+    }
+  }
+
+  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]): S = {
+    if (this.empty) {
+      handler(state, Rogue.Iter.EOF).state
+    } else {
+      QueryExecutor.iterateBatch("find", this, batchSize, state)(handler)
     }
   }
 

@@ -3,10 +3,12 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
+import com.foursquare.rogue.Rogue.Iter._
 import com.mongodb.{BasicDBObjectBuilder, Bytes, DBObject, DBCursor, WriteConcern}
 import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record.MongoRecord
 import scala.collection.immutable.ListMap
+import scala.collection.mutable.ListBuffer
 
 object MongoHelpers {
   case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition])
@@ -244,18 +246,89 @@ object MongoHelpers {
       }
     }
 
-    def explain[M <: MongoRecord[M]](operation: String,
-                                     query: GenericBaseQuery[M, _]): String = {
-      var explanation = ""
-      doQuery(operation, query){cursor =>
-        explanation += cursor.explain.toString
+    def iterate[M <: MongoRecord[M], R, S](operation: String,
+                                           query: GenericBaseQuery[M, R],
+                                           initialState: S)
+                                          (handler: (S, Event[R]) => Command[S]): S = {
+      def getObject(cursor: DBCursor): Either[R, Exception] = {
+        try {
+          Left(query.parseDBObject(cursor.next))
+        } catch {
+          case e: Exception => Right(e)
+        }
       }
-      explanation
+
+      @scala.annotation.tailrec
+      def iter(cursor: DBCursor, curState: S): S = {
+        if (cursor.hasNext) {
+          getObject(cursor) match {
+            case Right(e) => handler(curState, Error(e)).state
+            case Left(r) => handler(curState, Item(r)) match {
+              case Continue(s) => iter(cursor, s)
+              case Return(s) => s
+            }
+          }
+        } else {
+          handler(curState, EOF).state
+        }
+      }
+
+      doQuery(operation, query)(cursor =>
+        iter(cursor, initialState)
+      )
     }
 
-    private[rogue] def doQuery[M <: MongoRecord[M]](operation: String,
+    def iterateBatch[M <: MongoRecord[M], R, S](operation: String,
+                                                query: GenericBaseQuery[M, R],
+                                                batchSize: Int,
+                                                initialState: S)
+                                               (handler: (S, Event[List[R]]) => Command[S]): S = {
+      val buf = new ListBuffer[R]
+
+      def getBatch(cursor: DBCursor): Either[List[R], Exception] = {
+        try {
+          buf.clear()
+          while (cursor.hasNext && buf.size < batchSize) {
+            buf += query.parseDBObject(cursor.next)
+          }
+          Left(buf.toList)
+        } catch {
+          case e: Exception => Right(e)
+        }
+      }
+
+      @scala.annotation.tailrec
+      def iter(cursor: DBCursor, curState: S): S = {
+        if (cursor.hasNext) {
+          getBatch(cursor) match {
+            case Right(e) => handler(curState, Error(e)).state
+            case Left(Nil) => handler(curState, EOF).state
+            case Left(rs) => handler(curState, Item(rs)) match {
+              case Continue(s) => iter(cursor, s)
+              case Return(s) => s
+            }
+          }
+        } else {
+          handler(curState, EOF).state
+        }
+      }
+
+      doQuery(operation, query)(cursor => {
+        cursor.batchSize(batchSize)
+        iter(cursor, initialState)
+      })
+    }
+
+    def explain[M <: MongoRecord[M]](operation: String,
+                                     query: GenericBaseQuery[M, _]): String = {
+      doQuery(operation, query)(cursor =>
+        cursor.explain.toString
+      )
+    }
+
+    private[rogue] def doQuery[M <: MongoRecord[M], T](operation: String,
                                    query: GenericBaseQuery[M, _])
-                                  (f: DBCursor  => Unit): Unit = {
+                                  (f: DBCursor => T): T = {
 
       val queryClause = transformer.transformQuery(query)
       validator.validateQuery(queryClause)
@@ -286,7 +359,9 @@ object MongoHelpers {
             queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
             queryClause.comment.foreach(cursor addSpecial("$comment", _))
             hnt.foreach(cursor hint _)
-            f(cursor)
+            val ret = f(cursor)
+            cursor.close()
+            ret
           } catch {
             case e: Exception =>
               throw new RogueException("Mongo query on %s [%s] failed".format(

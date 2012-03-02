@@ -50,7 +50,25 @@ trait Rogue {
   object Desc extends IndexModifier(-1)
   object TwoD extends IndexModifier("2d")
 
-  /* Following are a collection of implicit conversions which take a meta-record and convert it to
+  /**
+   * Iteratee helper classes
+   * @tparam S state type
+   */
+  object Iter {
+    sealed trait Command[S] {
+      def state: S
+    }
+    case class Continue[S](state: S) extends Command[S]
+    case class Return[S](state: S) extends Command[S]
+
+    sealed trait Event[+R]
+    case class Item[R](r: R) extends Event[R]
+    case class Error(e: Exception) extends Event[Nothing]
+    case object EOF extends Event[Nothing]
+  }
+
+  /**
+   * Following are a collection of implicit conversions which take a meta-record and convert it to
    * a QueryBuilder. This allows users to write queries as "QueryType where ...".
    */
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]]
