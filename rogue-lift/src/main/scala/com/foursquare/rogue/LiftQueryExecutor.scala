@@ -12,6 +12,7 @@ trait LiftRogueSerializer[R] {
 }
 
 trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecord[_]] {
+  val optimizer = new QueryOptimizer
 
   protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       meta: M,
@@ -22,7 +23,13 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
       query: AbstractQuery[M, _, _, _, Lim, Sk, _]
   )(
       implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped
-  ): Long = LegacyQueryExecutor.condition("count", query)(query.meta.count(_))
+  ): Long = {
+    if (optimizer.isEmptyQuery(query)) {
+      0L
+    } else {
+      LegacyQueryExecutor.condition("count", query)(query.meta.count(_))
+    }
+  }
 
   override def countDistinct[
       M <: MongoRecord[_] with MongoMetaRecord[_],
@@ -40,22 +47,30 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
       ev2: Lim =:= Unlimited,
       ev3: Sk =:= Unskipped
   ): Long = {
-    LegacyQueryExecutor.condition(
-        "countDistinct",
-        query
-    )(
-        query.meta.countDistinct(field(query.meta).field.name, _)
-    )
+    if (optimizer.isEmptyQuery(query)) {
+      0L
+    } else {
+      LegacyQueryExecutor.condition(
+          "countDistinct",
+          query
+      )(
+          query.meta.countDistinct(field(query.meta).field.name, _)
+      )
+    }
   }
 
   override def fetch[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       query: AbstractQuery[M, R, _, _, _, _, _],
       readPreference: ReadPreference = defaultReadPreference
   ): List[R] = {
-    val s = serializer[M, R](query.meta, query.select)
-    val rv = new ListBuffer[R]
-    LegacyQueryExecutor.query("find", query, None)(dbo => rv += s.fromDBObject(dbo))
-    rv.toList
+    if (optimizer.isEmptyQuery(query)) {
+      Nil
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      val rv = new ListBuffer[R]
+      LegacyQueryExecutor.query("find", query, None)(dbo => rv += s.fromDBObject(dbo))
+      rv.toList
+    }
   }
 
   def fetchOne[M <: MongoRecord[_] with MongoMetaRecord[_], R, Lim <: MaybeLimited](
@@ -71,8 +86,12 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
   )(
       f: R => Unit
   ): Unit = {
-    val s = serializer[M, R](query.meta, query.select)
-    LegacyQueryExecutor.query("find", query, None)(dbo => f(s.fromDBObject(dbo)))
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      LegacyQueryExecutor.query("find", query, None)(dbo => f(s.fromDBObject(dbo)))
+    }
   }
 
   private def drainBuffer[A, B](
@@ -94,17 +113,21 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
   )(
       f: List[R] => List[T]
   ): Seq[T] = {
-    val s = serializer[M, R](query.meta, query.select)
-    val rv = new ListBuffer[T]
-    val buf = new ListBuffer[R]
+    if (optimizer.isEmptyQuery(query)) {
+      Nil
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      val rv = new ListBuffer[T]
+      val buf = new ListBuffer[R]
 
-    LegacyQueryExecutor.query("find", query, Some(batchSize)) { dbo =>
-      buf += s.fromDBObject(dbo)
-      drainBuffer(buf, rv, f, batchSize)
+      LegacyQueryExecutor.query("find", query, Some(batchSize)) { dbo =>
+        buf += s.fromDBObject(dbo)
+        drainBuffer(buf, rv, f, batchSize)
+      }
+      drainBuffer(buf, rv, f, 1)
+
+      rv.toList
     }
-    drainBuffer(buf, rv, f, 1)
-
-    rv.toList
   }
 
   def bulkDelete_!![M <: MongoRecord[_] with MongoMetaRecord[_], Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped](
@@ -116,28 +139,44 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
       ev2: Lim =:= Unlimited,
       ev3: Sk =:= Unskipped
   ): Unit = {
-    LegacyQueryExecutor.condition("remove", query)(/*TODO: master */query.meta.bulkDelete_!!(_))
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      LegacyQueryExecutor.condition("remove", query)(/*TODO: master */query.meta.bulkDelete_!!(_))
+    }
   }
 
   def updateOne[M <: MongoRecord[_] with MongoMetaRecord[_]](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
   ): Unit = {
-    LegacyQueryExecutor.modify(query, upsert = false, multi = false, writeConcern = Some(writeConcern))
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      LegacyQueryExecutor.modify(query, upsert = false, multi = false, writeConcern = Some(writeConcern))
+    }
   }
 
   def upsertOne[M <: MongoRecord[_] with MongoMetaRecord[_]](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
   ): Unit = {
-    LegacyQueryExecutor.modify(query, upsert = true, multi = false, writeConcern = Some(writeConcern))
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      LegacyQueryExecutor.modify(query, upsert = true, multi = false, writeConcern = Some(writeConcern))
+    }
   }
 
   def updateMulti[M <: MongoRecord[_] with MongoMetaRecord[_]](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
   ): Unit = {
-    LegacyQueryExecutor.modify(query, upsert = false, multi = true, writeConcern = Some(writeConcern))
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      LegacyQueryExecutor.modify(query, upsert = false, multi = true, writeConcern = Some(writeConcern))
+    }
   }
 
   def findAndUpdateOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
@@ -145,8 +184,12 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     returnNew: Boolean = false,
     writeConcern: WriteConcern = defaultWriteConcern
   ): Option[R] = {
-    val s = serializer[M, R](query.query.meta, query.query.select)
-    LegacyQueryExecutor.findAndModify(query, returnNew, upsert=false, remove=false)(s.fromDBObject _)
+    if (optimizer.isEmptyQuery(query)) {
+      None
+    } else {
+      val s = serializer[M, R](query.query.meta, query.query.select)
+      LegacyQueryExecutor.findAndModify(query, returnNew, upsert=false, remove=false)(s.fromDBObject _)
+    }
   }
 
   def findAndUpsertOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
@@ -154,17 +197,25 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     returnNew: Boolean = false,
     writeConcern: WriteConcern = defaultWriteConcern
   ): Option[R] = {
-    val s = serializer[M, R](query.query.meta, query.query.select)
-    LegacyQueryExecutor.findAndModify(query, returnNew, upsert=true, remove=false)(s.fromDBObject _)
+    if (optimizer.isEmptyQuery(query)) {
+      None
+    } else {
+      val s = serializer[M, R](query.query.meta, query.query.select)
+      LegacyQueryExecutor.findAndModify(query, returnNew, upsert=true, remove=false)(s.fromDBObject _)
+    }
   }
 
   def findAndDeleteOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
     query: AbstractQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped, _ <: MaybeHasOrClause],
     writeConcern: WriteConcern = defaultWriteConcern
   ): Option[R] = {
-    val s = serializer[M, R](query.meta, query.select)
-    val mod = BaseFindAndModifyQuery(query, MongoModify(Nil))
-    LegacyQueryExecutor.findAndModify(mod, returnNew=false, upsert=false, remove=true)(s.fromDBObject _)
+    if (optimizer.isEmptyQuery(query)) {
+      None
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      val mod = BaseFindAndModifyQuery(query, MongoModify(Nil))
+      LegacyQueryExecutor.findAndModify(mod, returnNew=false, upsert=false, remove=true)(s.fromDBObject _)
+    }
   }
 
   def explain[M <: MongoRecord[_] with MongoMetaRecord[_]](query: AbstractQuery[M, _, _, _, _, _, _]): String = {

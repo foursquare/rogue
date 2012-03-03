@@ -149,7 +149,7 @@ trait LiftRogue extends Rogue {
     new BsonRecordListQueryField[M, B](f, rec, _.asDBObject)
   }
 
-  implicit def calendarFieldToCalendarQueryField[M <: MongoRecord[M], F]
+  implicit def calendarFieldToCalendarQueryField[M <: MongoRecord[M]]
       (f: Field[java.util.Calendar, M]): CalendarQueryField[M] =
     new CalendarQueryField(f)
 

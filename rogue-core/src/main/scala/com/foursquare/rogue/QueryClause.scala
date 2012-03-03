@@ -6,65 +6,93 @@ import com.mongodb.DBObject
 import com.mongodb.BasicDBObjectBuilder
 import java.util.regex.Pattern
 
-class QueryClause[V](val fieldName: String, val actualIndexBehavior: MaybeIndexed, conditions: (CondOps.Value, V)*) {
+abstract class QueryClause[V](val fieldName: String, val actualIndexBehavior: MaybeIndexed, val conditions: (CondOps.Value, V)*) {
   def extend(q: BasicDBObjectBuilder, signature: Boolean) {
     conditions foreach { case (op, v) => q.add(op.toString, if (signature) 0 else v) }
   }
   val expectedIndexBehavior: MaybeIndexed = Index
-  def withExpectedIndexBehavior(b: MaybeIndexed) = new QueryClause(fieldName, actualIndexBehavior, conditions: _*) {
-    override val expectedIndexBehavior = b
-  }
+  def withExpectedIndexBehavior(b: MaybeIndexed): QueryClause[V]
 }
 
-class IndexableQueryClause[V, Ind <: MaybeIndexed](fname: String, actualIB: Ind, conds: (CondOps.Value, V)*)
+abstract class IndexableQueryClause[V, Ind <: MaybeIndexed](fname: String, actualIB: Ind, conds: (CondOps.Value, V)*)
     extends QueryClause[V](fname, actualIB, conds: _*)
 
-class AllQueryClause[V](fieldName: String, vs: java.util.List[V])
-    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.All -> vs)
+case class AllQueryClause[V](override val fieldName: String, vs: java.util.List[V], override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.All -> vs) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class InQueryClause[V](fieldName: String, vs: java.util.List[V])
-    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.In -> vs)
+case class InQueryClause[V](override val fieldName: String, vs: java.util.List[V], override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.In -> vs) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class GtQueryClause[V](fieldName: String, v: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Gt -> v)
+case class GtQueryClause[V](override val fieldName: String, v: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Gt -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class GtEqQueryClause[V](fieldName: String, v: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.GtEq -> v)
+case class GtEqQueryClause[V](override val fieldName: String, v: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.GtEq -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class LtQueryClause[V](fieldName: String, v: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Lt -> v)
+case class LtQueryClause[V](override val fieldName: String, v: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Lt -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class LtEqQueryClause[V](fieldName: String, v: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.LtEq -> v)
+case class LtEqQueryClause[V](override val fieldName: String, v: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.LtEq -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class BetweenQueryClause[V](fieldName: String, lower: V, upper: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.GtEq -> lower, CondOps.LtEq -> upper)
+case class BetweenQueryClause[V](override val fieldName: String, lower: V, upper: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.GtEq -> lower, CondOps.LtEq -> upper) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class StrictBetweenQueryClause[V](fieldName: String, lower: V, upper: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Gt -> lower, CondOps.Lt -> upper)
+case class StrictBetweenQueryClause[V](override val fieldName: String, lower: V, upper: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Gt -> lower, CondOps.Lt -> upper) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class NeQueryClause[V](fieldName: String, v: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Ne -> v)
+case class NeQueryClause[V](override val fieldName: String, v: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Ne -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class NearQueryClause[V](fieldName: String, v: V)
-    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Near -> v)
+case class NearQueryClause[V](override val fieldName: String, v: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan, CondOps.Near -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class ModQueryClause[V](fieldName: String, v: java.util.List[V])
-    extends IndexableQueryClause[java.util.List[V], IndexScan](fieldName, IndexScan, CondOps.Mod -> v)
+case class ModQueryClause[V](override val fieldName: String, v: java.util.List[V], override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[java.util.List[V], IndexScan](fieldName, IndexScan, CondOps.Mod -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class TypeQueryClause(fieldName: String, v: MongoType.Value)
-    extends IndexableQueryClause[Int, IndexScan](fieldName, IndexScan, CondOps.Type -> v.id)
+case class TypeQueryClause(override val fieldName: String, v: MongoType.Value, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[Int, IndexScan](fieldName, IndexScan, CondOps.Type -> v.id) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class ExistsQueryClause(fieldName: String, v: Boolean)
-    extends IndexableQueryClause[Boolean, DocumentScan](fieldName, DocumentScan, CondOps.Exists -> v)
+case class ExistsQueryClause(override val fieldName: String, v: Boolean, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[Boolean, DocumentScan](fieldName, DocumentScan, CondOps.Exists -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class NinQueryClause[V](fieldName: String, vs: java.util.List[V])
-    extends IndexableQueryClause[java.util.List[V], DocumentScan](fieldName, DocumentScan, CondOps.Nin -> vs)
+case class NinQueryClause[V](override val fieldName: String, vs: java.util.List[V], override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[java.util.List[V], DocumentScan](fieldName, DocumentScan, CondOps.Nin -> vs) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class SizeQueryClause(fieldName: String, v: Int)
-    extends IndexableQueryClause[Int, DocumentScan](fieldName, DocumentScan, CondOps.Size -> v)
+case class SizeQueryClause(override val fieldName: String, v: Int, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[Int, DocumentScan](fieldName, DocumentScan, CondOps.Size -> v) {
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
+}
 
-class RegexQueryClause[Ind <: MaybeIndexed](fieldName: String, actualIB: Ind, p: Pattern)
+case class RegexQueryClause[Ind <: MaybeIndexed](override val fieldName: String, actualIB: Ind, p: Pattern, override val expectedIndexBehavior: MaybeIndexed = Index)
     extends IndexableQueryClause[Pattern, Ind](fieldName, actualIB) {
   val flagMap = Map(
     Pattern.CANON_EQ -> "c",
@@ -89,37 +117,27 @@ class RegexQueryClause[Ind <: MaybeIndexed](fieldName: String, actualIB: Ind, p:
     q.add("$options", if (signature) 0 else flagsToString(p.flags))
   }
 
-  override def withExpectedIndexBehavior(b: MaybeIndexed) = {
-    new RegexQueryClause[Ind](fieldName, actualIB, p) {
-      override val expectedIndexBehavior = b
-    }
-  }
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
 
-class RawQueryClause(f: BasicDBObjectBuilder => Unit) extends IndexableQueryClause("raw", DocumentScan) {
+case class RawQueryClause(f: BasicDBObjectBuilder => Unit, override val expectedIndexBehavior: MaybeIndexed = DocumentScan) extends IndexableQueryClause("raw", DocumentScan) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean) {
     f(q)
   }
-  override val expectedIndexBehavior = DocumentScan
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
-class EmptyQueryClause[V](fieldName: String) extends IndexableQueryClause[V, Index](fieldName, Index) {
+case class EmptyQueryClause[V](override val fieldName: String, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, Index](fieldName, Index) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean) {}
-  override def withExpectedIndexBehavior(b: MaybeIndexed) = {
-    new EmptyQueryClause[V](fieldName) {
-      override val expectedIndexBehavior = b
-    }
-  }
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
-class EqClause[V, Ind <: MaybeIndexed](fieldName: String, actualIB: Ind, value: V) extends IndexableQueryClause[V, Ind](fieldName, actualIB) {
+case class EqClause[V, Ind <: MaybeIndexed](override val fieldName: String, actualIB: Ind, value: V, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, Ind](fieldName, actualIB) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     q.add(fieldName, if (signature) 0 else value)
   }
-  override def withExpectedIndexBehavior(b: MaybeIndexed) = new EqClause[V, Ind](fieldName, actualIB, value) {
-    override val expectedIndexBehavior = b
-  }
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
 object EqClause {
@@ -128,28 +146,22 @@ object EqClause {
   }
 }
 
-class WithinCircleClause[V](fieldName: String, lat: Double, lng: Double, radius: Double) extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
+case class WithinCircleClause[V](override val fieldName: String, lat: Double, lng: Double, radius: Double, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     val value = if (signature) 0 else QueryHelpers.list(List(QueryHelpers.list(List(lat, lng)), radius))
     q.push("$within").add("$center", value).pop
   }
-  override def withExpectedIndexBehavior(b: MaybeIndexed) = {
-    new WithinCircleClause[V](fieldName, lat, lng, radius) {
-      override val expectedIndexBehavior = b
-    }
-  }
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
-class WithinBoxClause[V](fieldName: String, lat1: Double, lng1: Double, lat2: Double, lng2: Double) extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
+case class WithinBoxClause[V](override val fieldName: String, lat1: Double, lng1: Double, lat2: Double, lng2: Double, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     val value = if (signature) 0 else {
       QueryHelpers.list(List(QueryHelpers.list(lat1, lng1), QueryHelpers.list(lat2, lng2)))
     }
     q.push("$within").add("$box", value).pop
   }
-  override def withExpectedIndexBehavior(b: MaybeIndexed) = new WithinBoxClause[V](fieldName, lat1, lng1, lat2, lng2) {
-    override val expectedIndexBehavior = b
-  }
+  override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
 class ModifyClause[V](val operator: ModOps.Value, fields: (String, V)*) {

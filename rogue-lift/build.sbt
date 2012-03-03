@@ -7,3 +7,5 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     "net.liftweb"             %% "lift-mongodb-record" % liftVersion  % "compile" intransitive(),
     "net.liftweb"             %% "lift-record"         % liftVersion  % "compile")
 }
+
+Seq(defaultSettings: _*)

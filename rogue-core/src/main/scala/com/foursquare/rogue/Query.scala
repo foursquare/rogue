@@ -470,8 +470,8 @@ case class BaseQuery[
     clause(meta) match {
       // case cl: EmptyQueryClause[_] => new BaseEmptyQuery[M, R, Ord, Sel, Lim, Sk, Or]
       case cl => {
-        val newClause = cl.withExpectedIndexBehavior(expectedIndexBehavior)
-        this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
+        // val newClause = cl.withExpectedIndexBehavior(expectedIndexBehavior)
+        this.copy(condition = condition.copy(clauses = cl :: condition.clauses))
       }
     }
   }
