@@ -133,12 +133,22 @@ trait LiftRogue extends Rogue {
   ](
       f: RField[B, M]
   ): BsonRecordQueryField[M, B] = {
-    // // a hack to get at the embedded record
+    // a hack to get at the embedded record
     val owner = f.owner
-    val field = owner.fieldByName(f.name).openOr(sys.error("TODO")).asInstanceOf[BsonRecordField[M, B]]
-    val rec: B = field.defaultValue
-    // val rec: B = sys.error("TODO") // f.defaultValue
-    new BsonRecordQueryField[M, B](f, _.asDBObject, rec)
+    if (f.name.indexOf('.') >= 0) {
+      val fieldName = f.name.takeWhile(_ != '.')
+      val field = owner.fieldByName(fieldName).openOr(sys.error("Error getting field "+fieldName+" for "+owner))
+      val typedField = field.asInstanceOf[BsonRecordListField[M, B]]
+       // a gross hack to get at the embedded record
+      val rec: B = typedField.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head
+      new BsonRecordQueryField[M, B](f, _.asDBObject, rec)
+    } else {
+      val fieldName = f.name
+      val field = owner.fieldByName(fieldName).openOr(sys.error("Error getting field "+fieldName+" for "+owner))
+      val typedField = field.asInstanceOf[BsonRecordField[M, B]]
+      val rec: B = typedField.defaultValue
+      new BsonRecordQueryField[M, B](f, _.asDBObject, rec)
+    }
   }
 
   implicit def bsonRecordListFieldToBsonRecordListQueryField[
@@ -186,7 +196,7 @@ trait LiftRogue extends Rogue {
   implicit def listFieldToListQueryField[M <: MongoRecord[M], F](f: Field[List[F], M]): ListQueryField[F, M] =
     new ListQueryField[F, M](f)
 
-  implicit def longFieldtoNumericQueryField[M <: MongoRecord[M], F](f: Field[Long, M]): NumericQueryField[Long, M] =
+  implicit def longFieldtoNumericQueryField[M <: MongoRecord[M]](f: Field[Long, M]): NumericQueryField[Long, M] =
     new NumericQueryField(f)
 
   implicit def objectIdFieldToObjectIdQueryField[M <: MongoRecord[M], F](f: Field[ObjectId, M])

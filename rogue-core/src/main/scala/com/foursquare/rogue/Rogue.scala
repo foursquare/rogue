@@ -66,7 +66,7 @@ trait Rogue {
   implicit def rlistFieldToListQueryField[M, F](f: RField[List[F], M]): ListQueryField[F, M] =
     new ListQueryField[F, M](f)
 
-  implicit def rlongFieldtoNumericQueryField[M, F](f: RField[Long, M]): NumericQueryField[Long, M] =
+  implicit def rlongFieldtoNumericQueryField[M](f: RField[Long, M]): NumericQueryField[Long, M] =
     new NumericQueryField(f)
 
   implicit def robjectIdFieldToObjectIdQueryField[M, F](f: RField[ObjectId, M])
