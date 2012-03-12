@@ -49,6 +49,12 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor_count between (3, 5)) toString() must_== """db.venues.find({ "mayor_count" : { "$gte" : 3 , "$lte" : 5}})"""
     VenueClaim where (_.status neqs ClaimStatus.approved) toString() must_== """db.venueclaims.find({ "status" : { "$ne" : "Approved"}})"""
 
+    // comparison even when type information is unavailable
+    def doLessThan[M <: MongoRecord[M], T](meta: M with MongoMetaRecord[M], f: M => Field[T, M], otherVal: T) =
+      meta.where(r => f(r) < otherVal)
+    doLessThan(Venue, (v: Venue) => v.mayor_count, 5L) toString() must_== """db.venues.find({ "mayor_count" : { "$lt" : 5}})"""
+
+
     // in,nin
     Venue where (_.legacyid in List(123L, 456L)) toString() must_== """db.venues.find({ "legid" : { "$in" : [ 123 , 456]}})"""
     Venue where (_.venuename nin List("Starbucks", "Whole Foods")) toString() must_== """db.venues.find({ "venuename" : { "$nin" : [ "Starbucks" , "Whole Foods"]}})"""
