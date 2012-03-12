@@ -61,6 +61,19 @@ abstract class AbstractQueryField[V, DB, M](val field: Field[V, M]) {
   def neqs(v: V) = new NeQueryClause(field.name, valueToDB(v))
   def in[L <% Traversable[V]](vs: L) = QueryHelpers.inListClause(field.name, valuesToDB(vs))
   def nin[L <% Traversable[V]](vs: L) = new NinQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
+
+  def lt(v: V) = new LtQueryClause(field.name, valueToDB(v))
+  def gt(v: V) = new GtQueryClause(field.name, valueToDB(v))
+  def lte(v: V) = new LtEqQueryClause(field.name, valueToDB(v))
+  def gte(v: V) = new GtEqQueryClause(field.name, valueToDB(v))
+
+  def <(v: V) = lt(v)
+  def <=(v: V) = lte(v)
+  def >(v: V) = gt(v)
+  def >=(v: V) = gte(v)
+
+  def between(v1: V, v2: V) =
+    new BetweenQueryClause(field.name, valueToDB(v1), valueToDB(v2))
 }
 
 class QueryField[V, M](field: Field[V, M])
@@ -110,25 +123,6 @@ class GeoQueryField[M](field: Field[LatLong, M])
 
 abstract class AbstractNumericQueryField[V, DB, M](field: Field[V, M])
     extends AbstractQueryField[V, DB, M](field) {
-  def lt(v: V) = new LtQueryClause(field.name, valueToDB(v))
-
-  def gt(v: V) = new GtQueryClause(field.name, valueToDB(v))
-
-  def lte(v: V) = new LtEqQueryClause(field.name, valueToDB(v))
-
-  def gte(v: V) = new GtEqQueryClause(field.name, valueToDB(v))
-
-  def <(v: V) = lt(v)
-
-  def <=(v: V) = lte(v)
-
-  def >(v: V) = gt(v)
-
-  def >=(v: V) = gte(v)
-
-  def between(v1: V, v2: V) =
-    new BetweenQueryClause(field.name, valueToDB(v1), valueToDB(v2))
-
   def mod(by: Int, eq: Int) =
     new ModQueryClause(field.name, QueryHelpers.list(List(by, eq)))
 }
