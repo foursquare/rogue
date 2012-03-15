@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 1.1.6
+
+- iteratee support
+- default WriteConcern is configurable
+- renamed blockingBulkDelete_!! to bulkDelete_!! (takes a WriteConcern)
+- moved gt, lt into base QueryField (nsanch)
+- fixed the way nested subfield queries work if both fields are ListFields
+
 # 1.1.5
 
 - fixed handling of subfields of list fields
