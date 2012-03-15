@@ -369,13 +369,13 @@ case class BaseQuery[M <: MongoRecord[M], R,
    * "limit", or "select" clauses. Sends the delete operation to mongo, and waits for the
    * delete operation to complete before returning to the caller.
    */
-  def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected,
-                                                            ev2: Lim =:= Unlimited,
-                                                            ev3: Sk =:= Unskipped): Unit = {
+  def bulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel =:= Unselected,
+                                                    ev2: Lim =:= Unlimited,
+                                                    ev3: Sk =:= Unskipped): Unit = {
     if (!this.empty) {
       QueryExecutor.condition("remove", this) { qry =>
         MongoDB.useCollection(master.mongoIdentifier, master.collectionName) { coll =>
-          coll.remove(qry, concern)
+          coll.remove(qry, QueryHelpers.config.defaultBulkDeleteWriteConcern)
         }
       }
     }
@@ -760,32 +760,32 @@ case class BaseModifyQuery[M <: MongoRecord[M]](query: BaseQuery[M, _, _ <: Mayb
   // These methods always do modifications against master (not query.meta, which could point to a slave).
   def updateMulti(): Unit = {
     if (!query.empty)
-      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = None)
+      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = QueryHelpers.config.defaultUpdateMultiWriteConcern)
   }
 
   def updateOne(): Unit = {
     if (!query.empty)
-      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = None)
+      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = QueryHelpers.config.defaultUpdateOneWriteConcern)
   }
 
   def upsertOne(): Unit = {
     // Execute this even if the query won't match any records!
-    QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = None)
+    QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = QueryHelpers.config.defaultUpsertOneWriteConcern)
   }
 
   def updateMulti(writeConcern: WriteConcern): Unit = {
     if (!query.empty)
-      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = Some(writeConcern))
+      QueryExecutor.modify(this, upsert = false, multi = true, writeConcern = writeConcern)
   }
 
   def updateOne(writeConcern: WriteConcern): Unit = {
     if (!query.empty)
-      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = Some(writeConcern))
+      QueryExecutor.modify(this, upsert = false, multi = false, writeConcern = writeConcern)
   }
 
   def upsertOne(writeConcern: WriteConcern): Unit = {
     // Execute this even if the query won't match any records!
-    QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = Some(writeConcern))
+    QueryExecutor.modify(this, upsert = true, multi = false, writeConcern = writeConcern)
   }
 
   override def toString = MongoBuilder.buildModifyString(this)

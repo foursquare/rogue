@@ -245,6 +245,7 @@ class EndToEndTest extends SpecsMatchers {
           case Item(i) if i.legacyid.value % 2 == 0 => Continue(i :: accum)
           case Item(_) => Continue(accum)
           case EOF => Return(accum)
+          case Error(e) => Return(accum)
         }
       }
     }}
@@ -261,6 +262,7 @@ class EndToEndTest extends SpecsMatchers {
             Continue(accum ++ items.filter(_.legacyid.value % 3 == 1))
           }
           case EOF => Return(accum)
+          case Error(e) => Return(accum)
         }
       }
     }}
@@ -276,6 +278,7 @@ class EndToEndTest extends SpecsMatchers {
             case Item(i) if i.legacyid.value == id => Return(idx)
             case Item(i) => Continue(idx+1)
             case EOF => Return(-2)
+            case Error(e) => Return(-3)
           }
         }
       }}

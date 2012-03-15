@@ -189,7 +189,7 @@ object MongoHelpers {
     def modify[M <: MongoRecord[M], T](mod: BaseModifyQuery[M],
                                        upsert: Boolean,
                                        multi: Boolean,
-                                       writeConcern: Option[WriteConcern] = None): Unit = {
+                                       writeConcern: WriteConcern): Unit = {
       val modClause = transformer.transformModify(mod)
       validator.validateModify(modClause)
       if (!modClause.mod.clauses.isEmpty) {
@@ -200,10 +200,7 @@ object MongoHelpers {
         runCommand(description, modClause.query) {
           MongoDB.useSession(mod.query.master.mongoIdentifier) { db =>
             val coll = db.getCollection(mod.query.master.collectionName)
-            writeConcern match {
-              case Some(theWriteConcern) => coll.update(q, m, upsert, multi, theWriteConcern)
-              case None => coll.update(q, m, upsert, multi)
-            }
+            coll.update(q, m, upsert, multi, writeConcern)
           }
         }
       }
