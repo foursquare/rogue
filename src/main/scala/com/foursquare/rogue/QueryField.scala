@@ -198,6 +198,10 @@ class BsonRecordQueryField[M <: BsonRecord[M], B <: BsonRecord[B]](field: BsonRe
   }
 
   def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
+
+  def unsafeField[F](name: String): DummyField[F, M] = {
+    new DummyField[F, M](field.owner, field.name + "." + name)
+  }
 }
 
 // This class is a hack to get $pull working for lists of objects. In that case,
@@ -262,14 +266,17 @@ class BsonRecordListQueryField[M <: BsonRecord[M], B <: BsonRecord[B]](field: Bs
     extends AbstractListQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = b.asDBObject
 
-  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
+  def subfield[V, V1](subfield: B => Field[V, B])(implicit ev: Rogue.Flattened[V, V1]): SelectableDummyField[List[V1], M] = {
     val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
-    new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
+    new SelectableDummyField[List[V1], M](field.owner, field.name + "." + subfield(rec).name)
   }
 
-  def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
-    val rec = field.setFromJValue(JArray(JInt(0) :: Nil)).open_!.head // a gross hack to get at the embedded record
-    new SelectableDummyField[List[V], M](field.owner, field.name + "." + subfield(rec).name)
+  def subselect[V, V1](f: B => Field[V, B])(implicit ev: Rogue.Flattened[V, V1]): SelectField[Box[List[V1]], M] = {
+    Rogue.optionalFieldToSelectField(subfield(f))
+  }
+
+  def unsafeField[F](name: String): DummyField[F, M] = {
+    new DummyField[F, M](field.owner, field.name + "." + name)
   }
 }
 

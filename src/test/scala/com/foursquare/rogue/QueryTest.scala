@@ -126,6 +126,7 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.claims.subfield(_.status) contains ClaimStatus.approved) toString() must_== """db.venues.find({ "claims.status" : "Approved"})"""
     Venue where (_.lastClaim.subfield(_.userid) eqs 123)               toString()      must_== """db.venues.find({ "lastClaim.uid" : 123})"""
     Venue where (_.claims.subfield(_.source.subfield(_.name)) contains "twitter") toString() must_== """db.venues.find({ "claims.source.name" : "twitter"})"""
+    Venue where (_.claims.subfield(_.sources.subfield(_.name)) contains "twitter") toString() must_== """db.venues.find({ "claims.sources.name" : "twitter"})"""
 
     // Enumeration list
     OAuthConsumer where (_.privileges contains ConsumerPrivilege.awardBadges) toString() must_== """db.oauthconsumers.find({ "privileges" : "Award badges"})"""
@@ -170,8 +171,8 @@ class QueryTest extends SpecsMatchers {
     // select subfields
     Tip where (_.legacyid eqs 1) select (_.counts at "foo") toString() must_== """db.tips.find({ "legid" : 1}, { "counts.foo" : 1})"""
     Venue where (_.legacyid eqs 1) select (_.geolatlng.unsafeField[Double]("lat")) toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
-    Venue where (_.legacyid eqs 1) select (_.lastClaim.subfield(_.status)) toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
-    Venue where (_.legacyid eqs 1) select(_.claims.subfield(_.userid)) toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
+    Venue where (_.legacyid eqs 1) select (_.lastClaim.subselect(_.status)) toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
+    Venue where (_.legacyid eqs 1) select (_.claims.subselect(_.userid)) toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
 
     // TODO: case class list fields
     // Comment select(_.comments.unsafeField[Long]("userid")) toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
@@ -253,8 +254,8 @@ class QueryTest extends SpecsMatchers {
 
     // BsonRecordField and BsonRecordListField with nested Enumeration
     val claims = List(VenueClaimBson.createRecord.userid(1).status(ClaimStatus.approved))
-    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims)         toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""}}]}}""" + suffix
-    Venue where (_.legacyid eqs 1) modify (_.lastClaim setTo claims.head) toString() must_== query + """{ "$set" : { "lastClaim" : { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""}}}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.claims setTo claims)         toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""} , "sources" : [ ]}]}}""" + suffix
+    Venue where (_.legacyid eqs 1) modify (_.lastClaim setTo claims.head) toString() must_== query + """{ "$set" : { "lastClaim" : { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""} , "sources" : [ ]}}}""" + suffix
 
     // Map
     val m = Map("foo" -> 1L)

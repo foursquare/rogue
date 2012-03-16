@@ -97,9 +97,10 @@ class VenueClaimBson extends BsonRecord[VenueClaimBson] {
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
   object source extends BsonRecordField(this, SourceBson)
+  object sources extends BsonRecordListField(this, SourceBson)
 }
 object VenueClaimBson extends VenueClaimBson with BsonMetaRecord[VenueClaimBson] {
-  override def fieldOrder = List(status, userid, source)
+  override def fieldOrder = List(status, userid, source, sources)
 }
 
 class SourceBson extends BsonRecord[SourceBson] {

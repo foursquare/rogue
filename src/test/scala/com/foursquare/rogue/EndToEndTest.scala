@@ -144,15 +144,15 @@ class EndToEndTest extends SpecsMatchers {
 
     Venue.where(_._id eqs v.id).select(_.geolatlng.unsafeField[Double]("lat")).fetch() must_== List(Full(40.73))
 
-    val subuserids: List[Box[List[Long]]] = Venue.where(_._id eqs v.id).select(_.claims.subfield(_.userid)).fetch()
+    val subuserids: List[Box[List[Long]]] = Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch()
     subuserids must_== List(Full(List(1234, 5678)))
 
     // selecting a claims.userid when there is no top-level claims list should
     // have one element in the List for the one Venue, but an Empty for that
     // Venue since there's no list of claims there.
     Venue.where(_._id eqs v.id).modify(_.claims unset).and(_.lastClaim unset).updateOne()
-    Venue.where(_._id eqs v.id).select(_.lastClaim.subfield(_.userid)).fetch() must_== List(Empty)
-    Venue.where(_._id eqs v.id).select(_.claims.subfield(_.userid)).fetch() must_== List(Empty)
+    Venue.where(_._id eqs v.id).select(_.lastClaim.subselect(_.userid)).fetch() must_== List(Empty)
+    Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch() must_== List(Empty)
   }
 
   @Ignore("These tests are broken because DummyField doesn't know how to convert a String to an Enum")
@@ -164,7 +164,7 @@ class EndToEndTest extends SpecsMatchers {
     // know how to convert the String to an Enum.
 
     val statuses: List[Box[VenueClaimBson.status.MyType]] =
-          Venue.where(_._id eqs v.id).select(_.lastClaim.subfield(_.status)) .fetch()
+          Venue.where(_._id eqs v.id).select(_.lastClaim.subselect(_.status)) .fetch()
     // This assertion works.
     statuses must_== List(Full("Approved"))
     // This assertion is what we want, and it fails.
@@ -172,7 +172,7 @@ class EndToEndTest extends SpecsMatchers {
 
     val subuseridsAndStatuses: List[(Box[List[Long]], Box[List[VenueClaimBson.status.MyType]])] =
           Venue.where(_._id eqs v.id)
-               .select(_.claims.subfield(_.userid), _.claims.subfield(_.status))
+               .select(_.claims.subselect(_.userid), _.claims.subselect(_.status))
                .fetch()
     // This assertion works.
     subuseridsAndStatuses must_== List((Full(List(1234, 5678)), Full(List("Pending approval", "Approved"))))
