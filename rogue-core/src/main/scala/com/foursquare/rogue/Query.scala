@@ -564,7 +564,7 @@ case class BaseQuery[
 
   def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(slaveOk = Some(b))
 
-  def hint(index: MongoIndex[M]) = this.copy(hint = Some(index.asListMap))
+  def hint(index: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(hint = Some(index.asListMap))
 
   def select[F1](f: M => SelectField[F1, M])
                        (implicit ev: Sel =:= Unselected): BaseQuery[M, F1, Ord, Selected, Lim, Sk, Or] = {

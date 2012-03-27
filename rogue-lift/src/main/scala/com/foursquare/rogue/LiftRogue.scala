@@ -72,6 +72,7 @@ trait LiftRogue extends Rogue {
                                      MongoModify(Nil))
     }
   }
+
   implicit def queryToLiftQuery[
       M <: MongoRecord[_],
       R,

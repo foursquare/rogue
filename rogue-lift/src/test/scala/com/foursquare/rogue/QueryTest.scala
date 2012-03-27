@@ -375,14 +375,10 @@ class QueryTest extends SpecsMatchers {
   @Test
   def testOrQueryShouldProduceACorrectJSONQueryString {
     // Simple $or
-    OrQuery(
-        Venue.where(_.legacyid eqs 1),
-        Venue.where(_.mayor eqs 2))
+    Venue.or(
+        _.where(_.legacyid eqs 1),
+        _.where(_.mayor eqs 2))
       .toString() must_== """db.venues.find({ "$or" : [ { "legid" : 1} , { "mayor" : 2}]})"""
-    // Venue.or(
-    //     _.where(_.legacyid eqs 1),
-    //     _.where(_.mayor eqs 2))
-    //   .toString() must_== """db.venues.find({ "$or" : [ { "legid" : 1} , { "mayor" : 2}]})"""
 
     // Compound $or
     Venue.where(_.tags size 0)
