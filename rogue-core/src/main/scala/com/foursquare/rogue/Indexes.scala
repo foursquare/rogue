@@ -7,11 +7,6 @@ import scala.collection.immutable.ListMap
 
 case class IndexModifier(value: Any)
 
-// Venue.index(_.userid, Asc)
-// Venue.index(_.userid, Desc)
-// Venue.index(_.geolatlng, TwoD)
-// Venue.index(_.geolatlng, CrazyCustomIndex)
-
 trait MongoIndex[R] {
   def asListMap: ListMap[String, Any]
 

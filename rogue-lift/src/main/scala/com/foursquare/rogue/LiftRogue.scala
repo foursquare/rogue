@@ -49,28 +49,25 @@ trait LiftRogue extends Rogue {
   /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
    * users to write "RecordType.where(...).modify(...)".
    */
-  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M], Or <: MaybeHasOrClause]
-      (query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, Or])
-      : AbstractModifyQuery[M] = {
-    query match {
-      // case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyModifyQuery[M]
-      case q: BaseQuery[_, _, _, _, _, _, _] =>
-          BaseModifyQuery[M](q.asInstanceOf[BaseQuery[M, M, Unordered, Unselected, Unlimited,
-                                                      Unskipped, HasNoOrClause]],
-                             MongoModify(Nil))
-    }
+  implicit def queryBuilderToModifyQuery[
+      M <: MongoRecord[M],
+      Or <: MaybeHasOrClause
+  ](
+      query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, Or]
+  ): AbstractModifyQuery[M] = {
+    BaseModifyQuery[M](query, MongoModify(Nil))
   }
 
-  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, Ord <: MaybeOrdered, Sel <: MaybeSelected, Or <: MaybeHasOrClause]
-      (query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or])
-      : AbstractFindAndModifyQuery[M, R] = {
-    query match {
-      // case q: BaseEmptyQuery[_, _, _, _, _, _, _] => new EmptyFindAndModifyQuery[M, R]
-      case q: BaseQuery[_, _, _, _, _, _, _] =>
-        BaseFindAndModifyQuery[M, R](q.asInstanceOf[BaseQuery[M, R, Ord, Sel, Unlimited,
-                                                              Unskipped, HasNoOrClause]],
-                                     MongoModify(Nil))
-    }
+  implicit def queryBuilderToFindAndModifyQuery[
+      M <: MongoRecord[M],
+      R,
+      Ord <: MaybeOrdered,
+      Sel <: MaybeSelected,
+      Or <: MaybeHasOrClause
+  ](
+      query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or]
+  ): AbstractFindAndModifyQuery[M, R] = {
+    BaseFindAndModifyQuery[M, R](query, MongoModify(Nil))
   }
 
   implicit def queryToLiftQuery[
@@ -291,13 +288,3 @@ trait LiftRogue extends Rogue {
 }
 
 object LiftRogue extends LiftRogue
-
-// object LiftQueryS {
-//   def apply[
-//       R <: MongoRecord[R]
-//   ](
-//       meta: R with MongoMetaRecord[R]
-//   ): BaseQuery[R, R, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
-//     BaseQuery[R, R, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
-//       meta, meta.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
-// }
