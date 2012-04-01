@@ -216,6 +216,9 @@ case class BaseQuery[
   override def toString: String =
     MongoBuilder.buildQueryString("find", collectionName, this)
 
+  def asDBObject: DBObject =
+    MongoBuilder.buildCondition(this.condition)
+
   def signature(): String =
     MongoBuilder.buildSignature(collectionName, this)
 
@@ -574,6 +577,8 @@ case class BaseModifyQuery[M](
       addClauseOpt(opt)(clause)
 
   override def toString: String = MongoBuilder.buildModifyString(query.collectionName, this)
+
+  def asDBObject = (this.query.asDBObject, MongoBuilder.buildModify(this.mod))
 }
 
 // *******************************************************
