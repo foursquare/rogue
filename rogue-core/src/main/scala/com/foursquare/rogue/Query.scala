@@ -73,11 +73,9 @@ case class BaseQuery[
   private def addClause[F](clause: M => QueryClause[F],
                            expectedIndexBehavior: MaybeIndexed):
                        AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = {
-    clause(meta) match {
-      case cl => {
-        this.copy(condition = condition.copy(clauses = cl :: condition.clauses))
-      }
-    }
+    val cl = clause(meta)
+    val newClause = cl.withExpectedIndexBehavior(expectedIndexBehavior)
+    this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }
 
   /**
