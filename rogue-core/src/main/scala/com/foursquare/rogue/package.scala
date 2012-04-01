@@ -13,7 +13,9 @@ package object rogue {
       Or <: MaybeHasOrClause
   ] = BaseQuery[M, R, Ord, Sel, Lim, Sk, Or]
 
+  type ModifyQuery[T] = BaseModifyQuery[T]
   type AbstractModifyQuery[M] = BaseModifyQuery[M]
 
   type AbstractFindAndModifyQuery[M, R] = BaseFindAndModifyQuery[M, R]
+
 }

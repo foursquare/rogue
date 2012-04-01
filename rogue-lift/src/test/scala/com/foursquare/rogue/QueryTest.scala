@@ -524,14 +524,16 @@ class QueryTest extends SpecsMatchers {
   def testQueryOptimizerDetectsEmptyQueries: Unit = {
     val optimizer = new QueryOptimizer
 
-    optimizer.isEmptyQuery(Venue where (_.mayor in List())) must_== true
-    optimizer.isEmptyQuery(Venue where (_.tags in List())) must_== true
-    optimizer.isEmptyQuery(Venue where (_.tags all List())) must_== true
-    optimizer.isEmptyQuery(Venue where (_.tags contains "karaoke") and (_.mayor in List())) must_== true
-    optimizer.isEmptyQuery(Venue where (_.mayor in List()) and (_.tags contains "karaoke")) must_== true
-    optimizer.isEmptyQuery(Comment where (_.comments in List())) must_== true
-    optimizer.isEmptyQuery(Venue where (_.mayor in List()) scan (_.mayor_count eqs 5)) must_== true
-    optimizer.isEmptyQuery(Venue where (_.mayor in List()) modify (_.venuename setTo "fshq")) must_== true
+    optimizer.isEmptyQuery(Venue.where(_.mayor eqs 1)) must_== false
+    optimizer.isEmptyQuery(Venue.where(_.mayor in List())) must_== true
+    optimizer.isEmptyQuery(Venue.where(_.tags in List())) must_== true
+    optimizer.isEmptyQuery(Venue.where(_.tags all List())) must_== true
+    optimizer.isEmptyQuery(Venue.where(_.tags contains "karaoke").and(_.mayor in List())) must_== true
+    optimizer.isEmptyQuery(Venue.where(_.mayor in List()).and(_.tags contains "karaoke")) must_== true
+    optimizer.isEmptyQuery(Comment.where(_.comments in List())) must_== true
+    optimizer.isEmptyQuery(Venue.where(_.mayor in List()).scan(_.mayor_count eqs 5)) must_== true
+    optimizer.isEmptyQuery(Venue.where(_.mayor eqs 1).modify(_.venuename setTo "fshq")) must_== false
+    optimizer.isEmptyQuery(Venue.where(_.mayor in List()).modify(_.venuename setTo "fshq")) must_== true
   }
 
   @Test

@@ -27,10 +27,6 @@ trait Rogue {
 
   // type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
 
-  // type EmptyQuery[T <: MongoRecord[T]] =
-  //   BaseEmptyQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
-  type ModifyQuery[T] = AbstractModifyQuery[T]
-
   type GenericQuery[M, R] = AbstractQuery[M, R, _, _, _, _, _]
   type GenericBaseQuery[M, R] = BaseQuery[M, R, _, _, _, _, _]
 
