@@ -25,4 +25,6 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
   )
 }
 
-Seq(defaultSettings: _*)
+retrieveManaged := true
+
+Seq(Defaults.defaultSettings: _*)

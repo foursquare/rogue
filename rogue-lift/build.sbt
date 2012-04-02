@@ -8,4 +8,6 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     "net.liftweb"             %% "lift-record"         % liftVersion  % "compile")
 }
 
-Seq(defaultSettings: _*)
+retrieveManaged := true
+
+Seq(Defaults.defaultSettings: _*)
