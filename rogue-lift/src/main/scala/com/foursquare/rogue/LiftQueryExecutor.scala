@@ -4,6 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
 import com.mongodb.{DBObject, ReadPreference, WriteConcern}
+import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
 import scala.collection.mutable.ListBuffer
 
@@ -142,7 +143,11 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
-      LegacyQueryExecutor.condition("remove", query)(/*TODO: master */query.meta.bulkDelete_!!(_))
+      LegacyQueryExecutor.condition("remove", query) { qry =>
+        MongoDB.useCollection(query.meta.mongoIdentifier, query.meta.collectionName) { coll =>
+          coll.remove(qry, writeConcern)
+        }
+      }
     }
   }
 
@@ -153,7 +158,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
-      LegacyQueryExecutor.modify(query, upsert = false, multi = false, writeConcern = Some(writeConcern))
+      LegacyQueryExecutor.modify(query, upsert = false, multi = false, writeConcern = writeConcern)
     }
   }
 
@@ -164,7 +169,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
-      LegacyQueryExecutor.modify(query, upsert = true, multi = false, writeConcern = Some(writeConcern))
+      LegacyQueryExecutor.modify(query, upsert = true, multi = false, writeConcern = writeConcern)
     }
   }
 
@@ -175,7 +180,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
-      LegacyQueryExecutor.modify(query, upsert = false, multi = true, writeConcern = Some(writeConcern))
+      LegacyQueryExecutor.modify(query, upsert = false, multi = true, writeConcern = writeConcern)
     }
   }
 

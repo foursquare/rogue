@@ -12,7 +12,7 @@ import org.bson.types.BasicBSONList
 object ConcreteLiftQueryExecutor extends ConcreteLiftQueryExecutor
 
 class ConcreteLiftQueryExecutor extends LiftQueryExecutor {
-  override def defaultWriteConcern = WriteConcern.SAFE
+  override def defaultWriteConcern = QueryHelpers.config.defaultWriteConcern
   override def defaultReadPreference = ReadPreference.PRIMARY
 
   override protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](

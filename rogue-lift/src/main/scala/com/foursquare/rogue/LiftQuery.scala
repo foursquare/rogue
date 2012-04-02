@@ -109,9 +109,9 @@ case class LiftQuery[
    * "limit", or "select" clauses. Sends the delete operation to mongo, and waits for the
    * delete operation to complete before returning to the caller.
    */
-  def blockingBulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel <:< Unselected,
-                                                            ev2: Lim =:= Unlimited,
-                                                            ev3: Sk =:= Unskipped): Unit =
+  def bulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel <:< Unselected,
+                                                    ev2: Lim =:= Unlimited,
+                                                    ev3: Sk =:= Unskipped): Unit =
     db.bulkDelete_!!(query, concern)
 
   /**

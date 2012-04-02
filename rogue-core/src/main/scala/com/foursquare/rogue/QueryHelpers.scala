@@ -3,7 +3,7 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue.GenericQuery
-import com.mongodb.DBObject
+import com.mongodb.{DBObject, WriteConcern}
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
 import net.liftweb.mongodb.{JObjectParser, ObjectIdSerializer}
@@ -82,6 +82,18 @@ object QueryHelpers {
   object NoopQueryTransformer extends DefaultQueryTransformer
 
   var transformer: QueryTransformer = NoopQueryTransformer
+
+  trait QueryConfig {
+    def defaultWriteConcern: WriteConcern
+  }
+
+  class DefaultQueryConfig extends QueryConfig {
+    override def defaultWriteConcern = WriteConcern.NONE
+  }
+
+  object DefaultQueryConfig extends DefaultQueryConfig
+
+  var config: QueryConfig = DefaultQueryConfig
 
   def makeJavaList[T](sl: Traversable[T]): java.util.List[T] = {
     val list = new java.util.ArrayList[T]()

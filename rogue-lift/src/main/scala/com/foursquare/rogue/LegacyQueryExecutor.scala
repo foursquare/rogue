@@ -42,10 +42,12 @@ object LegacyQueryExecutor {
     }
   }
 
-  def modify[M <: MongoRecord[_] with MongoMetaRecord[_], T](mod: BaseModifyQuery[M],
-                                     upsert: Boolean,
-                                     multi: Boolean,
-                                     writeConcern: Option[WriteConcern] = None): Unit = {
+  def modify[M <: MongoRecord[_] with MongoMetaRecord[_], T](
+      mod: BaseModifyQuery[M],
+      upsert: Boolean,
+      multi: Boolean,
+      writeConcern: WriteConcern
+  ): Unit = {
     val modClause = transformer.transformModify(mod)
     validator.validateModify(modClause)
     if (!modClause.mod.clauses.isEmpty) {
@@ -56,10 +58,7 @@ object LegacyQueryExecutor {
       runCommand(description, modClause.query) {
         MongoDB.useSession(mod.query/* TODO: .master*/.meta.mongoIdentifier) { db =>
           val coll = db.getCollection(mod.query/* TODO .master */.meta.collectionName)
-          writeConcern match {
-            case Some(theWriteConcern) => coll.update(q, m, upsert, multi, theWriteConcern)
-            case None => coll.update(q, m, upsert, multi)
-          }
+          coll.update(q, m, upsert, multi, writeConcern)
         }
       }
     }
