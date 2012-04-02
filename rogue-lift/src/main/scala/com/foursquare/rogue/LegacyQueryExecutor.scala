@@ -3,9 +3,11 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
+import com.foursquare.rogue.Rogue.Iter._
 import com.mongodb.{BasicDBObjectBuilder, Bytes, DBCursor, DBObject, WriteConcern}
 import net.liftweb.mongodb.MongoDB
 import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
+import scala.collection.mutable.ListBuffer
 
 object LegacyQueryExecutor {
 
@@ -100,19 +102,101 @@ object LegacyQueryExecutor {
     }
   }
 
-  def explain[M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String,
-                                   query: GenericBaseQuery[M, _]): String = {
-    var explanation = ""
-    doQuery(operation, query){cursor =>
-      explanation += cursor.explain.toString
+  def iterate[M <: MongoRecord[_] with MongoMetaRecord[_], R, S](
+      operation: String,
+      query: GenericBaseQuery[M, R],
+      initialState: S,
+      f: DBObject => R
+  )(
+      handler: (S, Event[R]) => Command[S]
+  ): S = {
+    def getObject(cursor: DBCursor): Either[R, Exception] = {
+      try {
+        Left(f(cursor.next))
+      } catch {
+        case e: Exception => Right(e)
+      }
     }
-    explanation
+
+    @scala.annotation.tailrec
+    def iter(cursor: DBCursor, curState: S): S = {
+      if (cursor.hasNext) {
+        getObject(cursor) match {
+          case Right(e) => handler(curState, Error(e)).state
+          case Left(r) => handler(curState, Item(r)) match {
+            case Continue(s) => iter(cursor, s)
+            case Return(s) => s
+          }
+        }
+      } else {
+        handler(curState, EOF).state
+      }
+    }
+
+    doQuery(operation, query)(cursor =>
+      iter(cursor, initialState)
+    )
   }
 
-  private[rogue] def doQuery[M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String,
-                                 query: GenericBaseQuery[M, _])
-                                (f: DBCursor  => Unit): Unit = {
+  def iterateBatch[M <: MongoRecord[_] with MongoMetaRecord[_], R, S](
+      operation: String,
+      query: GenericBaseQuery[M, R],
+      batchSize: Int,
+      initialState: S,
+      f: DBObject => R
+  )(
+      handler: (S, Event[List[R]]) => Command[S]
+  ): S = {
+    val buf = new ListBuffer[R]
 
+    def getBatch(cursor: DBCursor): Either[List[R], Exception] = {
+      try {
+        buf.clear()
+        while (cursor.hasNext && buf.size < batchSize) {
+          buf += f(cursor.next)
+        }
+        Left(buf.toList)
+      } catch {
+        case e: Exception => Right(e)
+      }
+    }
+
+    @scala.annotation.tailrec
+    def iter(cursor: DBCursor, curState: S): S = {
+      if (cursor.hasNext) {
+        getBatch(cursor) match {
+          case Right(e) => handler(curState, Error(e)).state
+          case Left(Nil) => handler(curState, EOF).state
+          case Left(rs) => handler(curState, Item(rs)) match {
+            case Continue(s) => iter(cursor, s)
+            case Return(s) => s
+          }
+        }
+      } else {
+        handler(curState, EOF).state
+      }
+    }
+
+    doQuery(operation, query)(cursor => {
+      cursor.batchSize(batchSize)
+      iter(cursor, initialState)
+    })
+  }
+
+
+  def explain[M <: MongoRecord[_] with MongoMetaRecord[_]](operation: String,
+                                   query: GenericBaseQuery[M, _]): String = {
+    doQuery(operation, query){cursor =>
+      cursor.explain.toString
+    }
+  }
+
+  private[rogue] def doQuery[M <: MongoRecord[_] with MongoMetaRecord[_], T](
+      operation: String,
+      query: GenericBaseQuery[M, _]
+  )(
+      f: DBCursor => T
+  ): T = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
     val cnd = buildCondition(queryClause.condition)
@@ -142,7 +226,9 @@ object LegacyQueryExecutor {
           queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
           queryClause.comment.foreach(cursor addSpecial("$comment", _))
           hnt.foreach(cursor hint _)
-          f(cursor)
+          val ret = f(cursor)
+          cursor.close()
+          ret
         } catch {
           case e: Exception =>
             throw new RogueException("Mongo query on %s [%s] failed".format(

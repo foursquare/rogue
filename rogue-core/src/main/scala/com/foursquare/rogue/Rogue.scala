@@ -34,6 +34,23 @@ trait Rogue {
   object Desc extends IndexModifier(-1)
   object TwoD extends IndexModifier("2d")
 
+  /**
+   * Iteratee helper classes
+   * @tparam S state type
+   */
+  object Iter {
+    sealed trait Command[S] {
+      def state: S
+    }
+    case class Continue[S](state: S) extends Command[S]
+    case class Return[S](state: S) extends Command[S]
+
+    sealed trait Event[+R]
+    case class Item[R](r: R) extends Event[R]
+    case class Error(e: Exception) extends Event[Nothing]
+    case object EOF extends Event[Nothing]
+  }
+
   // QueryField implicits
   implicit def rfieldToQueryField[M, F](f: RField[F, M]): QueryField[F, M] = new QueryField(f)
 

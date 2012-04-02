@@ -139,4 +139,19 @@ trait QueryExecutor[MB] {
    * In particular, this is useful for finding out what indexes will be used by the query.
    */
   def explain[M <: MB](query: AbstractQuery[M, _, _, _, _, _, _]): String
+
+  def iterate[S, M <: MB, R](
+      query: AbstractQuery[M, R, _, _, _, _, _],
+      state: S
+  )(
+      handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]
+  ): S
+
+  def iterateBatch[S, M <: MB, R](
+      query: AbstractQuery[M, R, _, _, _, _, _],
+      batchSize: Int,
+      state: S
+  )(
+      handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]
+  ): S
 }

@@ -73,14 +73,14 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def fetchOne[M <: MongoRecord[_] with MongoMetaRecord[_], R, Lim <: MaybeLimited](
+  override def fetchOne[M <: MongoRecord[_] with MongoMetaRecord[_], R, Lim <: MaybeLimited](
       query: AbstractQuery[M, R, _, _, Lim, _, _],
       readPreference: ReadPreference = defaultReadPreference
   )(
       implicit ev1: Lim =:= Unlimited
   ): Option[R] = fetch(query.limit(1), readPreference).headOption
 
-  def foreach[M <: MongoRecord[_] with MongoMetaRecord[_], R](
+  override def foreach[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       query: AbstractQuery[M, R, _, _, _, _, _],
       readPreference: ReadPreference = defaultReadPreference
   )(
@@ -106,7 +106,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def fetchBatch[M <: MongoRecord[_] with MongoMetaRecord[_], R, T](
+  override def fetchBatch[M <: MongoRecord[_] with MongoMetaRecord[_], R, T](
       query: AbstractQuery[M, R, _, _, _, _, _],
       batchSize: Int,
       readPreference: ReadPreference = defaultReadPreference
@@ -130,7 +130,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def bulkDelete_!![M <: MongoRecord[_] with MongoMetaRecord[_], Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped](
+  override def bulkDelete_!![M <: MongoRecord[_] with MongoMetaRecord[_], Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped](
       query: AbstractQuery[M, _, _, Sel, Lim, Sk, _],
       writeConcern: WriteConcern = defaultWriteConcern
   )(
@@ -146,7 +146,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def updateOne[M <: MongoRecord[_] with MongoMetaRecord[_]](
+  override def updateOne[M <: MongoRecord[_] with MongoMetaRecord[_]](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
   ): Unit = {
@@ -157,7 +157,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def upsertOne[M <: MongoRecord[_] with MongoMetaRecord[_]](
+  override def upsertOne[M <: MongoRecord[_] with MongoMetaRecord[_]](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
   ): Unit = {
@@ -168,7 +168,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def updateMulti[M <: MongoRecord[_] with MongoMetaRecord[_]](
+  override def updateMulti[M <: MongoRecord[_] with MongoMetaRecord[_]](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
   ): Unit = {
@@ -179,7 +179,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def findAndUpdateOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
+  override def findAndUpdateOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
     query: AbstractFindAndModifyQuery[M, R],
     returnNew: Boolean = false,
     writeConcern: WriteConcern = defaultWriteConcern
@@ -192,7 +192,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def findAndUpsertOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
+  override def findAndUpsertOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
     query: AbstractFindAndModifyQuery[M, R],
     returnNew: Boolean = false,
     writeConcern: WriteConcern = defaultWriteConcern
@@ -205,7 +205,7 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def findAndDeleteOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
+  override def findAndDeleteOne[M <: MongoRecord[_] with MongoMetaRecord[_], R](
     query: AbstractQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped, _ <: MaybeHasOrClause],
     writeConcern: WriteConcern = defaultWriteConcern
   ): Option[R] = {
@@ -218,7 +218,37 @@ trait LiftQueryExecutor extends QueryExecutor[MongoRecord[_] with MongoMetaRecor
     }
   }
 
-  def explain[M <: MongoRecord[_] with MongoMetaRecord[_]](query: AbstractQuery[M, _, _, _, _, _, _]): String = {
+  override def explain[M <: MongoRecord[_] with MongoMetaRecord[_]](query: AbstractQuery[M, _, _, _, _, _, _]): String = {
     LegacyQueryExecutor.explain("find", query)
+  }
+
+
+  override def iterate[S, M <: MongoRecord[_] with MongoMetaRecord[_], R](
+      query: AbstractQuery[M, R, _, _, _, _, _],
+      state: S
+  )(
+      handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]
+  ): S = {
+    if (optimizer.isEmptyQuery(query)) {
+      handler(state, Rogue.Iter.EOF).state
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      LegacyQueryExecutor.iterate("find", query, state, s.fromDBObject _)(handler)
+    }
+  }
+
+  override def iterateBatch[S, M <: MongoRecord[_] with MongoMetaRecord[_], R](
+      query: AbstractQuery[M, R, _, _, _, _, _],
+      batchSize: Int,
+      state: S
+  )(
+      handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]
+  ): S = {
+    if (optimizer.isEmptyQuery(query)) {
+      handler(state, Rogue.Iter.EOF).state
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      LegacyQueryExecutor.iterateBatch("find", query, batchSize, state, s.fromDBObject _)(handler)
+    }
   }
 }

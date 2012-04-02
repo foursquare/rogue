@@ -127,8 +127,13 @@ case class LiftQuery[
    */
   def explain(): String =
     db.explain(query)
-}
 
+  def iterate[S](state: S)(handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]): S =
+    db.iterate(query, state)(handler)
+
+  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]): S =
+    db.iterateBatch(query, batchSize, state)(handler)
+}
 
 case class LiftModifyQuery[M <: MongoRecord[_] with MongoMetaRecord[_]](
     query: BaseModifyQuery[M],
