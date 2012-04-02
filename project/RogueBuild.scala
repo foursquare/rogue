@@ -53,6 +53,7 @@ object RogueBuild extends Build {
       else
         Seq()
     },
+    retrieveManaged := true,
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     testFrameworks += new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker"),
     credentials ++= {

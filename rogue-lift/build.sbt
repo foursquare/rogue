@@ -15,6 +15,4 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     "org.joda"                 % "joda-convert"        % "1.2"        % "compile")
 }
 
-retrieveManaged := true
-
 Seq(Defaults.defaultSettings: _*)
