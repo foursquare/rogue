@@ -130,6 +130,13 @@ trait Rogue {
   implicit def roptionalFieldToSelectField[M, V](
       f: ROptionalField[V, M]
   ): SelectField[Box[V], M] = new OptionalSelectField(f)
+
+  class Flattened[A, B]
+  implicit def anyValIsFlattened[A <: AnyVal]: Flattened[A, A] = new Flattened[A, A]
+  implicit def stringIsFlattened[A <: String]: Flattened[A, A] = new Flattened[A, A]
+  implicit def objectIdIsFlattened[A <: ObjectId]: Flattened[A, A] = new Flattened[A, A]
+  implicit def enumIsFlattened[A <: Enumeration#Value]: Flattened[A, A] = new Flattened[A, A]
+  implicit def recursiveFlatten[A, B](implicit ev: Flattened[A, B]) = new Flattened[List[A], B]
 }
 
 object Rogue extends Rogue

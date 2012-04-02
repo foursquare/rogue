@@ -199,6 +199,10 @@ class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, 
     new SelectableDummyField[V, M](field.name + "." + subfield(defaultValue).name, field.owner)
   }
 
+  def unsafeField[V](name: String): DummyField[V, M] = {
+    new DummyField[V, M](field.name + "." + name, field.owner)
+  }
+
   def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
 }
 
@@ -263,12 +267,16 @@ class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObjec
     extends AbstractListQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
-  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
-    new SelectableDummyField[List[V], M](field.name + "." + subfield(rec).name, field.owner)
+  def subfield[V, V1](f: B => Field[V, B])(implicit ev: Rogue.Flattened[V, V1]): SelectableDummyField[List[V1], M] = {
+    new SelectableDummyField[List[V1], M](field.name + "." + f(rec).name, field.owner)
   }
 
-  def subselect[V](subfield: B => Field[V, B]): SelectableDummyField[List[V], M] = {
-    new SelectableDummyField[List[V], M](field.name + "." + subfield(rec).name, field.owner)
+  def subselect[V, V1](f: B => Field[V, B])(implicit ev: Rogue.Flattened[V, V1]): SelectField[Box[List[V1]], M] = {
+    Rogue.roptionalFieldToSelectField(subfield(f))
+  }
+
+  def unsafeField[V](name: String): DummyField[V, M] = {
+    new DummyField[V, M](field.name + "." + name, field.owner)
   }
 }
 
