@@ -4,8 +4,15 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     case _       => "2.4-M2"
   }
   Seq(
+    "net.liftweb"             %% "lift-util"           % liftVersion  % "compile" intransitive(),
+    "net.liftweb"             %% "lift-common"         % liftVersion  % "compile" intransitive(),
+    "net.liftweb"             %% "lift-record"         % liftVersion  % "compile" intransitive(),
     "net.liftweb"             %% "lift-mongodb-record" % liftVersion  % "compile" intransitive(),
-    "net.liftweb"             %% "lift-record"         % liftVersion  % "compile")
+    "net.liftweb"             %% "lift-mongodb"        % liftVersion  % "compile" intransitive(),
+    "net.liftweb"             %% "lift-webkit"         % liftVersion  % "compile" intransitive(),
+    "net.liftweb"             %% "lift-json"           % liftVersion  % "compile",
+    "joda-time"                % "joda-time"           % "2.0_2012b"  % "compile",
+    "org.joda"                 % "joda-convert"        % "1.2"        % "compile")
 }
 
 retrieveManaged := true
