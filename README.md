@@ -37,8 +37,9 @@ Because Rogue is designed to work with several versions of lift-mongodb-record (
 you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    val rogue           = "com.foursquare" %% "rogue"               % "1.1.6" intransitive()
-    val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M2"
+    val rogue           = "com.foursquare" %% "rogue-core"          % "2.0.0-beta1" intransitive()
+    val rogue           = "com.foursquare" %% "rogue-lift"          % "2.0.0-beta1" intransitive()
+    val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M5"
 
 You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
 production against Lift 2.2 and 2.4-M2. If you encounter problems using Rogue with other versions
