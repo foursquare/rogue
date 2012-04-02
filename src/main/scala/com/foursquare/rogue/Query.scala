@@ -126,7 +126,7 @@ case class BaseQuery[M <: MongoRecord[M], R,
   def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
     addClauseOpt(opt)(clause, expectedIndexBehavior = DocumentScan)
 
-  def raw(f: BasicDBObjectBuilder => Unit) = {
+  def raw(f: BasicDBObjectBuilder => Unit): BaseQuery[M, R, Ord, Sel, Lim, Sk, Or] = {
     val newClause = new RawQueryClause(f)
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }

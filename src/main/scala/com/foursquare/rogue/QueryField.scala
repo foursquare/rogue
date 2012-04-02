@@ -7,7 +7,6 @@ import java.util.Calendar
 import java.util.regex.Pattern
 import net.liftweb.common.{Box, Full, Empty}
 import net.liftweb.json.JsonAST.{JInt, JValue, JArray}
-import net.liftweb.http.js.JE.Num
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord}
 import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
 import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
@@ -453,8 +452,8 @@ class OptionalSelectField[V, M <: BsonRecord[M]](override val field: Field[V, M]
 // ********************************************************************************
 
 trait AbstractDummyField[V, M <: BsonRecord[M]] extends Field[V, M] {
-  override val asJValue = JInt(0)
-  override val asJs = Num(0)
+  override val asJValue = null
+  override val asJs = null
   override val toForm = Empty
   override def toBoxMyType(v: ValueType): Box[V] = Empty
   override def toValueType(v: Box[MyType]) = null.asInstanceOf[ValueType]
