@@ -15,4 +15,4 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     "org.joda"                 % "joda-convert"        % "1.2"        % "compile")
 }
 
-Seq(Defaults.defaultSettings: _*)
+Seq(RogueBuild.defaultSettings: _*)

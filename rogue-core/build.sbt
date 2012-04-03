@@ -25,4 +25,4 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
   )
 }
 
-Seq(Defaults.defaultSettings: _*)
+Seq(RogueBuild.defaultSettings: _*)
