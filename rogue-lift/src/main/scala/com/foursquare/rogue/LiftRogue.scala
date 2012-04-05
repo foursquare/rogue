@@ -71,7 +71,7 @@ trait LiftRogue extends Rogue {
   }
 
   implicit def queryToLiftQuery[
-      M <: MongoRecord[M],
+      M <: MongoRecord[_],
       R,
       Ord <: MaybeOrdered,
       Sel <: MaybeSelected,
@@ -80,9 +80,9 @@ trait LiftRogue extends Rogue {
       Or <: MaybeHasOrClause
   ](
       query: BaseQuery[M, R, Ord, Sel, Lim, Sk, Or]
-  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[M], R, Ord, Sel, Lim, Sk, Or] = {
+  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R, Ord, Sel, Lim, Sk, Or] = {
     ExecutableQuery(
-        query.asInstanceOf[BaseQuery[M with MongoMetaRecord[M], R, Ord, Sel, Lim, Sk, Or]],
+        query.asInstanceOf[BaseQuery[M with MongoMetaRecord[_], R, Ord, Sel, Lim, Sk, Or]],
         LiftQueryExecutor
     )
   }
@@ -107,7 +107,7 @@ trait LiftRogue extends Rogue {
 
   implicit def metaRecordToLiftQuery[M <: MongoRecord[M]](
       rec: M with MongoMetaRecord[M]
-  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[M], M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
+  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
     val queryBuilder = metaRecordToQueryBuilder(rec)
     val liftQuery = queryToLiftQuery(queryBuilder)
     liftQuery
