@@ -26,9 +26,12 @@ object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with M
   }
 }
 
-object LiftAdapter extends MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_]](LiftDBCollectionFactory)
+class LiftAdapter(dbCollectionFactory: DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]])
+  extends MongoJavaDriverAdapter(dbCollectionFactory)
 
-class LiftQueryExecutor extends QueryExecutor(LiftAdapter) {
+object LiftAdapter extends LiftAdapter(LiftDBCollectionFactory)
+
+class LiftQueryExecutor(adapter: MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_]]) extends QueryExecutor(adapter) {
   override def defaultWriteConcern = QueryHelpers.config.defaultWriteConcern
   override def defaultReadPreference = ReadPreference.PRIMARY
 
@@ -76,5 +79,5 @@ class LiftQueryExecutor extends QueryExecutor(LiftAdapter) {
   }
 }
 
-object LiftQueryExecutor extends LiftQueryExecutor
+object LiftQueryExecutor extends LiftQueryExecutor(LiftAdapter)
 
