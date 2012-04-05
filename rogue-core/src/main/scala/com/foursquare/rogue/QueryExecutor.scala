@@ -2,26 +2,36 @@
 
 package com.foursquare.rogue
 
-import com.mongodb.{ReadPreference, WriteConcern}
+import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
+import com.mongodb.{DBObject, ReadPreference, WriteConcern}
+import scala.collection.mutable.ListBuffer
 
-trait QueryExecutor[MB] {
+trait RogueSerializer[R] {
+  def fromDBObject(dbo: DBObject): R
+}
+
+abstract class QueryExecutor[MB](adapter: MongoJavaDriverAdapter[MB]) {
   def defaultReadPreference: ReadPreference
   def defaultWriteConcern: WriteConcern
+  def optimizer: QueryOptimizer = new QueryOptimizer
 
-  /**
-   * Gets the size of the query result. This should only be called on queries that do not
-   * have limits or skips.
-   */
+  protected def serializer[M <: MB, R](
+      meta: M,
+      select: Option[MongoSelect[R]]
+  ): RogueSerializer[R]
+
   def count[M <: MB, Lim <: MaybeLimited, Sk <: MaybeSkipped](
       query: AbstractQuery[M, _, _, _, Lim, Sk, _]
   )(
       implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped
-  ): Long
+  ): Long = {
+    if (optimizer.isEmptyQuery(query)) {
+      0L
+    } else {
+      adapter.count(query)
+    }
+  }
 
-  /**
-   * Returns the number of distinct values returned by a query. The query must not have
-   * limit or skip clauses.
-   */
   def countDistinct[
       M <: MB,
       Sel <: MaybeSelected,
@@ -34,60 +44,88 @@ trait QueryExecutor[MB] {
       field: M => QueryField[V, M]
   )(
       implicit
+      // ev1: Sel =:= SelectedOne,
       ev2: Lim =:= Unlimited,
       ev3: Sk =:= Unskipped
-  ): Long
+  ): Long = {
+    if (optimizer.isEmptyQuery(query)) {
+      0L
+    } else {
+      adapter.countDistinct(query, field(query.meta).field.name)
+    }
+  }
 
-  /**
-   * Execute the query, returning all of the records that match the query.
-   * @return a list containing the records that match the query
-   */
   def fetch[M <: MB, R](
       query: AbstractQuery[M, R, _, _, _, _, _],
       readPreference: ReadPreference = defaultReadPreference
-  ): Seq[R]
+  ): List[R] = {
+    if (optimizer.isEmptyQuery(query)) {
+      Nil
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      val rv = new ListBuffer[R]
+      adapter.query(query, None)(dbo => rv += s.fromDBObject(dbo))
+      rv.toList
+    }
+  }
 
-  /**
-   * Fetches the first record that matches the query. The query must not contain a "limited" clause.
-   * @return an option record containing either the first result that matches the
-   *     query, or None if there are no records that match.
-   */
   def fetchOne[M <: MB, R, Lim <: MaybeLimited](
       query: AbstractQuery[M, R, _, _, Lim, _, _],
       readPreference: ReadPreference = defaultReadPreference
   )(
       implicit ev1: Lim =:= Unlimited
-  ): Option[R]
+  ): Option[R] = fetch(query.limit(1), readPreference).headOption
 
-  /**
-   * Executes a function on each record value returned by a query.
-   * @param f a function to be invoked on each fetched record.
-   * @return nothing.
-   */
   def foreach[M <: MB, R](
       query: AbstractQuery[M, R, _, _, _, _, _],
       readPreference: ReadPreference = defaultReadPreference
   )(
       f: R => Unit
-  ): Unit
+  ): Unit = {
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      adapter.query(query, None)(dbo => f(s.fromDBObject(dbo)))
+    }
+  }
 
-  /**
-   * fetch a batch of results, and execute a function on each element of the list.
-   * @param f the function to invoke on the records that match the query.
-   * @return a sequence containing the results of invoking the function on each record.
-   */
+  private def drainBuffer[A, B](
+      from: ListBuffer[A],
+      to: ListBuffer[B],
+      f: List[A] => List[B],
+      size: Int
+  ): Unit = {
+    if (from.size >= size) {
+      to ++= f(from.toList)
+      from.clear
+    }
+  }
+
   def fetchBatch[M <: MB, R, T](
       query: AbstractQuery[M, R, _, _, _, _, _],
       batchSize: Int,
       readPreference: ReadPreference = defaultReadPreference
   )(
       f: List[R] => List[T]
-  ): Seq[T]
+  ): List[T] = {
+    if (optimizer.isEmptyQuery(query)) {
+      Nil
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      val rv = new ListBuffer[T]
+      val buf = new ListBuffer[R]
 
-  /**
-   * Delete all of the recurds that match the query. The query must not contain any "skip",
-   * "limit", or "select" clauses.
-   */
+      adapter.query(query, Some(batchSize)) { dbo =>
+        buf += s.fromDBObject(dbo)
+        drainBuffer(buf, rv, f, batchSize)
+      }
+      drainBuffer(buf, rv, f, 1)
+
+      rv.toList
+    }
+  }
+
   def bulkDelete_!![M <: MB, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped](
       query: AbstractQuery[M, _, _, Sel, Lim, Sk, _],
       writeConcern: WriteConcern = defaultWriteConcern
@@ -96,56 +134,103 @@ trait QueryExecutor[MB] {
       ev1: Sel <:< Unselected,
       ev2: Lim =:= Unlimited,
       ev3: Sk =:= Unskipped
-  ): Unit
+  ): Unit = {
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      adapter.delete(query, writeConcern)
+    }
+  }
 
   def updateOne[M <: MB](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
-  ): Unit
+  ): Unit = {
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      adapter.modify(query, upsert = false, multi = false, writeConcern = writeConcern)
+    }
+  }
 
   def upsertOne[M <: MB](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
-  ): Unit
+  ): Unit = {
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      adapter.modify(query, upsert = true, multi = false, writeConcern = writeConcern)
+    }
+  }
 
   def updateMulti[M <: MB](
       query: AbstractModifyQuery[M],
       writeConcern: WriteConcern = defaultWriteConcern
-  ): Unit
+  ): Unit = {
+    if (optimizer.isEmptyQuery(query)) {
+      ()
+    } else {
+      adapter.modify(query, upsert = false, multi = true, writeConcern = writeConcern)
+    }
+  }
 
   def findAndUpdateOne[M <: MB, R](
     query: AbstractFindAndModifyQuery[M, R],
     returnNew: Boolean = false,
     writeConcern: WriteConcern = defaultWriteConcern
-  ): Option[R]
+  ): Option[R] = {
+    if (optimizer.isEmptyQuery(query)) {
+      None
+    } else {
+      val s = serializer[M, R](query.query.meta, query.query.select)
+      adapter.findAndModify(query, returnNew, upsert=false, remove=false)(s.fromDBObject _)
+    }
+  }
 
   def findAndUpsertOne[M <: MB, R](
     query: AbstractFindAndModifyQuery[M, R],
     returnNew: Boolean = false,
     writeConcern: WriteConcern = defaultWriteConcern
-  ): Option[R]
+  ): Option[R] = {
+    if (optimizer.isEmptyQuery(query)) {
+      None
+    } else {
+      val s = serializer[M, R](query.query.meta, query.query.select)
+      adapter.findAndModify(query, returnNew, upsert=true, remove=false)(s.fromDBObject _)
+    }
+  }
 
-  /**
-   * Finds the first record that matches the query (if any), fetches it, and then deletes it.
-   * A copy of the deleted record is returned to the caller.
-   */
   def findAndDeleteOne[M <: MB, R](
     query: AbstractQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped, _ <: MaybeHasOrClause],
     writeConcern: WriteConcern = defaultWriteConcern
-  ): Option[R]
+  ): Option[R] = {
+    if (optimizer.isEmptyQuery(query)) {
+      None
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      val mod = BaseFindAndModifyQuery(query, MongoModify(Nil))
+      adapter.findAndModify(mod, returnNew=false, upsert=false, remove=true)(s.fromDBObject _)
+    }
+  }
 
-  /**
-   * Return a string containing details about how the query would be executed in mongo.
-   * In particular, this is useful for finding out what indexes will be used by the query.
-   */
-  def explain[M <: MB](query: AbstractQuery[M, _, _, _, _, _, _]): String
+  def explain[M <: MB](query: AbstractQuery[M, _, _, _, _, _, _]): String = {
+    adapter.explain(query)
+  }
 
   def iterate[S, M <: MB, R](
       query: AbstractQuery[M, R, _, _, _, _, _],
       state: S
   )(
       handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]
-  ): S
+  ): S = {
+    if (optimizer.isEmptyQuery(query)) {
+      handler(state, Rogue.Iter.EOF).state
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      adapter.iterate(query, state, s.fromDBObject _)(handler)
+    }
+  }
 
   def iterateBatch[S, M <: MB, R](
       query: AbstractQuery[M, R, _, _, _, _, _],
@@ -153,5 +238,12 @@ trait QueryExecutor[MB] {
       state: S
   )(
       handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]
-  ): S
+  ): S = {
+    if (optimizer.isEmptyQuery(query)) {
+      handler(state, Rogue.Iter.EOF).state
+    } else {
+      val s = serializer[M, R](query.meta, query.select)
+      adapter.iterateBatch(query, batchSize, state, s.fromDBObject _)(handler)
+    }
+  }
 }

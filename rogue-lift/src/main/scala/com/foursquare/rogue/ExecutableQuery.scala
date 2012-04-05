@@ -1,29 +1,23 @@
-// Copyright 2012 Foursquare Labs Inc. All Rights Reserved.
-
 package com.foursquare.rogue
+
+// Copyright 2012 Foursquare Labs Inc. All Rights Reserved.
 
 import com.foursquare.rogue.MongoHelpers.MongoSelect
 import com.mongodb.WriteConcern
-import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
 
-case class LiftQuery[
-    M <: MongoRecord[_] with MongoMetaRecord[_],
+case class ExecutableQuery[
+    MB,
+    M <: MB,
     R,
     Ord <: MaybeOrdered,
     Sel <: MaybeSelected,
     Lim <: MaybeLimited,
     Sk <: MaybeSkipped,
     Or <: MaybeHasOrClause
-](
-    query: BaseQuery[M, R, Ord, Sel, Lim, Sk, Or],
-    db: LiftQueryExecutor
-) {
-  // def or(subqueries: (M => AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, _])*)
-  //                      (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
-  //   val queries = subqueries.toList.map(q => q(query.meta))
-  //   val orCondition = QueryHelpers.orConditionFromQueries(queries)
-  //   query.copy(condition = query.condition.copy(orCondition = Some(orCondition)))
-  // }
+    ](
+     query: AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or],
+     db: QueryExecutor[MB]
+     ) {
 
   /**
    * Gets the size of the query result. This should only be called on queries that do not
@@ -37,7 +31,7 @@ case class LiftQuery[
    * limit or skip clauses.
    */
   def countDistinct[V](field: M => QueryField[V, M])
-                       (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
+                      (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
     db.countDistinct(query)(field)
 
   /**
@@ -74,13 +68,13 @@ case class LiftQuery[
    * @param f the function to invoke on the records that match the query.
    * @return a list containing the results of invoking the function on each record.
    */
-  def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] = 
+  def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] =
     db.fetchBatch(query, batchSize)(f).toList
 
   /**
    * Fetches the first record that matches the query. The query must not contain a "limited" clause.
    * @return an option record containing either the first result that matches the
-   *     query, or None if there are no records that match.
+   *         query, or None if there are no records that match.
    */
   def get()(implicit ev: Lim =:= Unlimited): Option[R] =
     db.fetchOne(query)
@@ -91,7 +85,8 @@ case class LiftQuery[
    * @param countPerPage the number of records to be contained in each page of the result.
    */
   def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
-    new BasePaginatedQuery(query.copy(), db, countPerPage)
+    val q = query.asInstanceOf[AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or]]
+    new BasePaginatedQuery[MB, M, R](q, db, countPerPage)
   }
 
   /**
@@ -100,18 +95,18 @@ case class LiftQuery[
    * <em>not</em> wait for the delete to be finished.
    */
   def bulkDelete_!!!()(implicit ev1: Sel <:< Unselected,
-                               ev2: Lim =:= Unlimited,
-                               ev3: Sk =:= Unskipped): Unit =
+                       ev2: Lim =:= Unlimited,
+                       ev3: Sk =:= Unskipped): Unit =
     db.bulkDelete_!!(query)
 
   /**
-   * Delete all of the recurds that match the query. The query must not contain any "skip",
+   * Delete all of the records that match the query. The query must not contain any "skip",
    * "limit", or "select" clauses. Sends the delete operation to mongo, and waits for the
    * delete operation to complete before returning to the caller.
    */
   def bulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel <:< Unselected,
-                                                    ev2: Lim =:= Unlimited,
-                                                    ev3: Sk =:= Unskipped): Unit =
+                                           ev2: Lim =:= Unlimited,
+                                           ev3: Sk =:= Unskipped): Unit =
     db.bulkDelete_!!(query, concern)
 
   /**
@@ -135,11 +130,8 @@ case class LiftQuery[
     db.iterateBatch(query, batchSize, state)(handler)
 }
 
-case class LiftModifyQuery[M <: MongoRecord[_] with MongoMetaRecord[_]](
-    query: BaseModifyQuery[M],
-    db: LiftQueryExecutor
-) {
-  // These methods always do modifications against master (not query.meta, which could point to a slave).
+case class ExecutableModifyQuery[MB, M <: MB](query: AbstractModifyQuery[M],
+                                              db: QueryExecutor[MB]) {
   def updateMulti(): Unit =
     db.updateMulti(query)
 
@@ -159,11 +151,8 @@ case class LiftModifyQuery[M <: MongoRecord[_] with MongoMetaRecord[_]](
     db.upsertOne(query, writeConcern)
 }
 
-case class LiftFindAndModifyQuery[M <: MongoRecord[_] with MongoMetaRecord[_], R](
-    query: BaseFindAndModifyQuery[M, R],
-    db: LiftQueryExecutor
-) {
-  // Always do modifications against master (not query.meta, which could point to slave)
+case class ExecutableFindAndModifyQuery[MB, M <: MB, R](query: AbstractFindAndModifyQuery[M, R],
+                                                        db: QueryExecutor[MB]) {
   def updateOne(returnNew: Boolean = false): Option[R] =
     db.findAndUpdateOne(query, returnNew)
 
@@ -171,12 +160,12 @@ case class LiftFindAndModifyQuery[M <: MongoRecord[_] with MongoMetaRecord[_], R
     db.findAndUpsertOne(query, returnNew)
 }
 
-class BasePaginatedQuery[M <: MongoRecord[_] with MongoMetaRecord[_], R](
-    q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
-    db: LiftQueryExecutor,
-    val countPerPage: Int,
-    val pageNum: Int = 1
-) {
+class BasePaginatedQuery[MB, M <: MB, R](
+                                  q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
+                                  db: QueryExecutor[MB],
+                                  val countPerPage: Int,
+                                  val pageNum: Int = 1
+                                  ) {
   def copy() = new BasePaginatedQuery(q, db, countPerPage, pageNum)
 
   def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, db, countPerPage, p)

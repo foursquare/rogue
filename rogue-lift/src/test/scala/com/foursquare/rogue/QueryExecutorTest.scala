@@ -19,7 +19,7 @@ class LegacyQueryExecutorTest extends SpecsMatchers {
   def testExeptionInRunCommandIsDecorated {
     val query = BaseQuery[Dummy.type, Dummy, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
       Dummy, "Dummy", None, None, None, None, None, AndCondition(Nil, None), None, None, None)
-    (LegacyQueryExecutor.runCommand("hello", query){
+    (LiftAdapter.runCommand("hello", query){
       throw new RuntimeException("bang")
       "hi"
     }) must throwA[RogueException]

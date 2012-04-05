@@ -71,7 +71,7 @@ trait LiftRogue extends Rogue {
   }
 
   implicit def queryToLiftQuery[
-      M <: MongoRecord[_],
+      M <: MongoRecord[M],
       R,
       Ord <: MaybeOrdered,
       Sel <: MaybeSelected,
@@ -80,34 +80,34 @@ trait LiftRogue extends Rogue {
       Or <: MaybeHasOrClause
   ](
       query: BaseQuery[M, R, Ord, Sel, Lim, Sk, Or]
-  ): LiftQuery[M with MongoMetaRecord[_], R, Ord, Sel, Lim, Sk, Or] = {
-    LiftQuery(
-        query.asInstanceOf[BaseQuery[M with MongoMetaRecord[_], R, Ord, Sel, Lim, Sk, Or]],
-        ConcreteLiftQueryExecutor
+  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[M], R, Ord, Sel, Lim, Sk, Or] = {
+    ExecutableQuery(
+        query.asInstanceOf[BaseQuery[M with MongoMetaRecord[M], R, Ord, Sel, Lim, Sk, Or]],
+        LiftQueryExecutor
     )
   }
 
   implicit def modifyQueryToLiftModifyQuery[M <: MongoRecord[_]](
       query: BaseModifyQuery[M]
-  ): LiftModifyQuery[M with MongoMetaRecord[_]] = {
-    LiftModifyQuery(
+  ): ExecutableModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_]] = {
+    ExecutableModifyQuery(
         query.asInstanceOf[BaseModifyQuery[M with MongoMetaRecord[_]]],
-        ConcreteLiftQueryExecutor
+        LiftQueryExecutor
     )
   }
 
   implicit def findAndModifyQueryToLiftFindAndModifyQuery[M <: MongoRecord[_], R](
       query: BaseFindAndModifyQuery[M, R]
-  ): LiftFindAndModifyQuery[M with MongoMetaRecord[_], R] = {
-    LiftFindAndModifyQuery(
+  ): ExecutableFindAndModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R] = {
+    ExecutableFindAndModifyQuery(
         query.asInstanceOf[BaseFindAndModifyQuery[M with MongoMetaRecord[_], R]],
-        ConcreteLiftQueryExecutor
+        LiftQueryExecutor
     )
   }
 
   implicit def metaRecordToLiftQuery[M <: MongoRecord[M]](
       rec: M with MongoMetaRecord[M]
-  ): LiftQuery[M with MongoMetaRecord[_], M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
+  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[M], M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
     val queryBuilder = metaRecordToQueryBuilder(rec)
     val liftQuery = queryToLiftQuery(queryBuilder)
     liftQuery

@@ -52,7 +52,6 @@ class EndToEndTest extends SpecsMatchers {
 
   @After
   def cleanupTestData: Unit = {
-    val db = ConcreteLiftQueryExecutor
     Venue.bulkDelete_!!!
     Venue.count must_== 0
 
