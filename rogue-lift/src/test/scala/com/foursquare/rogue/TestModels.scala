@@ -81,13 +81,20 @@ object ClaimStatus extends Enumeration {
   val approved = Value("Approved")
 }
 
+object RejectReason extends Enumeration {
+  val tooManyClaims = Value("too many claims")
+  val cheater = Value("cheater")
+  val wrongCode = Value("wrong code")
+}
+
 class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] with Venue.FK[VenueClaim] {
   def meta = VenueClaim
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
+  object reason extends EnumField(this, RejectReason)
 }
 object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim] {
-  override def fieldOrder = List(status, _id, userid, venueid)
+  override def fieldOrder = List(status, _id, userid, venueid, reason)
   override def collectionName = "venueclaims"
   override def mongoIdentifier = RogueTestMongo
 }

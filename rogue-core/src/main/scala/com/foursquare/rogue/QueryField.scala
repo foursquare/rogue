@@ -95,9 +95,14 @@ class CalendarQueryField[M](val field: Field[java.util.Calendar, M]) {
   def between(range: (DateTime, DateTime)) = new StrictBetweenQueryClause(field.name, range._1.toDate, range._2.toDate)
 }
 
-class EnumerationQueryField[M, E <: Enumeration#Value](field: Field[E, M])
+class EnumNameQueryField[M, E <: Enumeration#Value](field: Field[E, M])
     extends AbstractQueryField[E, String, M](field) {
   override def valueToDB(e: E) = e.toString
+}
+
+class EnumIdQueryField[M, E <: Enumeration#Value](field: Field[E, M])
+    extends AbstractQueryField[E, Int, M](field) {
+  override def valueToDB(e: E) = e.id
 }
 
 class GeoQueryField[M](field: Field[LatLong, M])

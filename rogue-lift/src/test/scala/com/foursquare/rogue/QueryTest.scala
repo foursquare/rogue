@@ -48,6 +48,9 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.mayor_count gte 5)  toString() must_== """db.venues.find({ "mayor_count" : { "$gte" : 5}})"""
     Venue where (_.mayor_count between (3, 5)) toString() must_== """db.venues.find({ "mayor_count" : { "$gte" : 3 , "$lte" : 5}})"""
     VenueClaim where (_.status neqs ClaimStatus.approved) toString() must_== """db.venueclaims.find({ "status" : { "$ne" : "Approved"}})"""
+    VenueClaim where (_.reason eqs RejectReason.tooManyClaims) toString() must_== """db.venueclaims.find({ "reason" : 0})"""
+    VenueClaim where (_.reason eqs RejectReason.cheater) toString() must_== """db.venueclaims.find({ "reason" : 1})"""
+    VenueClaim where (_.reason eqs RejectReason.wrongCode) toString() must_== """db.venueclaims.find({ "reason" : 2})"""
 
     // comparison even when type information is unavailable
     def doLessThan[M <: MongoRecord[M], T](meta: M with MongoMetaRecord[M], f: M => Field[T, M], otherVal: T) =

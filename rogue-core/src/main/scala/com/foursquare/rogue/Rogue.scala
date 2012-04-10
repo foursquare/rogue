@@ -62,9 +62,9 @@ trait Rogue {
       (f: RField[Double, M]): NumericQueryField[Double, M] =
     new NumericQueryField(f)
 
-  implicit def renumerationFieldToEnumerationQueryField[M, F <: Enumeration#Value]
-      (f: RField[F, M]): EnumerationQueryField[M, F] =
-    new EnumerationQueryField(f)
+  implicit def renumNameFieldToEnumNameQueryField[M, F <: Enumeration#Value]
+      (f: RField[F, M]): EnumNameQueryField[M, F] =
+    new EnumNameQueryField(f)
 
   implicit def renumerationListFieldToEnumerationListQueryField[M, F <: Enumeration#Value]
       (f: RField[List[F], M]): EnumerationListQueryField[F, M] =
