@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 1.1.7
+
+- support for EnumField and EnumNameField
+- added explicit lift jar dependencies to build.sbt
+
 # 1.1.6
 
 - iteratee support
