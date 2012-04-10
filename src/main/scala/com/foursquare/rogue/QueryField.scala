@@ -8,8 +8,9 @@ import java.util.regex.Pattern
 import net.liftweb.common.{Box, Full, Empty}
 import net.liftweb.json.JsonAST.{JInt, JValue, JArray}
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord}
-import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
 import net.liftweb.mongodb.record.field.{BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
+import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
+import net.liftweb.record.field.EnumField
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import scala.util.matching.Regex
@@ -98,9 +99,14 @@ class CalendarQueryField[M <: BsonRecord[M]](val field: Field[java.util.Calendar
   def between(range: (DateTime, DateTime)) = new StrictBetweenQueryClause(field.name, range._1.toDate, range._2.toDate)
 }
 
-class EnumerationQueryField[M <: BsonRecord[M], E <: Enumeration#Value](field: Field[E, M])
+class EnumNameQueryField[M <: BsonRecord[M], E <: Enumeration#Value](field: Field[E, M])
     extends AbstractQueryField[E, String, M](field) {
   override def valueToDB(e: E) = e.toString
+}
+
+class EnumIdQueryField[M <: BsonRecord[M], E <: Enumeration](field: EnumField[M, E])
+    extends AbstractQueryField[E#Value, Int, M](field) {
+  override def valueToDB(e: E#Value) = e.id
 }
 
 class GeoQueryField[M <: BsonRecord[M]](field: Field[LatLong, M])

@@ -31,6 +31,9 @@ class QueryTest extends SpecsMatchers {
     Venue where (_.closed eqs true)           toString() must_== """db.venues.find({ "closed" : true})"""
     Venue where (_._id eqs oid)               toString() must_== ("""db.venues.find({ "_id" : { "$oid" : "%s"}})""" format oid.toString)
     VenueClaim where (_.status eqs ClaimStatus.approved) toString() must_== """db.venueclaims.find({ "status" : "Approved"})"""
+    VenueClaim where (_.reason eqs RejectReason.tooManyClaims) toString() must_== """db.venueclaims.find({ "reason" : 0})"""
+    VenueClaim where (_.reason eqs RejectReason.cheater) toString() must_== """db.venueclaims.find({ "reason" : 1})"""
+    VenueClaim where (_.reason eqs RejectReason.wrongCode) toString() must_== """db.venueclaims.find({ "reason" : 2})"""
 
     VenueClaim where (_.venueid eqs oid)      toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid.toString)
     VenueClaim where (_.venueid eqs ven1.id)  toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid1.toString)

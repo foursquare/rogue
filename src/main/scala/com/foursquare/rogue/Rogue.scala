@@ -6,9 +6,10 @@ import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Calendar
 import net.liftweb.common.Box
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
-import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
 import net.liftweb.mongodb.record.field.{
     BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
+import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField}
+import net.liftweb.record.field.EnumField
 import org.bson.types.ObjectId
 
 /**
@@ -126,9 +127,13 @@ trait Rogue {
       (f: Field[Double, M]): NumericQueryField[Double, M] =
     new NumericQueryField(f)
 
-  implicit def enumerationFieldToEnumerationQueryField[M <: BsonRecord[M], F <: Enumeration#Value]
-      (f: Field[F, M]): EnumerationQueryField[M, F] =
-    new EnumerationQueryField(f)
+  implicit def enumNameFieldToEnumNameQueryField[M <: BsonRecord[M], F <: Enumeration#Value]
+      (f: Field[F, M]): EnumNameQueryField[M, F] =
+    new EnumNameQueryField(f)
+
+  implicit def enumFieldToEnumQueryField[M <: BsonRecord[M], F <: Enumeration]
+     (f: EnumField[M, F]): EnumIdQueryField[M, F] =
+    new EnumIdQueryField(f)
 
   implicit def enumerationListFieldToEnumerationListQueryField[M <: BsonRecord[M], F <: Enumeration#Value]
       (f: Field[List[F], M]): EnumerationListQueryField[F, M] =
