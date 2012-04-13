@@ -138,7 +138,7 @@ case class BaseQuery[
    * you can see that the "MaybeHasOrClause" type parameter is changed, and is now specifically
    * bound to "HasOrClause", rather than to a type variable.</p>
    */
-  def or(subqueries: (AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] => AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, _])*)
+  def or(subqueries: (AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] => AbstractQuery[M, R, Ord, Sel, Lim, Sk, _])*)
                        (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
     val queryBuilder =
       this.copy[M, R, Ord, Sel, Lim, Sk, Or](

@@ -20,15 +20,15 @@ import org.bson.types.ObjectId
  */
 trait Rogue {
   type Query[T] =
-    AbstractQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+    BaseQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
 
   type OrderedQuery[T] =
-    AbstractQuery[T, T, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+    BaseQuery[T, T, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
 
   // type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
-
-  type GenericQuery[M, R] = AbstractQuery[M, R, _, _, _, _, _]
-  type GenericBaseQuery[M, R] = BaseQuery[M, R, _, _, _, _, _]
+  type ModifyQuery[T] = BaseModifyQuery[T]
+  type GenericQuery[M, R] = BaseQuery[M, R, _, _, _, _, _]
+  type GenericBaseQuery[M, R] = GenericQuery[M, R]
 
   object Asc extends IndexModifier(1)
   object Desc extends IndexModifier(-1)

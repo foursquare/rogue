@@ -14,10 +14,10 @@ case class ExecutableQuery[
     Lim <: MaybeLimited,
     Sk <: MaybeSkipped,
     Or <: MaybeHasOrClause
-    ](
-     query: AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or],
-     db: QueryExecutor[MB]
-     ) {
+](
+    query: AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or],
+    db: QueryExecutor[MB]
+) {
 
   /**
    * Gets the size of the query result. This should only be called on queries that do not
@@ -151,8 +151,10 @@ case class ExecutableModifyQuery[MB, M <: MB](query: AbstractModifyQuery[M],
     db.upsertOne(query, writeConcern)
 }
 
-case class ExecutableFindAndModifyQuery[MB, M <: MB, R](query: AbstractFindAndModifyQuery[M, R],
-                                                        db: QueryExecutor[MB]) {
+case class ExecutableFindAndModifyQuery[MB, M <: MB, R](
+    query: AbstractFindAndModifyQuery[M, R],
+    db: QueryExecutor[MB]
+) {
   def updateOne(returnNew: Boolean = false): Option[R] =
     db.findAndUpdateOne(query, returnNew)
 
@@ -161,11 +163,11 @@ case class ExecutableFindAndModifyQuery[MB, M <: MB, R](query: AbstractFindAndMo
 }
 
 class BasePaginatedQuery[MB, M <: MB, R](
-                                  q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
-                                  db: QueryExecutor[MB],
-                                  val countPerPage: Int,
-                                  val pageNum: Int = 1
-                                  ) {
+    q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
+    db: QueryExecutor[MB],
+    val countPerPage: Int,
+    val pageNum: Int = 1
+) {
   def copy() = new BasePaginatedQuery(q, db, countPerPage, pageNum)
 
   def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, db, countPerPage, p)
