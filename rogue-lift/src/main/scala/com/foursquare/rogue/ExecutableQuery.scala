@@ -30,9 +30,9 @@ case class ExecutableQuery[
    * Returns the number of distinct values returned by a query. The query must not have
    * limit or skip clauses.
    */
-  def countDistinct[V](field: M => QueryField[V, M])
+  def countDistinct[V](field: M => QueryField[V, _])
                       (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    db.countDistinct(query)(field)
+    db.countDistinct(query)(field.asInstanceOf[M => QueryField[V, M]])
 
   /**
    * Checks if there are any records that match this query.

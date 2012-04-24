@@ -11,7 +11,7 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     "net.liftweb"             %% "lift-mongodb"        % liftVersion  % "compile" intransitive(),
     "net.liftweb"             %% "lift-webkit"         % liftVersion  % "compile" intransitive(),
     "net.liftweb"             %% "lift-json"           % liftVersion  % "compile",
-    "joda-time"                % "joda-time"           % "2.0_2012b"  % "compile",
+    "joda-time"                % "joda-time"           % "2.0"        % "compile",
     "org.joda"                 % "joda-convert"        % "1.2"        % "compile")
 }
 
