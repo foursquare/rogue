@@ -160,16 +160,18 @@ object MongoHelpers {
 
     private[rogue] def runCommand[T](description: => String,
                                      query: GenericBaseQuery[_, _])(f: => T): T = {
-      val start = System.currentTimeMillis
+      // Use nanoTime instead of currentTimeMillis to time the query since
+      // currentTimeMillis only has 10ms granularity on many systems.
+      val start = System.nanoTime
       try {
         f
       } catch {
         case e: Exception =>
           throw new RogueException("Mongo query on %s [%s] failed after %d ms".
                                    format(query.meta.mongoIdentifier,
-            description, System.currentTimeMillis - start), e)
+            description, (System.nanoTime - start) / (1000 * 1000)), e)
       } finally {
-        logger.log(query, description, System.currentTimeMillis - start)
+        logger.log(query, description, (System.nanoTime - start) / (1000 * 1000))
       }
     }
 
