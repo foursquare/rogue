@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.mongodb.{BasicDBObjectBuilder, Bytes, DBObject, DBCursor, WriteConcern}
+import com.mongodb.{BasicDBObjectBuilder, DBObject}
 import scala.collection.immutable.ListMap
 
 object MongoHelpers extends Rogue {
