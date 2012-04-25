@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 1.1.8
+
+- use nanoTime instead of currentTimeMillis for query timing
+- change joda-time dependency to publicly available version (oops)
+- support for $natural sort ordering
+
 # 1.1.7
 
 - support for EnumField and EnumNameField
