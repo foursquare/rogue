@@ -153,6 +153,8 @@ class QueryTest extends SpecsMatchers {
     // ordered queries
     Venue where (_.mayor eqs 1) orderAsc(_.legacyid) toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "legid" : 1})"""
     Venue where (_.mayor eqs 1) orderDesc(_.legacyid) andAsc(_.userid) toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "legid" : -1 , "userid" : 1})"""
+    Venue.where(_.mayor eqs 1).orderNaturalAsc.toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "$natural" : 1})"""
+    Venue.where(_.mayor eqs 1).orderNaturalDesc.toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "$natural" : -1})"""
 
     // select queries
     Venue where (_.mayor eqs 1) select(_.legacyid) toString() must_== """db.venues.find({ "mayor" : 1}, { "legid" : 1})"""

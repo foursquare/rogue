@@ -180,6 +180,16 @@ case class BaseQuery[
     this.copy(order = Some(MongoOrder((field(meta).field.name, false) :: order.get.terms)))
 
   /**
+   * Natural ordering.
+   * TODO: doesn't make sense in conjunction with ordering on any other fields. enforce w/ phantom types?
+   */
+  def orderNaturalAsc[V](implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+    this.copy(order = Some(MongoOrder(List(("$natural", true)))))
+
+  def orderNaturalDesc[V](implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+    this.copy(order = Some(MongoOrder(List(("$natural", false)))))
+
+  /**
    * Places a limit on the size of the returned result.
    *
    * <p> Like "or", this uses the Rogue phantom-type/implicit parameter mechanics. To call this
