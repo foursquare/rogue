@@ -13,7 +13,8 @@ Pre-release checklist:
 
 Release checklist:
 
-  [ ] Run "+publish" in sbt
+  [ ] Run "+rogue-core/publish" in sbt
+  [ ] Run "+rogue-lift/publish" in sbt
   [ ] Find the rogue repository on oss.sonatype.org / Staging Repositories
   [ ] Select it and click Close
   [ ] Select it and click Release

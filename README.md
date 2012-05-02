@@ -88,7 +88,7 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 1.1.6. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 2.0.0-beta1. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
 New since 1.1.0:
 

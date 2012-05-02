@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 2.0.0-beta1
+
+- total refactor
+- separate query building from query execution
+- break out lift support into rogue-lift
+- core of rogue now in rogue-core, agnostic to model representation
+- drop support for scala 2.8.x
+
 # 1.1.6
 
 - iteratee support
