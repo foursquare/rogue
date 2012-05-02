@@ -7,7 +7,7 @@ Pre-release checklist:
      [ ] Update "New in ..." section in README.md
         [ ] Move the existing "New in ..." section to the "Lots of new features since..." section
         [ ] Add the features listed in CHANGELOG.md to the "New in ..." section
-  [ ] Remove the "-SNAPSHOT" from the version in build.sbt
+  [ ] Remove the "-SNAPSHOT" from the version in RogueBuild.scala
   [ ] Run "+clean; +test; +publish-local" in sbt to make sure everything works.
   [ ] Commit these changes (but don't push!)
 
@@ -21,6 +21,6 @@ Release checklist:
 
 Post-release checklist:
 
-  [ ] Bump the version in build.sbt and add "-SNAPSHOT" to it
+  [ ] Bump the version in RogueBuild.scala and add "-SNAPSHOT" to it
   [ ] Commit these changes
   [ ] Push both commits to Github
