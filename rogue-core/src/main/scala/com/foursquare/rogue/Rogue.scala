@@ -8,7 +8,7 @@ import com.foursquare.recordv2.{
     RequiredField => RRequiredField,
     Selectable => RSelectable}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
-import java.util.Calendar
+import java.util.{Calendar, Date}
 import net.liftweb.common.Box
 import org.bson.types.ObjectId
 
@@ -92,15 +92,28 @@ trait Rogue {
   implicit def rstringFieldToStringQueryField[M](f: RField[String, M]): StringQueryField[M] =
     new StringQueryField(f)
 
-  // ModifyField implicits
-  implicit def rfieldToModifyField[M, F](f: RField[F, M]): ModifyField[F, M] = new ModifyField(f)
+
+  /** ModifyField implicits
+    *
+    * These are dangerous in the general case, unless the field type can be safely serialized
+    * or the field class handles necessary serialization. We specialize some safe cases.
+    **/
+  implicit def booleanRFieldToModifyField[M](f: RField[Boolean, M]): ModifyField[Boolean, M] = new ModifyField(f)
+  implicit def charRFieldToModifyField[M](f: RField[Char, M]): ModifyField[Char, M] = new ModifyField(f)
+
+  implicit def byteRFieldToModifyField[M](f: RField[Byte, M]): NumericModifyField[Byte, M] = new NumericModifyField(f)
+  implicit def shortRFieldToModifyField[M](f: RField[Short, M]): NumericModifyField[Short, M] = new NumericModifyField(f)
+  implicit def intRFieldToModifyField[M](f: RField[Int, M]): NumericModifyField[Int, M] = new NumericModifyField(f)
+  implicit def longRFieldToModifyField[M](f: RField[Long, M]): NumericModifyField[Long, M] = new NumericModifyField(f)
+  implicit def floatRFieldToModifyField[M](f: RField[Float, M]): NumericModifyField[Float, M] = new NumericModifyField(f)
+  implicit def doubleRFieldToModifyField[M](f: RField[Double, M]): NumericModifyField[Double, M] = new NumericModifyField(f)
+
+  implicit def stringRFieldToModifyField[M](f: RField[String, M]): ModifyField[String, M] = new ModifyField(f)
+  implicit def objectidRFieldToModifyField[M](f: RField[ObjectId, M]): ModifyField[ObjectId, M] = new ModifyField(f)
+  implicit def dateRFieldToModifyField[M](f: RField[Date, M]): ModifyField[Date, M] = new ModifyField(f)
 
   implicit def rcalendarFieldToCalendarModifyField[M](f: RField[Calendar, M]): CalendarModifyField[M] =
     new CalendarModifyField(f)
-
-  implicit def rdoubleFieldToNumericModifyField[M]
-      (f: RField[Double, M]): NumericModifyField[Double, M] =
-    new NumericModifyField(f)
 
   implicit def renumerationFieldToEnumerationModifyField[M, F <: Enumeration#Value]
       (f: RField[F, M]): EnumerationModifyField[M, F] =
@@ -110,18 +123,11 @@ trait Rogue {
       (f: RField[List[F], M]): EnumerationListModifyField[F, M] =
     new EnumerationListModifyField[F, M](f)
 
-  implicit def rintFieldToIntModifyField[M]
-      (f: RField[Int, M]): NumericModifyField[Int, M] =
-    new NumericModifyField(f)
-
   implicit def rlatLongFieldToGeoQueryModifyField[M](f: RField[LatLong, M]): GeoModifyField[M] =
     new GeoModifyField(f)
 
   implicit def rlistFieldToListModifyField[M, F](f: RField[List[F], M]): ListModifyField[F, M] =
     new ListModifyField[F, M](f)
-
-  implicit def rlongFieldToNumericModifyField[M](f: RField[Long, M]): NumericModifyField[Long, M] =
-    new NumericModifyField(f)
 
   implicit def rmapFieldToMapModifyField[M, F](f: RField[Map[String, F], M]): MapModifyField[F, M] =
     new MapModifyField[F, M](f)

@@ -335,7 +335,7 @@ class GeoModifyField[M](field: Field[LatLong, M])
                      field.name -> QueryHelpers.list(List(lat, long)))
 }
 
-class NumericModifyField[V, M](val field: Field[V, M]) {
+class NumericModifyField[V, M](override val field: Field[V, M]) extends ModifyField[V, M](field) {
   def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
 
   def bitAnd(v: V) = new ModifyBitAndClause(field.name, v)
