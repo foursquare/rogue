@@ -683,7 +683,7 @@ class QueryTest extends SpecsMatchers {
   class Compiler {
     import java.io.{PrintWriter, Writer}
     import scala.io.Source
-    import scala.tools.nsc.{Interpreter, InterpreterResults, Settings}
+    import scala.tools.nsc.{interpreter => IR, Settings}
 
     class NullWriter extends Writer {
       override def close() = ()
@@ -701,7 +701,7 @@ class QueryTest extends SpecsMatchers {
     // This is deprecated in 2.9.x, but we need to use it for compatibility with 2.8.x
     val stringWriter = new java.io.StringWriter()
     private val interpreter =
-      new Interpreter(
+      new IR.IMain(
         settings,
         /**
          * It's a good idea to comment out this second parameter when adding or modifying
@@ -719,9 +719,9 @@ class QueryTest extends SpecsMatchers {
       stringWriter.getBuffer.delete(0, stringWriter.getBuffer.length)
       val thunked = "() => { %s }".format(code)
       interpreter.interpret(thunked) match {
-        case InterpreterResults.Success => None
-        case InterpreterResults.Error => Some(stringWriter.toString)
-        case InterpreterResults.Incomplete => throw new Exception("Incomplete code snippet")
+        case IR.Results.Success => None
+        case IR.Results.Error => Some(stringWriter.toString)
+        case IR.Results.Incomplete => throw new Exception("Incomplete code snippet")
       }
     }
   }
