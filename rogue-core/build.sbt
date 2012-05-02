@@ -1,6 +1,5 @@
 libraryDependencies <++= (scalaVersion) { scalaVersion =>
   val specsVersion = scalaVersion match {
-    case "2.8.0" => "1.6.5"
     case "2.9.1" => "1.6.9"
     case _       => "1.6.8"
   }
