@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta2
+
+- fix O(N^2) bug in fetchBatch and iterateBatch
+
 # 2.0.0-beta1
 
 - total refactor
