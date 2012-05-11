@@ -96,7 +96,8 @@ abstract class QueryExecutor[MB](adapter: MongoJavaDriverAdapter[MB]) {
       f: List[A] => List[B],
       size: Int
   ): Unit = {
-    if (from.size >= size) {
+    // ListBuffer#length is O(1) vs ListBuffer#size is O(N) (true in 2.9.x, fixed in 2.10.x)
+    if (from.length >= size) {
       to ++= f(from.toList)
       from.clear
     }

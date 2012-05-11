@@ -171,7 +171,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     def getBatch(cursor: DBCursor): Either[List[R], Exception] = {
       try {
         buf.clear()
-        while (cursor.hasNext && buf.size < batchSize) {
+        // ListBuffer#length is O(1) vs ListBuffer#size is O(N) (true in 2.9.x, fixed in 2.10.x)
+        while (cursor.hasNext && buf.length < batchSize) {
           buf += f(cursor.next)
         }
         Left(buf.toList)

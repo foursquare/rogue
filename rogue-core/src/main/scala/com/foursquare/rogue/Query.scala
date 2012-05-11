@@ -7,7 +7,6 @@ import com.foursquare.rogue.MongoHelpers.{
 import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
 import net.liftweb.common.{Box, Full}
 import org.bson.types.BasicBSONList
-import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.ListMap
 
 // ***************************************************************************
