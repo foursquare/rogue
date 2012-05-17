@@ -10,10 +10,12 @@ trait RogueSerializer[R] {
   def fromDBObject(dbo: DBObject): R
 }
 
-abstract class QueryExecutor[MB](adapter: MongoJavaDriverAdapter[MB]) {
+trait QueryExecutor[MB] {
+  def adapter: MongoJavaDriverAdapter[MB]
+  def optimizer: QueryOptimizer = new QueryOptimizer
+
   def defaultReadPreference: ReadPreference
   def defaultWriteConcern: WriteConcern
-  def optimizer: QueryOptimizer = new QueryOptimizer
 
   protected def serializer[M <: MB, R](
       meta: M,

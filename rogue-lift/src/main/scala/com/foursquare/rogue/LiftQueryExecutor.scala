@@ -31,7 +31,7 @@ class LiftAdapter(dbCollectionFactory: DBCollectionFactory[MongoRecord[_] with M
 
 object LiftAdapter extends LiftAdapter(LiftDBCollectionFactory)
 
-class LiftQueryExecutor(adapter: MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_]]) extends QueryExecutor(adapter) {
+class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_]]) extends QueryExecutor[MongoRecord[_] with MongoMetaRecord[_]] {
   override def defaultWriteConcern = QueryHelpers.config.defaultWriteConcern
   override def defaultReadPreference = ReadPreference.PRIMARY
 
