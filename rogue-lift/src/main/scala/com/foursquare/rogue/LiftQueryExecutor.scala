@@ -71,7 +71,7 @@ class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord
           }
 
           setInstanceFieldFromDbo("_id")
-          transformer(fields.map(fld => fld(setInstanceFieldFromDbo(fld.field.name))))
+          transformer(fields.map(fld => fld.valueOrDefault(setInstanceFieldFromDbo(fld.field.name))))
         case None =>
           meta.fromDBObject(dbo).asInstanceOf[R]
       }

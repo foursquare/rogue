@@ -441,17 +441,17 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
 
 abstract class SelectField[V, M](val field: Field[_, M] with Selectable) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
-  def apply(v: Any): Any
+  def valueOrDefault(v: Any): Any
 }
 
 class MandatorySelectField[V, M](override val field: RequiredField[V, M])
     extends SelectField[V, M](field) {
-  override def apply(v: Any): Any = v.asInstanceOf[Box[V]].openOr(field.defaultValue)
+  override def valueOrDefault(v: Any): Any = v.asInstanceOf[Box[V]].openOr(field.defaultValue)
 }
 
 class OptionalSelectField[V, M](override val field: OptionalField[V, M])
     extends SelectField[Box[V], M](field) {
-  override def apply(v: Any): Any = v.asInstanceOf[Box[V]]
+  override def valueOrDefault(v: Any): Any = v.asInstanceOf[Box[V]]
 }
 
 // ********************************************************************************
