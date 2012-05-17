@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 2.0.0-beta3
+
+- upgrade to v0.6 of gpg plugin
+- make QueryExecutor a trait
+- rename SelectField#apply so implicits to SelectField don't cause trouble
+
 # 2.0.0-beta2
 
 - fix O(N^2) bug in fetchBatch and iterateBatch
