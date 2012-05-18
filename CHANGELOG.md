@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta4
+
+- split off com.foursquare.field into a standalone project
+
 # 2.0.0-beta3
 
 - upgrade to v0.6 of gpg plugin
