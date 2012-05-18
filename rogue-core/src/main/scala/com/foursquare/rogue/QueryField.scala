@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.recordv2.{Field, OptionalField, RequiredField, Selectable}
+import com.foursquare.field.{Field, OptionalField, RequiredField}
 import com.mongodb.DBObject
 import java.util.Calendar
 import java.util.regex.Pattern
@@ -439,17 +439,23 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
 // *** Select fields
 // ********************************************************************************
 
-abstract class SelectField[V, M](val field: Field[_, M] with Selectable) {
+/**
+ * Fields that can be turned into SelectFields can be used in a .select call.
+ *
+ * This class is sealed because only RequiredFields and OptionalFields should
+ * be selectable. Be careful when adding subclasses of this class.
+ */
+sealed abstract class SelectField[V, M](val field: Field[_, M]) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
   def valueOrDefault(v: Any): Any
 }
 
-class MandatorySelectField[V, M](override val field: RequiredField[V, M])
+final class MandatorySelectField[V, M](override val field: RequiredField[V, M])
     extends SelectField[V, M](field) {
   override def valueOrDefault(v: Any): Any = v.asInstanceOf[Box[V]].openOr(field.defaultValue)
 }
 
-class OptionalSelectField[V, M](override val field: OptionalField[V, M])
+final class OptionalSelectField[V, M](override val field: OptionalField[V, M])
     extends SelectField[Box[V], M](field) {
   override def valueOrDefault(v: Any): Any = v.asInstanceOf[Box[V]]
 }
@@ -463,37 +469,3 @@ class DummyField[V, R](override val name: String, override val owner: R) extends
 class SelectableDummyField[V, R](override val name: String, override val owner: R) extends OptionalField[V, R]
 
 class RequiredDummyField[V, R](override val name: String, override val owner: R, override val defaultValue: V) extends RequiredField[V, R]
-
-// trait AbstractDummyField[V, M] extends Field[V, M]
-
-// trait AbstractDummyField[V, M <: MongoRecord[M]] extends Field[V, M] {
-//   override val asJValue = JInt(0)
-//   override val asJs = Num(0)
-//   override val toForm = Empty
-//   override def toBoxMyType(v: ValueType): Box[V] = Empty
-//   override def toValueType(v: Box[MyType]) = null.asInstanceOf[ValueType]
-//   override def defaultValueBox = Empty
-//   override def set(v: ValueType) = v
-//   override def get = null.asInstanceOf[ValueType]
-//   override def is = get
-//   override def apply(v: V) = owner
-//   override def setFromAny(a: Any) = Empty
-//   override def setFromString(s: String) = Empty
-//   override def setFromJValue(jv: JValue) = Empty
-//   override def liftSetFilterToBox(in: Box[MyType]): Box[MyType] = Empty
-// }
-
-// class DummyField[V, M](override val owner: M, override val name: String, override val defaultValue: V)
-//     extends AbstractDummyField[V, M]
-// 
-// class SelectableDummyField[V, M <: MongoRecord[M]](override val owner: M, override val name: String)
-//     extends OptionalTypedField[V]
-//     with AbstractDummyField[V, M]
-// 
-// class MandatoryDummyField[V, M <: MongoRecord[M]](override val owner: M,
-//                                                   override val name: String,
-//                                                   override val defaultValue: V)
-//     extends MandatoryTypedField[V] with AbstractDummyField[V, M] {
-//   override def set(v: MyType) = v
-//   override def toBoxMyType(v: ValueType): Full[V] = Full(v)
-// }

@@ -2,11 +2,10 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.recordv2.{
+import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
-    RequiredField => RRequiredField,
-    Selectable => RSelectable}
+    RequiredField => RRequiredField}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Calendar
 import net.liftweb.common.Box
@@ -280,13 +279,13 @@ trait LiftRogue extends Rogue {
 
   implicit def mandatoryLiftField2RequiredRecordv2Field[M <: BsonRecord[M], V](
       f: Field[V, M] with MandatoryTypedField[V]
-  ): com.foursquare.recordv2.RequiredField[V, M] = new com.foursquare.recordv2.RequiredField[V, M] {
+  ): com.foursquare.field.RequiredField[V, M] = new com.foursquare.field.RequiredField[V, M] {
     override def name = f.name
     override def owner = f.owner
     override def defaultValue = f.defaultValue
   }
 
-  implicit def liftField2Recordv2Field[M <: Record[M], V](f: Field[V, M]): com.foursquare.recordv2.Field[V, M] = new com.foursquare.recordv2.Field[V, M] {
+  implicit def liftField2Recordv2Field[M <: Record[M], V](f: Field[V, M]): com.foursquare.field.Field[V, M] = new com.foursquare.field.Field[V, M] {
     override def name = f.name
     override def owner = f.owner
   }

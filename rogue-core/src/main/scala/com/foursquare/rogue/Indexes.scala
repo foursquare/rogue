@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.recordv2.Field
+import com.foursquare.field.Field
 import scala.collection.immutable.ListMap
 
 case class IndexModifier(value: Any)

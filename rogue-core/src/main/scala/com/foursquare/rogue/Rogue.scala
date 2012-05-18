@@ -2,11 +2,10 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.recordv2.{
+import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
-    RequiredField => RRequiredField,
-    Selectable => RSelectable}
+    RequiredField => RRequiredField}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.{Calendar, Date}
 import net.liftweb.common.Box
