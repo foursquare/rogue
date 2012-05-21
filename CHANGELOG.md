@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta5
+
+- Internal: Use standard Either convention of failure on the Left.
+
 # 2.0.0-beta4
 
 - split off com.foursquare.field into a standalone project
