@@ -249,11 +249,11 @@ object MongoHelpers {
                                            query: GenericBaseQuery[M, R],
                                            initialState: S)
                                           (handler: (S, Event[R]) => Command[S]): S = {
-      def getObject(cursor: DBCursor): Either[R, Exception] = {
+      def getObject(cursor: DBCursor): Either[Exception, R] = {
         try {
-          Left(query.parseDBObject(cursor.next))
+          Right(query.parseDBObject(cursor.next))
         } catch {
-          case e: Exception => Right(e)
+          case e: Exception => Left(e)
         }
       }
 
@@ -261,8 +261,8 @@ object MongoHelpers {
       def iter(cursor: DBCursor, curState: S): S = {
         if (cursor.hasNext) {
           getObject(cursor) match {
-            case Right(e) => handler(curState, Error(e)).state
-            case Left(r) => handler(curState, Item(r)) match {
+            case Left(e) => handler(curState, Error(e)).state
+            case Right(r) => handler(curState, Item(r)) match {
               case Continue(s) => iter(cursor, s)
               case Return(s) => s
             }
@@ -284,15 +284,15 @@ object MongoHelpers {
                                                (handler: (S, Event[List[R]]) => Command[S]): S = {
       val buf = new ListBuffer[R]
 
-      def getBatch(cursor: DBCursor): Either[List[R], Exception] = {
+      def getBatch(cursor: DBCursor): Either[Exception, List[R]] = {
         try {
           buf.clear()
           while (cursor.hasNext && buf.size < batchSize) {
             buf += query.parseDBObject(cursor.next)
           }
-          Left(buf.toList)
+          Right(buf.toList)
         } catch {
-          case e: Exception => Right(e)
+          case e: Exception => Left(e)
         }
       }
 
@@ -300,9 +300,9 @@ object MongoHelpers {
       def iter(cursor: DBCursor, curState: S): S = {
         if (cursor.hasNext) {
           getBatch(cursor) match {
-            case Right(e) => handler(curState, Error(e)).state
-            case Left(Nil) => handler(curState, EOF).state
-            case Left(rs) => handler(curState, Item(rs)) match {
+            case Left(e) => handler(curState, Error(e)).state
+            case Right(Nil) => handler(curState, EOF).state
+            case Right(rs) => handler(curState, Item(rs)) match {
               case Continue(s) => iter(cursor, s)
               case Return(s) => s
             }

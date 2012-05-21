@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 1.1.9
+
+- Internal: Use standard Either convention of failure on the Left.
+
 # 1.1.8
 
 - use nanoTime instead of currentTimeMillis for query timing
