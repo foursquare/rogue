@@ -168,7 +168,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
                                   initialState: S,
                                   f: DBObject => R)
                                  (handler: (S, Event[CollType]) => Command[S])
-                                 (implicit cbf: CanBuildFrom[Traversable[_], R, CollType]): S = {
+                                 (implicit cbf: CanBuildFrom[Nothing, R, CollType]): S = {
 
     def getBatch(cursor: DBCursor): Either[Exception, CollType] = {
       try {
