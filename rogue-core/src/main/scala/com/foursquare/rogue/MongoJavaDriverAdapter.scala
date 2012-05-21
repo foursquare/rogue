@@ -133,11 +133,11 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
                              initialState: S,
                              f: DBObject => R)
                             (handler: (S, Event[R]) => Command[S]): S = {
-    def getObject(cursor: DBCursor): Either[R, Exception] = {
+    def getObject(cursor: DBCursor): Either[Exception, R] = {
       try {
-        Left(f(cursor.next))
+        Right(f(cursor.next))
       } catch {
-        case e: Exception => Right(e)
+        case e: Exception => Left(e)
       }
     }
 
@@ -145,8 +145,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     def iter(cursor: DBCursor, curState: S): S = {
       if (cursor.hasNext) {
         getObject(cursor) match {
-          case Right(e) => handler(curState, Error(e)).state
-          case Left(r) => handler(curState, Item(r)) match {
+          case Left(e) => handler(curState, Error(e)).state
+          case Right(r) => handler(curState, Item(r)) match {
             case Continue(s) => iter(cursor, s)
             case Return(s) => s
           }
@@ -168,16 +168,16 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
                                  (handler: (S, Event[List[R]]) => Command[S]): S = {
     val buf = new ListBuffer[R]
 
-    def getBatch(cursor: DBCursor): Either[List[R], Exception] = {
+    def getBatch(cursor: DBCursor): Either[Exception, List[R]] = {
       try {
         buf.clear()
         // ListBuffer#length is O(1) vs ListBuffer#size is O(N) (true in 2.9.x, fixed in 2.10.x)
         while (cursor.hasNext && buf.length < batchSize) {
           buf += f(cursor.next)
         }
-        Left(buf.toList)
+        Right(buf.toList)
       } catch {
-        case e: Exception => Right(e)
+        case e: Exception => Left(e)
       }
     }
 
@@ -185,9 +185,9 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     def iter(cursor: DBCursor, curState: S): S = {
       if (cursor.hasNext) {
         getBatch(cursor) match {
-          case Right(e) => handler(curState, Error(e)).state
-          case Left(Nil) => handler(curState, EOF).state
-          case Left(rs) => handler(curState, Item(rs)) match {
+          case Left(e) => handler(curState, Error(e)).state
+          case Right(Nil) => handler(curState, EOF).state
+          case Right(rs) => handler(curState, Item(rs)) match {
             case Continue(s) => iter(cursor, s)
             case Return(s) => s
           }
