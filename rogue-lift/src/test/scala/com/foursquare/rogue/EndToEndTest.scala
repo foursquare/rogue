@@ -253,7 +253,7 @@ class EndToEndTest extends SpecsMatchers {
     items1.map(_.legacyid.value) must_== List(6, 4, 2)
 
     val items2 = Venue.where(_._id in ids)
-        .iterateBatch[List[Venue]](2, Nil){ case (accum, event) => {
+        .iterateBatch(2, List[Venue]()){ case (accum, event) => {
       if (accum.length >= 3) {
         Return(accum)
       } else {

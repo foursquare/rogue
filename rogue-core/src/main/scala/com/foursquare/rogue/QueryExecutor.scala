@@ -4,6 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
 import com.mongodb.{DBObject, ReadPreference, WriteConcern}
+import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.ListBuffer
 
 trait RogueSerializer[R] {
@@ -235,12 +236,14 @@ trait QueryExecutor[MB] {
     }
   }
 
-  def iterateBatch[S, M <: MB, R](
+  def iterateBatch[S, M <: MB, R, CollType <: Traversable[R]](
       query: AbstractQuery[M, R, _, _, _, _, _],
       batchSize: Int,
       state: S
   )(
-      handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]
+      handler: (S, Rogue.Iter.Event[CollType]) => Rogue.Iter.Command[S]
+  )(
+      implicit cbf: CanBuildFrom[Traversable[_], R, CollType]
   ): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Rogue.Iter.EOF).state

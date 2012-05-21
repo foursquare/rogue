@@ -3,6 +3,7 @@
 # 2.0.0-beta5
 
 - Internal: Use standard Either convention of failure on the Left.
+- support any collection type (not just List) with iterateBatch
 
 # 2.0.0-beta4
 
