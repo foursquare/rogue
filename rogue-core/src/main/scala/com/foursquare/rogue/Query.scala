@@ -47,15 +47,7 @@ import scala.collection.immutable.ListMap
  *    an or-clause. The type system will guarantee that the query and its or-connected query
  *    have the same types.
  */
-case class BaseQuery[
-    M,
-    R,
-    Ord <: MaybeOrdered,
-    Sel <: MaybeSelected,
-    Lim <: MaybeLimited,
-    Sk <: MaybeSkipped,
-    Or <: MaybeHasOrClause
-](
+case class BaseQuery[M, R, +State](
     meta: M,
     collectionName: String,
     lim: Option[Int],
@@ -71,7 +63,7 @@ case class BaseQuery[
 
   private def addClause[F](clause: M => QueryClause[F],
                            expectedIndexBehavior: MaybeIndexed):
-                       AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = {
+                       AbstractQuery[M, R, State] = {
     val cl = clause(meta)
     val newClause = cl.withExpectedIndexBehavior(expectedIndexBehavior)
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
@@ -122,7 +114,7 @@ case class BaseQuery[
   def scanOpt[V, F](opt: Option[V])(clause: (M, V) => QueryClause[F]) =
     addClauseOpt(opt)(clause, expectedIndexBehavior = DocumentScan)
 
-  def raw(f: BasicDBObjectBuilder => Unit): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = {
+  def raw(f: BasicDBObjectBuilder => Unit): AbstractQuery[M, R, State] = {
     val newClause = new RawQueryClause(f)
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }
@@ -137,10 +129,10 @@ case class BaseQuery[
    * you can see that the "MaybeHasOrClause" type parameter is changed, and is now specifically
    * bound to "HasOrClause", rather than to a type variable.</p>
    */
-  def or(subqueries: (AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] => AbstractQuery[M, R, Ord, Sel, Lim, Sk, _])*)
-                       (implicit ev: Or =:= HasNoOrClause): AbstractQuery[M, R, Ord, Sel, Lim, Sk, HasOrClause] = {
+  def or[S2](subqueries: (AbstractQuery[M, R, Ordered with Selected with Limited with Skipped with HasNoOrClause] => AbstractQuery[M, R, _])*)
+            (implicit ev: AddOrClause[State, S2]): AbstractQuery[M, R, S2] = {
     val queryBuilder =
-      this.copy[M, R, Ord, Sel, Lim, Sk, Or](
+      this.copy[M, R, Ordered with Selected with Limited with Skipped with HasNoOrClause](
         lim = None,
         sk = None,
         maxScan = None,
@@ -162,30 +154,30 @@ case class BaseQuery[
    * type signature of the returned query is updated so that the "MaybeOrdered" type parameter is
    * now Ordered.
    */
-  def orderAsc[V](field: M => AbstractQueryField[V, _, M])
-                       (implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+  def orderAsc[V, S2](field: M => AbstractQueryField[V, _, M])
+                     (implicit ev: AddOrder[State, S2]): BaseQuery[M, R, S2] =
     this.copy(order = Some(MongoOrder(List((field(meta).field.name, true)))))
 
-  def orderDesc[V](field: M => AbstractQueryField[V, _, M])
-                       (implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+  def orderDesc[V, S2](field: M => AbstractQueryField[V, _, M])
+                      (implicit ev: AddOrder[State, S2]): BaseQuery[M, R, S2] =
     this.copy(order = Some(MongoOrder(List((field(meta).field.name, false)))))
 
   def andAsc[V](field: M => AbstractQueryField[V, _, M])
-                       (implicit ev: Ord =:= Ordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+               (implicit ev: State <:< Ordered): BaseQuery[M, R, State] =
     this.copy(order = Some(MongoOrder((field(meta).field.name, true) :: order.get.terms)))
 
   def andDesc[V](field: M => AbstractQueryField[V, _, M])
-                       (implicit ev: Ord =:= Ordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+                (implicit ev: State <:< Ordered): BaseQuery[M, R, State] =
     this.copy(order = Some(MongoOrder((field(meta).field.name, false) :: order.get.terms)))
 
   /**
    * Natural ordering.
    * TODO: doesn't make sense in conjunction with ordering on any other fields. enforce w/ phantom types?
    */
-  def orderNaturalAsc[V](implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+  def orderNaturalAsc[V, S2](implicit ev: AddOrder[State, S2]): BaseQuery[M, R, S2] =
     this.copy(order = Some(MongoOrder(List(("$natural", true)))))
 
-  def orderNaturalDesc[V](implicit ev: Ord =:= Unordered): BaseQuery[M, R, Ordered, Sel, Lim, Sk, Or] =
+  def orderNaturalDesc[V, S2](implicit ev: AddOrder[State, S2]): BaseQuery[M, R, S2] =
     this.copy(order = Some(MongoOrder(List(("$natural", false)))))
 
   /**
@@ -197,10 +189,10 @@ case class BaseQuery[
    * type signature of the returned query is updated so that the "MaybeLimited" type parameter is
    * now Limited.</p>
    */
-  def limit(n: Int)(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk, Or] =
+  def limit[S2](n: Int)(implicit ev: AddLimit[State, S2]): BaseQuery[M, R, S2] =
     this.copy(lim = Some(n))
 
-  def limitOpt(n: Option[Int])(implicit ev: Lim =:= Unlimited): BaseQuery[M, R, Ord, Sel, Limited, Sk, Or] =
+  def limitOpt[S2](n: Option[Int])(implicit ev: AddLimit[State, S2]): BaseQuery[M, R, S2] =
     this.copy(lim = n)
 
   /**
@@ -212,15 +204,14 @@ case class BaseQuery[
    * type signature of the returned query is updated so that the {@link MaybeSkipped} type parameter is
    * now {@link Skipped}.</p>
    */
-  def skip(n: Int)(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped, Or] =
+  def skip[S2](n: Int)(implicit ev: AddSkip[State, S2]): BaseQuery[M, R, S2] =
     this.copy(sk = Some(n))
 
-  def skipOpt(n: Option[Int])(implicit ev: Sk =:= Unskipped): BaseQuery[M, R, Ord, Sel, Lim, Skipped, Or] =
+  def skipOpt[S2](n: Option[Int])(implicit ev: AddSkip[State, S2]): BaseQuery[M, R, S2] =
     this.copy(sk = n)
 
-  def noop()(implicit ev1: Sel =:= Unselected,
-                      ev2: Lim =:= Unlimited,
-                      ev3: Sk =:= Unskipped): BaseModifyQuery[M] = BaseModifyQuery(this, MongoModify(Nil)) // TODO: Does this work?
+  def noop()(implicit ev: State <:< Unselected with Unlimited with Unskipped): BaseModifyQuery[M] =
+      BaseModifyQuery(this, MongoModify(Nil)) // TODO: Does this work?
 
   override def toString: String =
     MongoBuilder.buildQueryString("find", collectionName, this)
@@ -231,9 +222,9 @@ case class BaseQuery[
   def signature(): String =
     MongoBuilder.buildSignature(collectionName, this)
 
-  def maxScan(max: Int): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(maxScan = Some(max))
+  def maxScan(max: Int): AbstractQuery[M, R, State] = this.copy(maxScan = Some(max))
 
-  def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(comment = Some(c))
+  def comment(c: String): AbstractQuery[M, R, State] = this.copy(comment = Some(c))
 
   /**
    * Set a flag to indicate whether this query should hit primaries or secondaries.
@@ -246,9 +237,9 @@ case class BaseQuery[
    * For more info, see
    * http://www.mongodb.org/display/DOCS/slaveOk
    */
-  def setReadPreference(r: ReadPreference): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(readPreference = Some(r))
+  def setReadPreference(r: ReadPreference): AbstractQuery[M, R, State] = this.copy(readPreference = Some(r))
 
-  def hint(index: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(hint = Some(index.asListMap))
+  def hint(index: MongoIndex[M]): AbstractQuery[M, R, State] = this.copy(hint = Some(index.asListMap))
 
   /**
    * Adds a select clause to the query. The use of this method constrains the type
@@ -261,290 +252,178 @@ case class BaseQuery[
    * you can see that the "MaybeSelected" type parameter is changed, and is now specifically
    * bound to "Selected", rather than to a type variable.</p>
    */
-  def select[F1](f: M => SelectField[F1, M])
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, F1, Ord, Selected, Lim, Sk, Or] = {
-    selectCase(f, (f: F1) => f)
+
+  /*
+
+  // Code to generate the select() and selectCase() methods:
+
+  def select(n: Int) = {
+    val typeParams = (1 to n).map(i => "F%d".format(i)).mkString(", ")
+    val arguments = (1 to n).map(i => "f%d: M => SelectField[F%d, M]".format(i, i)).mkString(", ")
+    val outParams = if (n == 1) "_, S2" else "S2, _"
+    val resultType = if (n == 1) typeParams else "(%s)".format(typeParams)
+    val vars = (1 to n).map(i => "f%d".format(i)).mkString(", ")
+    val fnArgs = (1 to n).map(i => "f%d: F%d".format(i, i)).mkString(", ")
+    val fnResult = if (n == 1) vars else "(%s)".format(vars)
+    val code = """
+    def select[%s, S2](%s)
+          (implicit ev: AddSelect[State, %s]): BaseQuery[M, %s, S2] = {
+      selectCase(%s, (%s) => %s)
+    }"""
+    code.format(typeParams, arguments, outParams, resultType, vars, fnArgs, fnResult)
   }
 
-  def select[F1, F2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2), Ord, Selected, Lim, Sk, Or] = {
+  def selectCase(n: Int) = {
+    val typeParams = (1 to n).map(i => "F%d".format(i)).mkString(", ")
+    val arguments = (1 to n).map(i => "f%d: M => SelectField[F%d, M]".format(i, i)).mkString(", ")
+    val outParams = if (n == 1) "_, S2" else "S2, _"
+    val resultType = if (n == 1) typeParams else "(%s)".format(typeParams)
+    val instCalls = (1 to n).map(i => "f%d(inst)".format(i)).mkString(", ")
+    val createArgs = (1 to n).map(i => "xs(%d).asInstanceOf[F%d]".format(i-1, i)).mkString(", ")
+    val code = """
+    def selectCase[%s, CC, S2](%s,
+          create: %s => CC)(implicit ev: AddSelect[State, %s]): BaseQuery[M, CC, S2] = {
+      val inst = meta
+      val fields = List(%s)
+      val transformer = (xs: List[_]) => create(%s)
+      this.copy(select = Some(MongoSelect(fields, transformer)))
+    }"""
+    code.format(typeParams, arguments, resultType, outParams, instCalls, createArgs)
+  }
+
+  def generate(n:	Int) = {
+    (1 to n).foreach(i => println(select(i)))
+    (1 to n).foreach(i => println(selectCase(i)))
+  }
+   */
+
+  def select[F1, S2](f1: M => SelectField[F1, M])
+        (implicit ev: AddSelect[State, _, S2]): BaseQuery[M, F1, S2] = {
+    selectCase(f1, (f1: F1) => f1)
+  }
+
+  def select[F1, F2, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2), S2] = {
     selectCase(f1, f2, (f1: F1, f2: F2) => (f1, f2))
   }
 
-  def select[F1, F2, F3](f1: M => SelectField[F1, M],
-                                  f2: M => SelectField[F2, M],
-                                  f3: M => SelectField[F3, M])
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3), Ord, Selected, Lim, Sk, Or] = {
+  def select[F1, F2, F3, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3), S2] = {
     selectCase(f1, f2, f3, (f1: F1, f2: F2, f3: F3) => (f1, f2, f3))
   }
 
-  def select[F1, F2, F3, F4](f1: M => SelectField[F1, M],
-                                      f2: M => SelectField[F2, M],
-                                      f3: M => SelectField[F3, M],
-                                      f4: M => SelectField[F4, M])
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, (F1, F2, F3, F4), Ord, Selected, Lim, Sk, Or] = {
+  def select[F1, F2, F3, F4, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3, F4), S2] = {
     selectCase(f1, f2, f3, f4, (f1: F1, f2: F2, f3: F3, f4: F4) => (f1, f2, f3, f4))
   }
 
-  def select[F1, F2, F3, F4, F5](f1: M => SelectField[F1, M],
-                                          f2: M => SelectField[F2, M],
-                                          f3: M => SelectField[F3, M],
-                                          f4: M => SelectField[F4, M],
-                                          f5: M => SelectField[F5, M])
-                       (implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, (F1, F2, F3, F4, F5), Ord, Selected, Lim, Sk, Or] = {
+  def select[F1, F2, F3, F4, F5, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3, F4, F5), S2] = {
     selectCase(f1, f2, f3, f4, f5, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5) => (f1, f2, f3, f4, f5))
   }
 
-  def select[F1, F2, F3, F4, F5, F6](f1: M => SelectField[F1, M],
-                                              f2: M => SelectField[F2, M],
-                                              f3: M => SelectField[F3, M],
-                                              f4: M => SelectField[F4, M],
-                                              f5: M => SelectField[F5, M],
-                                              f6: M => SelectField[F6, M])
-                       (implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, (F1, F2, F3, F4, F5, F6), Ord, Selected, Lim, Sk, Or] = {
+  def select[F1, F2, F3, F4, F5, F6, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3, F4, F5, F6), S2] = {
     selectCase(f1, f2, f3, f4, f5, f6, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6) => (f1, f2, f3, f4, f5, f6))
   }
 
-  def select[F1, F2, F3, F4, F5, F6, F7](f1: M => SelectField[F1, M],
-                                                  f2: M => SelectField[F2, M],
-                                                  f3: M => SelectField[F3, M],
-                                                  f4: M => SelectField[F4, M],
-                                                  f5: M => SelectField[F5, M],
-                                                  f6: M => SelectField[F6, M],
-                                                  f7: M => SelectField[F7, M])
-                       (implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7), Ord, Selected, Lim, Sk, Or] = {
-    selectCase(f1, f2, f3, f4, f5, f6, f7,
-               (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7) => (f1, f2, f3, f4, f5, f6, f7))
+  def select[F1, F2, F3, F4, F5, F6, F7, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7), S2] = {
+    selectCase(f1, f2, f3, f4, f5, f6, f7, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7) => (f1, f2, f3, f4, f5, f6, f7))
   }
 
-  def select[F1, F2, F3, F4, F5, F6, F7, F8](f1: M => SelectField[F1, M],
-                                                      f2: M => SelectField[F2, M],
-                                                      f3: M => SelectField[F3, M],
-                                                      f4: M => SelectField[F4, M],
-                                                      f5: M => SelectField[F5, M],
-                                                      f6: M => SelectField[F6, M],
-                                                      f7: M => SelectField[F7, M],
-                                                      f8: M => SelectField[F8, M])
-                       (implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), Ord, Selected, Lim, Sk, Or] = {
-    selectCase(f1, f2, f3, f4, f5, f6, f7, f8,
-               (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8) => (f1, f2, f3, f4, f5, f6, f7, f8))
+  def select[F1, F2, F3, F4, F5, F6, F7, F8, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M], f8: M => SelectField[F8, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8), S2] = {
+    selectCase(f1, f2, f3, f4, f5, f6, f7, f8, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8) => (f1, f2, f3, f4, f5, f6, f7, f8))
   }
 
-  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9](f1: M => SelectField[F1, M],
-                                                          f2: M => SelectField[F2, M],
-                                                          f3: M => SelectField[F3, M],
-                                                          f4: M => SelectField[F4, M],
-                                                          f5: M => SelectField[F5, M],
-                                                          f6: M => SelectField[F6, M],
-                                                          f7: M => SelectField[F7, M],
-                                                          f8: M => SelectField[F8, M],
-                                                          f9: M => SelectField[F9, M])
-                       (implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), Ord, Selected, Lim, Sk, Or] = {
-    selectCase(f1, f2, f3, f4, f5, f6, f7, f8, f9,
-               (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8, f9: F9) =>
-               (f1, f2, f3, f4, f5, f6, f7, f8, f9))
+  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M], f8: M => SelectField[F8, M], f9: M => SelectField[F9, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9), S2] = {
+    selectCase(f1, f2, f3, f4, f5, f6, f7, f8, f9, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8, f9: F9) => (f1, f2, f3, f4, f5, f6, f7, f8, f9))
   }
 
-  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10](f1: M => SelectField[F1, M],
-                                                               f2: M => SelectField[F2, M],
-                                                               f3: M => SelectField[F3, M],
-                                                               f4: M => SelectField[F4, M],
-                                                               f5: M => SelectField[F5, M],
-                                                               f6: M => SelectField[F6, M],
-                                                               f7: M => SelectField[F7, M],
-                                                               f8: M => SelectField[F8, M],
-                                                               f9: M => SelectField[F9, M],
-                                                               f10: M => SelectField[F10, M])
-                       (implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), Ord, Selected, Lim, Sk, Or] = {
-    selectCase(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10,
-               (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8, f9: F9, f10: F10) =>
-               (f1, f2, f3, f4, f5, f6, f7, f8, f9, f10))
+  def select[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M], f8: M => SelectField[F8, M], f9: M => SelectField[F9, M], f10: M => SelectField[F10, M])
+        (implicit ev: AddSelect[State, S2, _]): BaseQuery[M, (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10), S2] = {
+    selectCase(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, (f1: F1, f2: F2, f3: F3, f4: F4, f5: F5, f6: F6, f7: F7, f8: F8, f9: F9, f10: F10) => (f1, f2, f3, f4, f5, f6, f7, f8, f9, f10))
   }
 
-  def selectCase[F1, CC](f: M => SelectField[F1, M],
-                         create: F1 => CC)(implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, CC, S2](f1: M => SelectField[F1, M],
+        create: F1 => CC)(implicit ev: AddSelect[State, _, S2]): BaseQuery[M, CC, S2] = {
     val inst = meta
-    val fields = List(f(inst))
-    val transformer = (xs: List[_]) => create(xs.head.asInstanceOf[F1])
+    val fields = List(f1(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, CC](f1: M => SelectField[F1, M],
-                             f2: M => SelectField[F2, M],
-                             create: (F1, F2) => CC)
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M],
+        create: (F1, F2) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst))
     val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, CC](f1: M => SelectField[F1, M],
-                                 f2: M => SelectField[F2, M],
-                                 f3: M => SelectField[F3, M],
-                                 create: (F1, F2, F3) => CC)
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M],
+        create: (F1, F2, F3) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, F4, CC](f1: M => SelectField[F1, M],
-                                     f2: M => SelectField[F2, M],
-                                     f3: M => SelectField[F3, M],
-                                     f4: M => SelectField[F4, M],
-                                     create: (F1, F2, F3, F4) => CC)
-                         (implicit ev: Sel =:= Unselected):
-                       BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, F4, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M],
+        create: (F1, F2, F3, F4) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3],
-                                              xs(3).asInstanceOf[F4])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, F4, F5, CC](f1: M => SelectField[F1, M],
-                                         f2: M => SelectField[F2, M],
-                                         f3: M => SelectField[F3, M],
-                                         f4: M => SelectField[F4, M],
-                                         f5: M => SelectField[F5, M],
-                                         create: (F1, F2, F3, F4, F5) => CC)
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, F4, F5, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M],
+        create: (F1, F2, F3, F4, F5) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3],
-                                              xs(3).asInstanceOf[F4],
-                                              xs(4).asInstanceOf[F5])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, F4, F5, F6, CC](f1: M => SelectField[F1, M],
-                                             f2: M => SelectField[F2, M],
-                                             f3: M => SelectField[F3, M],
-                                             f4: M => SelectField[F4, M],
-                                             f5: M => SelectField[F5, M],
-                                             f6: M => SelectField[F6, M],
-                                             create: (F1, F2, F3, F4, F5, F6) => CC)
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, F4, F5, F6, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M],
+        create: (F1, F2, F3, F4, F5, F6) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3],
-                                              xs(3).asInstanceOf[F4],
-                                              xs(4).asInstanceOf[F5],
-                                              xs(5).asInstanceOf[F6])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, CC](f1: M => SelectField[F1, M],
-                                                 f2: M => SelectField[F2, M],
-                                                 f3: M => SelectField[F3, M],
-                                                 f4: M => SelectField[F4, M],
-                                                 f5: M => SelectField[F5, M],
-                                                 f6: M => SelectField[F6, M],
-                                                 f7: M => SelectField[F7, M],
-                                                 create: (F1, F2, F3, F4, F5, F6, F7) => CC)
-                       (   implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M],
+        create: (F1, F2, F3, F4, F5, F6, F7) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3],
-                                              xs(3).asInstanceOf[F4],
-                                              xs(4).asInstanceOf[F5],
-                                              xs(5).asInstanceOf[F6],
-                                              xs(6).asInstanceOf[F7])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6], xs(6).asInstanceOf[F7])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, CC](f1: M => SelectField[F1, M],
-                                                     f2: M => SelectField[F2, M],
-                                                     f3: M => SelectField[F3, M],
-                                                     f4: M => SelectField[F4, M],
-                                                     f5: M => SelectField[F5, M],
-                                                     f6: M => SelectField[F6, M],
-                                                     f7: M => SelectField[F7, M],
-                                                     f8: M => SelectField[F8, M],
-                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M], f8: M => SelectField[F8, M],
+        create: (F1, F2, F3, F4, F5, F6, F7, F8) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst), f8(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3],
-                                              xs(3).asInstanceOf[F4],
-                                              xs(4).asInstanceOf[F5],
-                                              xs(5).asInstanceOf[F6],
-                                              xs(6).asInstanceOf[F7],
-                                              xs(7).asInstanceOf[F8])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6], xs(6).asInstanceOf[F7], xs(7).asInstanceOf[F8])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC](f1: M => SelectField[F1, M],
-                                                     f2: M => SelectField[F2, M],
-                                                     f3: M => SelectField[F3, M],
-                                                     f4: M => SelectField[F4, M],
-                                                     f5: M => SelectField[F5, M],
-                                                     f6: M => SelectField[F6, M],
-                                                     f7: M => SelectField[F7, M],
-                                                     f8: M => SelectField[F8, M],
-                                                     f9: M => SelectField[F9, M],
-                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M], f8: M => SelectField[F8, M], f9: M => SelectField[F9, M],
+        create: (F1, F2, F3, F4, F5, F6, F7, F8, F9) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
     val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst), f8(inst), f9(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3],
-                                              xs(3).asInstanceOf[F4],
-                                              xs(4).asInstanceOf[F5],
-                                              xs(5).asInstanceOf[F6],
-                                              xs(6).asInstanceOf[F7],
-                                              xs(7).asInstanceOf[F8],
-                                              xs(8).asInstanceOf[F9])
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6], xs(6).asInstanceOf[F7], xs(7).asInstanceOf[F8], xs(8).asInstanceOf[F9])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 
-  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC](f1: M => SelectField[F1, M],
-                                                     f2: M => SelectField[F2, M],
-                                                     f3: M => SelectField[F3, M],
-                                                     f4: M => SelectField[F4, M],
-                                                     f5: M => SelectField[F5, M],
-                                                     f6: M => SelectField[F6, M],
-                                                     f7: M => SelectField[F7, M],
-                                                     f8: M => SelectField[F8, M],
-                                                     f9: M => SelectField[F9, M],
-                                                     f10: M => SelectField[F10, M],
-                                                     create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)
-                       (implicit ev: Sel =:= Unselected): BaseQuery[M, CC, Ord, Selected, Lim, Sk, Or] = {
+  def selectCase[F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, CC, S2](f1: M => SelectField[F1, M], f2: M => SelectField[F2, M], f3: M => SelectField[F3, M], f4: M => SelectField[F4, M], f5: M => SelectField[F5, M], f6: M => SelectField[F6, M], f7: M => SelectField[F7, M], f8: M => SelectField[F8, M], f9: M => SelectField[F9, M], f10: M => SelectField[F10, M],
+        create: (F1, F2, F3, F4, F5, F6, F7, F8, F9, F10) => CC)(implicit ev: AddSelect[State, S2, _]): BaseQuery[M, CC, S2] = {
     val inst = meta
-    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst),
-                      f6(inst), f7(inst), f8(inst), f9(inst), f10(inst))
-    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1],
-                                              xs(1).asInstanceOf[F2],
-                                              xs(2).asInstanceOf[F3],
-                                              xs(3).asInstanceOf[F4],
-                                              xs(4).asInstanceOf[F5],
-                                              xs(5).asInstanceOf[F6],
-                                              xs(6).asInstanceOf[F7],
-                                              xs(7).asInstanceOf[F8],
-                                              xs(8).asInstanceOf[F9],
-                                              xs(9).asInstanceOf[F10])
+    val fields = List(f1(inst), f2(inst), f3(inst), f4(inst), f5(inst), f6(inst), f7(inst), f8(inst), f9(inst), f10(inst))
+    val transformer = (xs: List[_]) => create(xs(0).asInstanceOf[F1], xs(1).asInstanceOf[F2], xs(2).asInstanceOf[F3], xs(3).asInstanceOf[F4], xs(4).asInstanceOf[F5], xs(5).asInstanceOf[F6], xs(6).asInstanceOf[F7], xs(7).asInstanceOf[F8], xs(8).asInstanceOf[F9], xs(9).asInstanceOf[F10])
     this.copy(select = Some(MongoSelect(fields, transformer)))
   }
 }
@@ -554,14 +433,7 @@ case class BaseQuery[
 // *******************************************************
 
 case class BaseModifyQuery[M](
-  	query: BaseQuery[
-        M,
-        _,
-        _ <: MaybeOrdered,
-        _ <: MaybeSelected,
-        _ <: MaybeLimited,
-        _ <: MaybeSkipped,
-        _ <: MaybeHasOrClause],
+  	query: BaseQuery[M, _, _],
     mod: MongoModify
 ) {
 
@@ -595,14 +467,7 @@ case class BaseModifyQuery[M](
 // *******************************************************
 
 case class BaseFindAndModifyQuery[M, R](
-    query: BaseQuery[
-        M,
-        R,
-        _ <: MaybeOrdered,
-        _ <: MaybeSelected,
-        _ <: MaybeLimited,
-        _ <: MaybeSkipped,
-        _ <: MaybeHasOrClause],
+    query: BaseQuery[M, R, _],
     mod: MongoModify
 ) {
 

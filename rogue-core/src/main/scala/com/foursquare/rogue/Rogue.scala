@@ -19,15 +19,28 @@ import org.bson.types.ObjectId
  *@see AbstractQuery for an example of the use of implicit conversions.
  */
 trait Rogue {
+
+  implicit def addOrder[Rest >: Sel with Lim with Sk with Or]: AddOrder[Rest with Unordered, Rest with Ordered] = null
+  implicit def addSelect[Rest >: Ord with Lim with Sk with Or]: AddSelect[Rest with Unselected, Rest with Selected, Rest with SelectedOne] = null
+  implicit def addLimit[Rest >: Ord with Sel with Sk with Or]: AddLimit[Rest with Unlimited, Rest with Limited] = null
+  implicit def addSkip[Rest >: Ord with Sel with Lim with Or]: AddSkip[Rest with Unskipped, Rest with Skipped] = null
+  implicit def addOr[Rest >: Ord with Sel with Lim with Sk]: AddOrClause[Rest with HasNoOrClause, Rest with HasOrClause] = null
+
+  implicit def upcastQuery[M, R, S, T](q: AbstractQuery[M, R, S])(implicit ev: S <:< T): AbstractQuery[M, R, T] =
+    q.asInstanceOf[AbstractQuery[M, R, T]]
+
+  type InitialState = Unordered with Unselected with Unlimited with Unskipped with HasNoOrClause
+  type OrderedState = Ordered with Unselected with Unlimited with Unskipped with HasNoOrClause
+
   type Query[T] =
-    BaseQuery[T, T, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+    BaseQuery[T, T, InitialState]
 
   type OrderedQuery[T] =
-    BaseQuery[T, T, Ordered, Unselected, Unlimited, Unskipped, HasNoOrClause]
+    BaseQuery[T, T, OrderedState]
 
   // type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
   type ModifyQuery[T] = BaseModifyQuery[T]
-  type GenericQuery[M, R] = BaseQuery[M, R, _, _, _, _, _]
+  type GenericQuery[M, R] = BaseQuery[M, R, _]
   type GenericBaseQuery[M, R] = GenericQuery[M, R]
 
   object Asc extends IndexModifier(1)

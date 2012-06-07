@@ -50,7 +50,7 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
-    def validateQuery[M](query: BaseQuery[M, _, _, _, _, _, _]): Unit
+    def validateQuery[M](query: BaseQuery[M, _, _]): Unit
     def validateModify[M](modify: BaseModifyQuery[M]): Unit
     def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): Unit
   }
@@ -58,7 +58,7 @@ object QueryHelpers {
   class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
-    override def validateQuery[M](query: BaseQuery[M, _, _, _, _, _, _]) {}
+    override def validateQuery[M](query: BaseQuery[M, _, _]) {}
     override def validateModify[M](modify: BaseModifyQuery[M]) {}
     override def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]) {}
   }
@@ -68,13 +68,13 @@ object QueryHelpers {
   var validator: QueryValidator = NoopQueryValidator
 
   trait QueryTransformer {
-    def transformQuery[M](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _]
+    def transformQuery[M](query: BaseQuery[M, _, _]): BaseQuery[M, _, _]
     def transformModify[M](modify: BaseModifyQuery[M]): BaseModifyQuery[M]
     def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R]
   }
 
   class DefaultQueryTransformer extends QueryTransformer {
-    override def transformQuery[M](query: BaseQuery[M, _, _, _, _, _, _]): BaseQuery[M, _, _, _, _, _, _] = { query }
+    override def transformQuery[M](query: BaseQuery[M, _, _]): BaseQuery[M, _, _] = { query }
     override def transformModify[M](modify: BaseModifyQuery[M]): BaseModifyQuery[M] = { modify }
     override def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R] = { modify }
   }
@@ -140,10 +140,10 @@ object QueryHelpers {
     JObjectParser.parse(Extraction.decompose(x).asInstanceOf[JObject])
   }
 
-  def orConditionFromQueries(subqueries: List[AbstractQuery[_, _, _, _, _, _, _]]) = {
+  def orConditionFromQueries(subqueries: List[AbstractQuery[_, _, _]]) = {
     MongoHelpers.OrCondition(subqueries.flatMap(subquery => {
       subquery match {
-        case q: BaseQuery[_, _, _, _, _, _, _] => Some(q.condition)
+        case q: BaseQuery[_, _, _] => Some(q.condition)
         case _ => None
       }
     }))

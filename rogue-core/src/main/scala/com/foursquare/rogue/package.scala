@@ -3,15 +3,7 @@
 package com.foursquare
 
 package object rogue {
-  type AbstractQuery[
-      M,
-      R,
-      Ord <: MaybeOrdered,
-      Sel <: MaybeSelected,
-      Lim <: MaybeLimited,
-      Sk <: MaybeSkipped,
-      Or <: MaybeHasOrClause
-  ] = BaseQuery[M, R, Ord, Sel, Lim, Sk, Or]
+  type AbstractQuery[M, R, +State] = BaseQuery[M, R, State]
 
   type ModifyQuery[T] = BaseModifyQuery[T]
   type AbstractModifyQuery[M] = BaseModifyQuery[M]

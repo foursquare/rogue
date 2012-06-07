@@ -525,7 +525,7 @@ class QueryTest extends SpecsMatchers {
 
   @Test
   def testSetReadPreference: Unit = {
-    type Q = BaseQuery[Venue, Venue, _, _, _, _, _]
+    type Q = BaseQuery[Venue, Venue, _]
 
     Venue.where(_.mayor eqs 2).asInstanceOf[Q].readPreference must_== None
     Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.SECONDARY)
@@ -602,16 +602,13 @@ class QueryTest extends SpecsMatchers {
     //
     // Phantom type stuff
     //
+
     check("""Venue orderAsc(_.legacyid) orderAsc(_.closed)""")
     check("""Venue andAsc(_.legacyid)""")
     check("""Venue limit(1) limit(5)""")
     check("""Venue limit(1) fetch(5)""")
     check("""Venue limit(1) get()""")
     check("""Venue skip(3) skip(3)""")
-    check("""Venue limit(10) count()""")
-    check("""Venue skip(10) count()""")
-    check("""Venue limit(10) countDistinct(_.legacyid)""")
-    check("""Venue skip(10) countDistinct(_.legacyid)""")
     check("""Venue select(_.legacyid) select(_.closed)""")
 
     // select case class

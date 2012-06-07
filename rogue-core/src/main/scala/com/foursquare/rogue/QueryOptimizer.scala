@@ -9,7 +9,7 @@ class QueryOptimizer {
     case _ => false
   }
 
-  def isEmptyQuery(query: BaseQuery[_, _, _, _, _, _, _]): Boolean = {
+  def isEmptyQuery(query: BaseQuery[_, _, _]): Boolean = {
     query.condition.clauses.exists(isEmptyClause)
   }
 

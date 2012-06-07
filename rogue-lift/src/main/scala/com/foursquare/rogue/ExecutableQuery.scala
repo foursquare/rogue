@@ -4,19 +4,11 @@ package com.foursquare.rogue
 
 import com.foursquare.field.Field
 import com.foursquare.rogue.MongoHelpers.MongoSelect
+import com.foursquare.rogue.Rogue._
 import com.mongodb.WriteConcern
 
-case class ExecutableQuery[
-    MB,
-    M <: MB,
-    R,
-    Ord <: MaybeOrdered,
-    Sel <: MaybeSelected,
-    Lim <: MaybeLimited,
-    Sk <: MaybeSkipped,
-    Or <: MaybeHasOrClause
-](
-    query: AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or],
+case class ExecutableQuery[MB, M <: MB, R, State](
+    query: AbstractQuery[M, R, State],
     db: QueryExecutor[MB]
 ) {
 
@@ -24,22 +16,23 @@ case class ExecutableQuery[
    * Gets the size of the query result. This should only be called on queries that do not
    * have limits or skips.
    */
-  def count()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
+  def count(): Long =
     db.count(query)
 
   /**
    * Returns the number of distinct values returned by a query. The query must not have
    * limit or skip clauses.
    */
-  def countDistinct[V](field: M => Field[V, _])
-                      (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
+  def countDistinct[V](field: M => Field[V, _]): Long =
     db.countDistinct(query)(field.asInstanceOf[M => Field[V, M]])
 
   /**
    * Checks if there are any records that match this query.
    */
-  def exists()(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Boolean =
-    db.fetch(query.copy(select = Some(MongoSelect[Null](Nil, _ => null))).limit(1)).size > 0
+  def exists()(implicit ev: State <:< Unlimited with Unskipped): Boolean = {
+    val q = query.copy(select = Some(MongoSelect[Null](Nil, _ => null)))
+    db.fetch(q.limit(1)).size > 0
+  }
 
   /**
    * Executes a function on each record value returned by a query.
@@ -61,8 +54,8 @@ case class ExecutableQuery[
    * query must not have a limit clause.
    * @param limit the maximum number of records to return.
    */
-  def fetch(limit: Int)(implicit ev: Lim =:= Unlimited): List[R] =
-    db.fetch(query.limit(limit))
+  def fetch(limit: Int)(implicit ev: State <:< Unlimited): List[R] =
+    db.fetch(upcastQuery(query).limit(limit))
 
   /**
    * fetch a batch of results, and execute a function on each element of the list.
@@ -72,22 +65,23 @@ case class ExecutableQuery[
   def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] =
     db.fetchBatch(query, batchSize)(f).toList
 
+
   /**
    * Fetches the first record that matches the query. The query must not contain a "limited" clause.
    * @return an option record containing either the first result that matches the
    *         query, or None if there are no records that match.
    */
-  def get()(implicit ev: Lim =:= Unlimited): Option[R] =
-    db.fetchOne(query)
+  def get()(implicit ev: State <:< Unlimited): Option[R] =
+    db.fetchOne(upcastQuery(query))
 
   /**
    * Fetches the records that match the query in paginated form. The query must not contain
    * a "limit" clause.
    * @param countPerPage the number of records to be contained in each page of the result.
    */
-  def paginate(countPerPage: Int)(implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped) = {
-    val q = query.asInstanceOf[AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or]]
-    new BasePaginatedQuery[MB, M, R](q, db, countPerPage)
+  def paginate(countPerPage: Int)
+              (implicit ev: State <:< Unlimited with Unskipped) = {
+    new BasePaginatedQuery[MB, M, R](upcastQuery(query), db, countPerPage)
   }
 
   /**
@@ -95,20 +89,17 @@ case class ExecutableQuery[
    * "limit", or "select" clauses. Sends the delete operation to mongo, and returns - does
    * <em>not</em> wait for the delete to be finished.
    */
-  def bulkDelete_!!!()(implicit ev1: Sel <:< Unselected,
-                       ev2: Lim =:= Unlimited,
-                       ev3: Sk =:= Unskipped): Unit =
-    db.bulkDelete_!!(query)
+  def bulkDelete_!!!()(implicit ev: State <:< Unselected with Unlimited with Unskipped): Unit =
+    db.bulkDelete_!!(upcastQuery(query))
 
   /**
    * Delete all of the records that match the query. The query must not contain any "skip",
    * "limit", or "select" clauses. Sends the delete operation to mongo, and waits for the
    * delete operation to complete before returning to the caller.
    */
-  def bulkDelete_!!(concern: WriteConcern)(implicit ev1: Sel <:< Unselected,
-                                           ev2: Lim =:= Unlimited,
-                                           ev3: Sk =:= Unskipped): Unit =
-    db.bulkDelete_!!(query, concern)
+  def bulkDelete_!!(concern: WriteConcern)
+                   (implicit ev: State <:< Unselected with Unlimited with Unskipped): Unit =
+    db.bulkDelete_!!(upcastQuery(query), concern)
 
   /**
    * Finds the first record that matches the query (if any), fetches it, and then deletes it.
@@ -164,7 +155,7 @@ case class ExecutableFindAndModifyQuery[MB, M <: MB, R](
 }
 
 class BasePaginatedQuery[MB, M <: MB, R](
-    q: AbstractQuery[M, R, _, _, Unlimited, Unskipped, _],
+    q: AbstractQuery[M, R, Unlimited with Unskipped],
     db: QueryExecutor[MB],
     val countPerPage: Int,
     val pageNum: Int = 1
@@ -177,7 +168,9 @@ class BasePaginatedQuery[MB, M <: MB, R](
 
   lazy val countAll: Long = db.count(q)
 
-  def fetch(): List[R] = db.fetch(q.skip(countPerPage * (pageNum - 1)).limit(countPerPage))
+  def fetch[S2, S3](): List[R] = {
+    db.fetch(q.skip(countPerPage * (pageNum - 1)).limit(countPerPage))
+  }
 
   def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
 }

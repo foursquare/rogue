@@ -19,13 +19,13 @@ import net.liftweb.record.field.EnumField
 
 trait LiftRogue extends Rogue {
   def OrQuery[M <: MongoRecord[M], R]
-      (subqueries: AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, _]*)
-      : AbstractQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, HasOrClause] = {
+      (subqueries: AbstractQuery[M, R, _]*)
+      : AbstractQuery[M, R, Unordered with Unselected with Unlimited with Unskipped with HasOrClause] = {
     subqueries.toList match {
       case Nil => throw new RogueException("No subqueries supplied to OrQuery", null)
       case q :: qs => {
         val orCondition = QueryHelpers.orConditionFromQueries(q :: qs)
-        BaseQuery[M, R, Unordered, Unselected, Unlimited, Unskipped, HasOrClause](
+        BaseQuery[M, R, Unordered with Unselected with Unlimited with Unskipped with HasOrClause](
           q.meta, q.collectionName, None, None, None, None, None,
           AndCondition(Nil, Some(orCondition)), None, None, None)
       }
@@ -36,8 +36,8 @@ trait LiftRogue extends Rogue {
    * a QueryBuilder. This allows users to write queries as "QueryType where ...".
    */
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]]
-      (rec: M with MongoMetaRecord[M]): BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] =
-    BaseQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause](
+      (rec: M with MongoMetaRecord[M]): BaseQuery[M, M, InitialState] =
+    BaseQuery[M, M, InitialState](
       rec, rec.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
 
   implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): AbstractModifyQuery[M] =
@@ -51,9 +51,9 @@ trait LiftRogue extends Rogue {
    */
   implicit def queryBuilderToModifyQuery[
       M <: MongoRecord[M],
-      Or <: MaybeHasOrClause
+      State <: Unordered with Unselected with Unlimited with Unskipped
   ](
-      query: AbstractQuery[M, M, Unordered, Unselected, Unlimited, Unskipped, Or]
+      query: AbstractQuery[M, M, State]
   ): AbstractModifyQuery[M] = {
     BaseModifyQuery[M](query, MongoModify(Nil))
   }
@@ -61,11 +61,9 @@ trait LiftRogue extends Rogue {
   implicit def queryBuilderToFindAndModifyQuery[
       M <: MongoRecord[M],
       R,
-      Ord <: MaybeOrdered,
-      Sel <: MaybeSelected,
-      Or <: MaybeHasOrClause
+      State <: Unlimited with Unskipped
   ](
-      query: AbstractQuery[M, R, Ord, Sel, Unlimited, Unskipped, Or]
+      query: AbstractQuery[M, R, State]
   ): AbstractFindAndModifyQuery[M, R] = {
     BaseFindAndModifyQuery[M, R](query, MongoModify(Nil))
   }
@@ -73,16 +71,12 @@ trait LiftRogue extends Rogue {
   implicit def queryToLiftQuery[
       M <: MongoRecord[_],
       R,
-      Ord <: MaybeOrdered,
-      Sel <: MaybeSelected,
-      Lim <: MaybeLimited,
-      Sk <: MaybeSkipped,
-      Or <: MaybeHasOrClause
+      State
   ](
-      query: BaseQuery[M, R, Ord, Sel, Lim, Sk, Or]
-  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R, Ord, Sel, Lim, Sk, Or] = {
+      query: BaseQuery[M, R, State]
+  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R, State] = {
     ExecutableQuery(
-        query.asInstanceOf[BaseQuery[M with MongoMetaRecord[_], R, Ord, Sel, Lim, Sk, Or]],
+        query.asInstanceOf[BaseQuery[M with MongoMetaRecord[_], R, State]],
         LiftQueryExecutor
     )
   }
@@ -107,7 +101,7 @@ trait LiftRogue extends Rogue {
 
   implicit def metaRecordToLiftQuery[M <: MongoRecord[M]](
       rec: M with MongoMetaRecord[M]
-  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], M, Unordered, Unselected, Unlimited, Unskipped, HasNoOrClause] = {
+  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], M, InitialState] = {
     val queryBuilder = metaRecordToQueryBuilder(rec)
     val liftQuery = queryToLiftQuery(queryBuilder)
     liftQuery

@@ -11,7 +11,7 @@ trait RogueSerializer[R] {
   def fromDBObject(dbo: DBObject): R
 }
 
-trait QueryExecutor[MB] {
+trait QueryExecutor[MB] extends Rogue {
   def adapter: MongoJavaDriverAdapter[MB]
   def optimizer: QueryOptimizer = new QueryOptimizer
 
@@ -23,11 +23,7 @@ trait QueryExecutor[MB] {
       select: Option[MongoSelect[R]]
   ): RogueSerializer[R]
 
-  def count[M <: MB, Lim <: MaybeLimited, Sk <: MaybeSkipped](
-      query: AbstractQuery[M, _, _, _, Lim, Sk, _]
-  )(
-      implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped
-  ): Long = {
+  def count[M <: MB, State](query: AbstractQuery[M, _, State]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
@@ -35,22 +31,8 @@ trait QueryExecutor[MB] {
     }
   }
 
-  def countDistinct[
-      M <: MB,
-      Sel <: MaybeSelected,
-      Lim <: MaybeLimited,
-      Sk <: MaybeSkipped,
-      V
-  ](
-      query: AbstractQuery[M, _, _, Sel, Lim, Sk, _]
-  )(
-      field: M => Field[V, M]
-  )(
-      implicit
-      // ev1: Sel =:= SelectedOne,
-      ev2: Lim =:= Unlimited,
-      ev3: Sk =:= Unskipped
-  ): Long = {
+  def countDistinct[M <: MB, State, V](query: AbstractQuery[M, _, State])
+                                      (field: M => Field[V, M]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
@@ -59,7 +41,7 @@ trait QueryExecutor[MB] {
   }
 
   def fetch[M <: MB, R](
-      query: AbstractQuery[M, R, _, _, _, _, _],
+      query: AbstractQuery[M, R, _],
       readPreference: ReadPreference = defaultReadPreference
   ): List[R] = {
     if (optimizer.isEmptyQuery(query)) {
@@ -72,15 +54,13 @@ trait QueryExecutor[MB] {
     }
   }
 
-  def fetchOne[M <: MB, R, Lim <: MaybeLimited](
-      query: AbstractQuery[M, R, _, _, Lim, _, _],
+  def fetchOne[M <: MB, R](
+      query: AbstractQuery[M, R, Unlimited],
       readPreference: ReadPreference = defaultReadPreference
-  )(
-      implicit ev1: Lim =:= Unlimited
   ): Option[R] = fetch(query.limit(1), readPreference).headOption
 
   def foreach[M <: MB, R](
-      query: AbstractQuery[M, R, _, _, _, _, _],
+      query: AbstractQuery[M, R, _],
       readPreference: ReadPreference = defaultReadPreference
   )(
       f: R => Unit
@@ -107,7 +87,7 @@ trait QueryExecutor[MB] {
   }
 
   def fetchBatch[M <: MB, R, T](
-      query: AbstractQuery[M, R, _, _, _, _, _],
+      query: AbstractQuery[M, R, _],
       batchSize: Int,
       readPreference: ReadPreference = defaultReadPreference
   )(
@@ -130,14 +110,9 @@ trait QueryExecutor[MB] {
     }
   }
 
-  def bulkDelete_!![M <: MB, Sel <: MaybeSelected, Lim <: MaybeLimited, Sk <: MaybeSkipped](
-      query: AbstractQuery[M, _, _, Sel, Lim, Sk, _],
+  def bulkDelete_!![M <: MB](
+      query: AbstractQuery[M, _, Unselected with Unlimited with Unskipped],
       writeConcern: WriteConcern = defaultWriteConcern
-  )(
-      implicit
-      ev1: Sel <:< Unselected,
-      ev2: Lim =:= Unlimited,
-      ev3: Sk =:= Unskipped
   ): Unit = {
     if (optimizer.isEmptyQuery(query)) {
       ()
@@ -206,7 +181,7 @@ trait QueryExecutor[MB] {
   }
 
   def findAndDeleteOne[M <: MB, R](
-    query: AbstractQuery[M, R, _ <: MaybeOrdered, _ <: MaybeSelected, _ <: MaybeLimited, _ <: MaybeSkipped, _ <: MaybeHasOrClause],
+    query: AbstractQuery[M, R, _],
     writeConcern: WriteConcern = defaultWriteConcern
   ): Option[R] = {
     if (optimizer.isEmptyQuery(query)) {
@@ -218,12 +193,12 @@ trait QueryExecutor[MB] {
     }
   }
 
-  def explain[M <: MB](query: AbstractQuery[M, _, _, _, _, _, _]): String = {
+  def explain[M <: MB](query: AbstractQuery[M, _, _]): String = {
     adapter.explain(query)
   }
 
   def iterate[S, M <: MB, R](
-      query: AbstractQuery[M, R, _, _, _, _, _],
+      query: AbstractQuery[M, R, _],
       state: S
   )(
       handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]
@@ -237,7 +212,7 @@ trait QueryExecutor[MB] {
   }
 
   def iterateBatch[S, M <: MB, R](
-      query: AbstractQuery[M, R, _, _, _, _, _],
+      query: AbstractQuery[M, R, _],
       batchSize: Int,
       state: S
   )(

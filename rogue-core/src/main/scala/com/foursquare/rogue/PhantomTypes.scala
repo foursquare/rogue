@@ -6,36 +6,43 @@ package com.foursquare.rogue
 // *** Phantom types
 // ***************************************************************************
 
-abstract sealed class MaybeOrdered
-abstract sealed class Ordered extends MaybeOrdered
-abstract sealed class Unordered extends MaybeOrdered
+sealed trait Ordered
+sealed trait Unordered
+sealed trait Ord extends Ordered with Unordered
 
-abstract sealed class MaybeSelected
-abstract sealed class Selected extends MaybeSelected
-abstract sealed class SelectedOne extends Selected
-abstract sealed class Unselected extends MaybeSelected
+sealed trait Selected
+sealed trait SelectedOne extends Selected
+sealed trait Unselected
+sealed trait Sel extends Selected with SelectedOne with Unselected
 
-abstract sealed class MaybeLimited
-abstract sealed class Limited extends MaybeLimited
-abstract sealed class Unlimited extends MaybeLimited
+sealed trait Limited
+sealed trait Unlimited
+sealed trait Lim extends Limited with Unlimited
 
-abstract sealed class MaybeSkipped
-abstract sealed class Skipped extends MaybeSkipped
-abstract sealed class Unskipped extends MaybeSkipped
+sealed trait Skipped
+sealed trait Unskipped
+sealed trait Sk extends Skipped with Unskipped
 
-abstract sealed class MaybeHasOrClause
-abstract sealed class HasOrClause extends MaybeHasOrClause
-abstract sealed class HasNoOrClause extends MaybeHasOrClause
+sealed trait HasOrClause
+sealed trait HasNoOrClause
+sealed trait Or extends HasOrClause with HasNoOrClause
+
+class AddOrder[-In, +Out]
+class AddSelect[-In, +Out, +One]
+class AddLimit[-In, +Out]
+class AddSkip[-In, +Out]
+class AddOrClause[-In, +Out]
+
 
 sealed trait MaybeIndexed
 sealed trait Indexable extends MaybeIndexed
 sealed trait IndexScannable extends MaybeIndexed
 
-abstract sealed class NoIndexInfo extends Indexable with IndexScannable
-abstract sealed class Index extends Indexable with IndexScannable
-abstract sealed class PartialIndexScan extends IndexScannable
-abstract sealed class IndexScan extends IndexScannable
-abstract sealed class DocumentScan extends MaybeIndexed
+sealed trait NoIndexInfo extends Indexable with IndexScannable
+sealed trait Index extends Indexable with IndexScannable
+sealed trait PartialIndexScan extends IndexScannable
+sealed trait IndexScan extends IndexScannable
+sealed trait DocumentScan extends MaybeIndexed
 
 case object NoIndexInfo extends NoIndexInfo
 case object Index extends Index
@@ -43,6 +50,6 @@ case object PartialIndexScan extends PartialIndexScan
 case object IndexScan extends IndexScan
 case object DocumentScan extends DocumentScan
 
-abstract sealed class MaybeUsedIndex
-abstract sealed class UsedIndex extends MaybeUsedIndex
-abstract sealed class HasntUsedIndex extends MaybeUsedIndex
+sealed trait MaybeUsedIndex
+sealed trait UsedIndex extends MaybeUsedIndex
+sealed trait HasntUsedIndex extends MaybeUsedIndex
