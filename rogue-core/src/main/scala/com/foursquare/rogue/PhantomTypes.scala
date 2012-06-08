@@ -2,6 +2,8 @@
 
 package com.foursquare.rogue
 
+import scala.annotation.implicitNotFound
+
 // ***************************************************************************
 // *** Phantom types
 // ***************************************************************************
@@ -27,10 +29,15 @@ sealed trait HasOrClause
 sealed trait HasNoOrClause
 sealed trait Or extends HasOrClause with HasNoOrClause
 
+@implicitNotFound(msg = "Query must be Unordered, but it's actually ${In}")
 class AddOrder[-In, +Out]
+@implicitNotFound(msg = "Query must be Unselected, but it's actually ${In}")
 class AddSelect[-In, +Out, +One]
+@implicitNotFound(msg = "Query must be Unlimited, but it's actually ${In}")
 class AddLimit[-In, +Out]
+@implicitNotFound(msg = "Query must be Unskipped, but it's actually ${In}")
 class AddSkip[-In, +Out]
+@implicitNotFound(msg = "Query must be HasNoOrClause, but it's actually ${In}")
 class AddOrClause[-In, +Out]
 
 
