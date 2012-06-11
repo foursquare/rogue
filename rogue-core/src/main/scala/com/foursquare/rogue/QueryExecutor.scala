@@ -23,7 +23,8 @@ trait QueryExecutor[MB] extends Rogue {
       select: Option[MongoSelect[R]]
   ): RogueSerializer[R]
 
-  def count[M <: MB, State](query: AbstractQuery[M, _, State]): Long = {
+  def count[M <: MB, State](query: AbstractQuery[M, _, State])
+                           (implicit ev: ShardingOk[M, State]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
@@ -31,8 +32,9 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def countDistinct[M <: MB, State, V](query: AbstractQuery[M, _, State])
-                                      (field: M => Field[V, M]): Long = {
+  def countDistinct[M <: MB, V, State](query: AbstractQuery[M, _, State])
+                                      (field: M => Field[V, M])
+                                      (implicit ev: ShardingOk[M, State]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
@@ -40,10 +42,9 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def fetch[M <: MB, R](
-      query: AbstractQuery[M, R, _],
-      readPreference: ReadPreference = defaultReadPreference
-  ): List[R] = {
+  def fetch[M <: MB, R, State](query: AbstractQuery[M, R, State],
+                               readPreference: ReadPreference = defaultReadPreference)
+                              (implicit ev: ShardingOk[M, State]): List[R] = {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
@@ -54,17 +55,16 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def fetchOne[M <: MB, R](
-      query: AbstractQuery[M, R, Unlimited],
-      readPreference: ReadPreference = defaultReadPreference
-  ): Option[R] = fetch(query.limit(1), readPreference).headOption
+  def fetchOne[M <: MB, R, State, S2](query: AbstractQuery[M, R, State],
+                                  readPreference: ReadPreference = defaultReadPreference)
+                                 (implicit ev1: AddLimit[State, S2], ev2: ShardingOk[M, S2]): Option[R] = {
+    fetch(query.limit(1), readPreference).headOption
+  }
 
-  def foreach[M <: MB, R](
-      query: AbstractQuery[M, R, _],
-      readPreference: ReadPreference = defaultReadPreference
-  )(
-      f: R => Unit
-  ): Unit = {
+  def foreach[M <: MB, R, State](query: AbstractQuery[M, R, State],
+                                 readPreference: ReadPreference = defaultReadPreference)
+                                (f: R => Unit)
+                                (implicit ev: ShardingOk[M, State]): Unit = {
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
@@ -86,13 +86,11 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def fetchBatch[M <: MB, R, T](
-      query: AbstractQuery[M, R, _],
-      batchSize: Int,
-      readPreference: ReadPreference = defaultReadPreference
-  )(
-      f: List[R] => List[T]
-  ): List[T] = {
+  def fetchBatch[M <: MB, R, T, State](query: AbstractQuery[M, R, State],
+                                       batchSize: Int,
+                                       readPreference: ReadPreference = defaultReadPreference)
+                                      (f: List[R] => List[T])
+                                      (implicit ev: ShardingOk[M, State]): List[T] = {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
@@ -110,10 +108,10 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def bulkDelete_!![M <: MB](
-      query: AbstractQuery[M, _, Unselected with Unlimited with Unskipped],
-      writeConcern: WriteConcern = defaultWriteConcern
-  ): Unit = {
+  def bulkDelete_!![M <: MB, State](query: AbstractQuery[M, _, State],
+                                    writeConcern: WriteConcern = defaultWriteConcern)
+                                   (implicit ev1: Required[State, Unselected with Unlimited with Unskipped],
+                                    ev2: ShardingOk[M, State]): Unit = {
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
@@ -121,10 +119,10 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def updateOne[M <: MB](
-      query: AbstractModifyQuery[M],
+  def updateOne[M <: MB, State](
+      query: AbstractModifyQuery[M, State],
       writeConcern: WriteConcern = defaultWriteConcern
-  ): Unit = {
+  )(implicit ev: RequireShardKey[M, State]): Unit = {
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
@@ -132,10 +130,10 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def upsertOne[M <: MB](
-      query: AbstractModifyQuery[M],
+  def upsertOne[M <: MB, State](
+      query: AbstractModifyQuery[M, State],
       writeConcern: WriteConcern = defaultWriteConcern
-  ): Unit = {
+  )(implicit ev: RequireShardKey[M, State]): Unit = {
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
@@ -143,8 +141,8 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def updateMulti[M <: MB](
-      query: AbstractModifyQuery[M],
+  def updateMulti[M <: MB, State](
+      query: AbstractModifyQuery[M, State],
       writeConcern: WriteConcern = defaultWriteConcern
   ): Unit = {
     if (optimizer.isEmptyQuery(query)) {
@@ -180,10 +178,10 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def findAndDeleteOne[M <: MB, R](
-    query: AbstractQuery[M, R, _],
+  def findAndDeleteOne[M <: MB, R, State](
+    query: AbstractQuery[M, R, State],
     writeConcern: WriteConcern = defaultWriteConcern
-  ): Option[R] = {
+  )(implicit ev: RequireShardKey[M, State]): Option[R] = {
     if (optimizer.isEmptyQuery(query)) {
       None
     } else {
@@ -197,12 +195,10 @@ trait QueryExecutor[MB] extends Rogue {
     adapter.explain(query)
   }
 
-  def iterate[S, M <: MB, R](
-      query: AbstractQuery[M, R, _],
-      state: S
-  )(
-      handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]
-  ): S = {
+  def iterate[S, M <: MB, R, State](query: AbstractQuery[M, R, State],
+                                    state: S)
+                                   (handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S])
+                                   (implicit ev: ShardingOk[M, State]): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Rogue.Iter.EOF).state
     } else {
@@ -211,13 +207,11 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
-  def iterateBatch[S, M <: MB, R](
-      query: AbstractQuery[M, R, _],
-      batchSize: Int,
-      state: S
-  )(
-      handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]
-  ): S = {
+  def iterateBatch[S, M <: MB, R, State](query: AbstractQuery[M, R, State],
+                                         batchSize: Int,
+                                         state: S)
+                                        (handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S])
+                                        (implicit ev: ShardingOk[M, State]): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Rogue.Iter.EOF).state
     } else {

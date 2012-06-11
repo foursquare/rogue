@@ -6,7 +6,6 @@ import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
-import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import com.mongodb.DBObject
 import java.util.{Calendar, Date}
 import net.liftweb.common.Box
@@ -20,17 +19,8 @@ import org.bson.types.ObjectId
  */
 trait Rogue {
 
-  implicit def addOrder[Rest >: Sel with Lim with Sk with Or]: AddOrder[Rest with Unordered, Rest with Ordered] = null
-  implicit def addSelect[Rest >: Ord with Lim with Sk with Or]: AddSelect[Rest with Unselected, Rest with Selected, Rest with SelectedOne] = null
-  implicit def addLimit[Rest >: Ord with Sel with Sk with Or]: AddLimit[Rest with Unlimited, Rest with Limited] = null
-  implicit def addSkip[Rest >: Ord with Sel with Lim with Or]: AddSkip[Rest with Unskipped, Rest with Skipped] = null
-  implicit def addOr[Rest >: Ord with Sel with Lim with Sk]: AddOrClause[Rest with HasNoOrClause, Rest with HasOrClause] = null
-
-  implicit def upcastQuery[M, R, S, T](q: AbstractQuery[M, R, S])(implicit ev: S <:< T): AbstractQuery[M, R, T] =
-    q.asInstanceOf[AbstractQuery[M, R, T]]
-
-  type InitialState = Unordered with Unselected with Unlimited with Unskipped with HasNoOrClause
-  type OrderedState = Ordered with Unselected with Unlimited with Unskipped with HasNoOrClause
+  type InitialState = Unordered with Unselected with Unlimited with Unskipped with HasNoOrClause with ShardKeyNotSpecified
+  type OrderedState = Ordered with Unselected with Unlimited with Unskipped with HasNoOrClause with ShardKeyNotSpecified
 
   type Query[T] =
     BaseQuery[T, T, InitialState]
@@ -39,9 +29,17 @@ trait Rogue {
     BaseQuery[T, T, OrderedState]
 
   // type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
-  type ModifyQuery[T] = BaseModifyQuery[T]
+  type ModifyQuery[T, _] = BaseModifyQuery[T, _]
   type GenericQuery[M, R] = BaseQuery[M, R, _]
   type GenericBaseQuery[M, R] = GenericQuery[M, R]
+
+  trait Sharded
+
+  trait ShardKey[V] {
+    def name: String
+    def eqs(v: V) = new EqClause(this.name, v) with ShardKeyClause
+    def in[L <% Traversable[V]](vs: L) = new InQueryClause(this.name, QueryHelpers.validatedList(vs.toSet)) with ShardKeyClause
+  }
 
   object Asc extends IndexModifier(1)
   object Desc extends IndexModifier(-1)

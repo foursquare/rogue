@@ -40,8 +40,10 @@ trait LiftRogue extends Rogue {
     BaseQuery[M, M, InitialState](
       rec, rec.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
 
-  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): AbstractModifyQuery[M] =
-      BaseModifyQuery[M](metaRecordToQueryBuilder[M](rec), MongoModify(Nil))
+  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]]
+    (rec: M with MongoMetaRecord[M])
+    (implicit ev: ShardingOk[M, ShardKeyNotSpecified]): AbstractModifyQuery[M, ShardKeyNotSpecified] =
+      BaseModifyQuery[M, ShardKeyNotSpecified](metaRecordToQueryBuilder[M](rec), MongoModify(Nil))
 
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
       IndexBuilder(rec)
@@ -49,43 +51,32 @@ trait LiftRogue extends Rogue {
   /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
    * users to write "RecordType.where(...).modify(...)".
    */
-  implicit def queryBuilderToModifyQuery[
-      M <: MongoRecord[M],
-      State <: Unordered with Unselected with Unlimited with Unskipped
-  ](
-      query: AbstractQuery[M, M, State]
-  ): AbstractModifyQuery[M] = {
-    BaseModifyQuery[M](query, MongoModify(Nil))
+  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M], State <: Unordered with Unselected with Unlimited with Unskipped]
+    (query: AbstractQuery[M, M, State])
+    (implicit ev: ShardingOk[M, State]): AbstractModifyQuery[M, State] = {
+    new BaseModifyQuery[M, State](query, MongoModify(Nil))
   }
 
-  implicit def queryBuilderToFindAndModifyQuery[
-      M <: MongoRecord[M],
-      R,
-      State <: Unlimited with Unskipped
-  ](
-      query: AbstractQuery[M, R, State]
-  ): AbstractFindAndModifyQuery[M, R] = {
+  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, State <: Unlimited with Unskipped]
+    (query: AbstractQuery[M, R, State])
+    (implicit ev: RequireShardKey[M, State]): AbstractFindAndModifyQuery[M, R] = {
     BaseFindAndModifyQuery[M, R](query, MongoModify(Nil))
   }
 
-  implicit def queryToLiftQuery[
-      M <: MongoRecord[_],
-      R,
-      State
-  ](
-      query: BaseQuery[M, R, State]
-  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R, State] = {
+  implicit def queryToLiftQuery[M <: MongoRecord[_], R, State]
+    (query: BaseQuery[M, R, State])
+    (implicit ev: ShardingOk[M with MongoMetaRecord[_], State]): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R, State] = {
     ExecutableQuery(
         query.asInstanceOf[BaseQuery[M with MongoMetaRecord[_], R, State]],
         LiftQueryExecutor
     )
   }
 
-  implicit def modifyQueryToLiftModifyQuery[M <: MongoRecord[_]](
-      query: BaseModifyQuery[M]
-  ): ExecutableModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_]] = {
+  implicit def modifyQueryToLiftModifyQuery[M <: MongoRecord[_], State](
+      query: BaseModifyQuery[M, State]
+  ): ExecutableModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], State] = {
     ExecutableModifyQuery(
-        query.asInstanceOf[BaseModifyQuery[M with MongoMetaRecord[_]]],
+        query.asInstanceOf[BaseModifyQuery[M with MongoMetaRecord[_], State]],
         LiftQueryExecutor
     )
   }

@@ -59,6 +59,8 @@ class EndToEndTest extends SpecsMatchers {
     VenueClaim.bulkDelete_!!!
     VenueClaim.count must_== 0
 
+    Like.allShards.bulkDelete_!!!
+
     RogueTestMongo.disconnectFromMongo
   }
 
@@ -288,5 +290,33 @@ class EndToEndTest extends SpecsMatchers {
     findIndexOfWithLimit(5, 2) must_== -1
     findIndexOfWithLimit(5, 7) must_== 5
     findIndexOfWithLimit(11, 12) must_== -2
+  }
+
+  @Test
+  def testSharding {
+    val l1 = Like.createRecord.userid(1).checkin(111).save
+    val l2 = Like.createRecord.userid(2).checkin(111).save
+    val l3 = Like.createRecord.userid(2).checkin(333).save
+    val l4 = Like.createRecord.userid(2).checkin(444).save
+
+    // Find
+    Like.where(_.checkin eqs 111).allShards.count() must_== 2
+    Like.where(_.checkin eqs 111).withShardKey(_.userid eqs 1).count() must_== 1
+    Like.withShardKey(_.userid eqs 1).where(_.checkin eqs 111).count() must_== 1
+    Like.withShardKey(_.userid eqs 1).count() must_== 1
+    Like.withShardKey(_.userid eqs 2).count() must_== 3
+    Like.where(_.checkin eqs 333).withShardKey(_.userid eqs 2).count() must_== 1
+
+    // Modify
+    Like.withShardKey(_.userid eqs 2).and(_.checkin eqs 333).modify(_.checkin setTo 334).updateOne()
+    Like.find(l3.id).open_!.checkin.value must_== 334
+    Like.where(_.checkin eqs 334).allShards.count() must_== 1
+
+    Like.where(_.checkin eqs 111).allShards.modify(_.checkin setTo 112).updateMulti()
+    Like.where(_.checkin eqs 112).withShardKey(_.userid in List(1L, 2L)).count() must_== 2
+
+    val l5 = Like.where(_.checkin eqs 112).withShardKey(_.userid eqs 1).findAndModify(_.checkin setTo 113).updateOne(returnNew = true)
+    l5.get.id must_== l1.id
+    l5.get.checkin.value must_== 113
   }
 }

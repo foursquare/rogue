@@ -51,7 +51,7 @@ object QueryHelpers {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
     def validateQuery[M](query: BaseQuery[M, _, _]): Unit
-    def validateModify[M](modify: BaseModifyQuery[M]): Unit
+    def validateModify[M](modify: BaseModifyQuery[M, _]): Unit
     def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): Unit
   }
 
@@ -59,7 +59,7 @@ object QueryHelpers {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
     override def validateQuery[M](query: BaseQuery[M, _, _]) {}
-    override def validateModify[M](modify: BaseModifyQuery[M]) {}
+    override def validateModify[M](modify: BaseModifyQuery[M, _]) {}
     override def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]) {}
   }
 
@@ -69,13 +69,13 @@ object QueryHelpers {
 
   trait QueryTransformer {
     def transformQuery[M](query: BaseQuery[M, _, _]): BaseQuery[M, _, _]
-    def transformModify[M](modify: BaseModifyQuery[M]): BaseModifyQuery[M]
+    def transformModify[M](modify: BaseModifyQuery[M, _]): BaseModifyQuery[M, _]
     def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R]
   }
 
   class DefaultQueryTransformer extends QueryTransformer {
     override def transformQuery[M](query: BaseQuery[M, _, _]): BaseQuery[M, _, _] = { query }
-    override def transformModify[M](modify: BaseModifyQuery[M]): BaseModifyQuery[M] = { modify }
+    override def transformModify[M](modify: BaseModifyQuery[M, _]): BaseModifyQuery[M, _] = { modify }
     override def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R] = { modify }
   }
 
@@ -148,5 +148,4 @@ object QueryHelpers {
       }
     }))
   }
-
 }

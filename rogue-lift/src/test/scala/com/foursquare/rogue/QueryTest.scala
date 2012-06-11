@@ -511,6 +511,18 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
+  def testShardKey {
+    Like.where(_.checkin eqs 123) toString() must_== """db.likes.find({ "checkin" : 123})"""
+    Like.where(_.userid eqs 123) toString() must_== """db.likes.find({ "userid" : 123})"""
+    Like.where(_.userid eqs 123).allShards toString() must_== """db.likes.find({ "userid" : 123})"""
+    Like.where(_.userid eqs 123).allShards.noop() toString() must_== """db.likes.update({ "userid" : 123}, { }, false, false)"""
+    Like.withShardKey(_.userid eqs 123) toString() must_== """db.likes.find({ "userid" : 123})"""
+    Like.withShardKey(_.userid in List(123L, 456L)) toString() must_== """db.likes.find({ "userid" : { "$in" : [ 123 , 456]}})"""
+    Like.withShardKey(_.userid eqs 123).and(_.checkin eqs 1) toString() must_== """db.likes.find({ "userid" : 123 , "checkin" : 1})"""
+    Like.where(_.checkin eqs 1).withShardKey(_.userid eqs 123) toString() must_== """db.likes.find({ "checkin" : 1 , "userid" : 123})"""
+  }
+
+  @Test
   def testCommonSuperclassForPhantomTypes {
     def maybeLimit(legid: Long, limitOpt: Option[Int]) = {
       limitOpt match {
@@ -640,6 +652,21 @@ class QueryTest extends SpecsMatchers {
     check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) limit 10)""")
     check("""Venue or (_ where (_.legacyid eqs 1), _ where (_.legacyid eqs 2) skip 10)""")
     check("""OrQuery(Venue.where(_.legacyid eqs 1), Tip.where(_.legacyid eqs 2))""")
+
+    // Sharding
+
+    check("""Like.where(_.userid eqs 123).noop()""")
+    check("""Like.where(_.userid eqs 123).count()""")
+    check("""Like.where(_.userid eqs 123).exists()""")
+    check("""Like.where(_.userid eqs 123).fetch()""")
+    check("""Like.where(_.userid eqs 123).bulkDelete_!!!()""")
+    check("""Like.where(_.userid eqs 123).paginate(10)""")
+    check("""Like.withShardKey(_.userid lt 123)""")
+    check("""Like.withShardKey(_.checkin eqs 123)""")
+    check("""Like.where(_.checkin eqs 444).allShards.modify(_.checkin setTo 112).updateOne()""")
+    check("""Like.where(_.checkin eqs 444).allShards.modify(_.checkin setTo 112).and(_.tip unset).updateOne()""")
+    check("""Like.where(_.checkin eqs 444).allShards.findAndModify(_.checkin setTo 112).updateOne()""")
+    check("""Like.where(_.checkin eqs 444).allShards.findAndModify(_.checkin setTo 112).and(_.tip unset).updateOne()""")
 
     // Indexes
 

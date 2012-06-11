@@ -93,6 +93,18 @@ case class BaseQuery[M, R, +State](
   def scan[F](clause: M => QueryClause[F]) =
     addClause(clause, expectedIndexBehavior = DocumentScan)
 
+  /**
+   * Adds an eqs clause specifying the shard key.
+   */
+  def withShardKey[F, S2](clause: M => QueryClause[F] with ShardKeyClause)
+                         (implicit ev: AddShardAware[State, S2, _]): AbstractQuery[M, R, S2] = {
+    addClause(clause, expectedIndexBehavior = DocumentScan).asInstanceOf[BaseQuery[M, R, S2]]
+  }
+
+  def allShards[S2](implicit ev: AddShardAware[State, _, S2]): AbstractQuery[M, R, S2] = {
+    this.asInstanceOf[BaseQuery[M, R, S2]]
+  }
+
   private def addClauseOpt[V, F](opt: Option[V])
                        (clause: (M, V) => QueryClause[F],
                         expectedIndexBehavior: MaybeIndexed) = {
@@ -210,8 +222,10 @@ case class BaseQuery[M, R, +State](
   def skipOpt[S2](n: Option[Int])(implicit ev: AddSkip[State, S2]): BaseQuery[M, R, S2] =
     this.copy(sk = n)
 
-  def noop()(implicit ev: State <:< Unselected with Unlimited with Unskipped): BaseModifyQuery[M] =
-      BaseModifyQuery(this, MongoModify(Nil)) // TODO: Does this work?
+  def noop()
+          (implicit ev1: Required[State, Unselected with Unlimited with Unskipped],
+           ev2: ShardingOk[M, State]): BaseModifyQuery[M, State] =
+      BaseModifyQuery(this, MongoModify(Nil))
 
   override def toString: String =
     MongoBuilder.buildQueryString("find", collectionName, this)
@@ -432,8 +446,8 @@ case class BaseQuery[M, R, +State](
 // *** Modify Queries
 // *******************************************************
 
-case class BaseModifyQuery[M](
-  	query: BaseQuery[M, _, _],
+case class BaseModifyQuery[M, +State](
+  	query: BaseQuery[M, _, State],
     mod: MongoModify
 ) {
 

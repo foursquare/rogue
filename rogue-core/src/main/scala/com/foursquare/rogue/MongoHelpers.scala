@@ -113,7 +113,7 @@ object MongoHelpers extends Rogue {
       sb.toString
     }
 
-    def buildModifyString[R, M](collectionName: String, modify: BaseModifyQuery[M],
+    def buildModifyString[R, M](collectionName: String, modify: BaseModifyQuery[M, _],
                                 upsert: Boolean = false, multi: Boolean = false): String = {
       "db.%s.update(%s, %s, %s, %s)".format(
         collectionName,

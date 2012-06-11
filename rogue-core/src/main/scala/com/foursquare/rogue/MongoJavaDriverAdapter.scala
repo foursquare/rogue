@@ -76,7 +76,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def modify[M <: MB](mod: AbstractModifyQuery[M],
+  def modify[M <: MB](mod: AbstractModifyQuery[M, _],
                       upsert: Boolean,
                       multi: Boolean,
                       writeConcern: WriteConcern): Unit = {

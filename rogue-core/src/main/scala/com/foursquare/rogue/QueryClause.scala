@@ -17,6 +17,8 @@ abstract class QueryClause[V](val fieldName: String, val actualIndexBehavior: Ma
 abstract class IndexableQueryClause[V, Ind <: MaybeIndexed](fname: String, actualIB: Ind, conds: (CondOps.Value, V)*)
     extends QueryClause[V](fname, actualIB, conds: _*)
 
+trait ShardKeyClause
+
 case class AllQueryClause[V](override val fieldName: String, vs: java.util.List[V], override val expectedIndexBehavior: MaybeIndexed = Index)
     extends IndexableQueryClause[java.util.List[V], Index](fieldName, Index, CondOps.All -> vs) {
   override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
@@ -128,22 +130,18 @@ case class RawQueryClause(f: BasicDBObjectBuilder => Unit, override val expected
   override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
-case class EmptyQueryClause[V](override val fieldName: String, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, Index](fieldName, Index) {
+case class EmptyQueryClause[V](override val fieldName: String, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, Index](fieldName, Index) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean) {}
   override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
-case class EqClause[V, Ind <: MaybeIndexed](override val fieldName: String, actualIB: Ind, value: V, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, Ind](fieldName, actualIB) {
+case class EqClause[V, Ind <: MaybeIndexed](override val fieldName: String, value: V, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, Index](fieldName, Index) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     q.add(fieldName, if (signature) 0 else value)
   }
   override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
-}
-
-object EqClause {
-  def apply[V](fieldName: String, value: V) = {
-    new EqClause[V, Index](fieldName, Index, value)
-  }
 }
 
 case class WithinCircleClause[V](override val fieldName: String, lat: Double, lng: Double, radius: Double, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {

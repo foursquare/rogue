@@ -134,9 +134,21 @@ class Tip extends MongoRecord[Tip] with MongoId[Tip] {
   def meta = Tip
   object legacyid extends LongField(this) { override def name = "legid" }
   object counts extends MongoMapField[Tip, Long](this)
+  object userid extends LongField(this)
 }
 object Tip extends Tip with MongoMetaRecord[Tip] {
   override def collectionName = "tips"
+  override def mongoIdentifier = RogueTestMongo
+}
+
+class Like extends MongoRecord[Like] with MongoId[Like] with Rogue.Sharded {
+  def meta = Like
+  object userid extends LongField(this) with ShardKey[Long]
+  object checkin extends LongField(this)
+  object tip extends ObjectIdField(this)
+}
+object Like extends Like with MongoMetaRecord[Like] {
+  override def collectionName = "likes"
   override def mongoIdentifier = RogueTestMongo
 }
 

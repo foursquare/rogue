@@ -10,7 +10,7 @@ import com.mongodb.WriteConcern
 case class ExecutableQuery[MB, M <: MB, R, State](
     query: AbstractQuery[M, R, State],
     db: QueryExecutor[MB]
-) {
+)(implicit ev: ShardingOk[M, State]) {
 
   /**
    * Gets the size of the query result. This should only be called on queries that do not
@@ -54,8 +54,8 @@ case class ExecutableQuery[MB, M <: MB, R, State](
    * query must not have a limit clause.
    * @param limit the maximum number of records to return.
    */
-  def fetch(limit: Int)(implicit ev: State <:< Unlimited): List[R] =
-    db.fetch(upcastQuery(query).limit(limit))
+  def fetch[S2](limit: Int)(implicit ev1: AddLimit[State, S2], ev2: ShardingOk[M, S2]): List[R] =
+    db.fetch(query.limit(limit))
 
   /**
    * fetch a batch of results, and execute a function on each element of the list.
@@ -71,8 +71,8 @@ case class ExecutableQuery[MB, M <: MB, R, State](
    * @return an option record containing either the first result that matches the
    *         query, or None if there are no records that match.
    */
-  def get()(implicit ev: State <:< Unlimited): Option[R] =
-    db.fetchOne(upcastQuery(query))
+  def get[S2]()(implicit ev1: AddLimit[State, S2], ev2: ShardingOk[M, S2]): Option[R] =
+    db.fetchOne(query)
 
   /**
    * Fetches the records that match the query in paginated form. The query must not contain
@@ -80,8 +80,8 @@ case class ExecutableQuery[MB, M <: MB, R, State](
    * @param countPerPage the number of records to be contained in each page of the result.
    */
   def paginate(countPerPage: Int)
-              (implicit ev: State <:< Unlimited with Unskipped) = {
-    new BasePaginatedQuery[MB, M, R](upcastQuery(query), db, countPerPage)
+              (implicit ev: ShardingOk[M, State]) = {
+    new BasePaginatedQuery[MB, M, R, State](query, db, countPerPage)
   }
 
   /**
@@ -89,8 +89,9 @@ case class ExecutableQuery[MB, M <: MB, R, State](
    * "limit", or "select" clauses. Sends the delete operation to mongo, and returns - does
    * <em>not</em> wait for the delete to be finished.
    */
-  def bulkDelete_!!!()(implicit ev: State <:< Unselected with Unlimited with Unskipped): Unit =
-    db.bulkDelete_!!(upcastQuery(query))
+  def bulkDelete_!!!()
+                    (implicit ev1: Required[State, Unselected with Unlimited with Unskipped]): Unit =
+    db.bulkDelete_!!(query)
 
   /**
    * Delete all of the records that match the query. The query must not contain any "skip",
@@ -98,14 +99,14 @@ case class ExecutableQuery[MB, M <: MB, R, State](
    * delete operation to complete before returning to the caller.
    */
   def bulkDelete_!!(concern: WriteConcern)
-                   (implicit ev: State <:< Unselected with Unlimited with Unskipped): Unit =
-    db.bulkDelete_!!(upcastQuery(query), concern)
+                   (implicit ev1: Required[State, Unselected with Unlimited with Unskipped]): Unit =
+    db.bulkDelete_!!(query, concern)
 
   /**
    * Finds the first record that matches the query (if any), fetches it, and then deletes it.
    * A copy of the deleted record is returned to the caller.
    */
-  def findAndDeleteOne(): Option[R] =
+  def findAndDeleteOne()(implicit ev: RequireShardKey[M, State]): Option[R] =
     db.findAndDeleteOne(query)
 
   /**
@@ -122,24 +123,24 @@ case class ExecutableQuery[MB, M <: MB, R, State](
     db.iterateBatch(query, batchSize, state)(handler)
 }
 
-case class ExecutableModifyQuery[MB, M <: MB](query: AbstractModifyQuery[M],
-                                              db: QueryExecutor[MB]) {
+case class ExecutableModifyQuery[MB, M <: MB, State](query: AbstractModifyQuery[M, State],
+                                                     db: QueryExecutor[MB]) {
   def updateMulti(): Unit =
     db.updateMulti(query)
 
-  def updateOne(): Unit =
+  def updateOne()(implicit ev: RequireShardKey[M, State]): Unit =
     db.updateOne(query)
 
-  def upsertOne(): Unit =
+  def upsertOne()(implicit ev: RequireShardKey[M, State]): Unit =
     db.upsertOne(query)
 
   def updateMulti(writeConcern: WriteConcern): Unit =
     db.updateMulti(query, writeConcern)
 
-  def updateOne(writeConcern: WriteConcern): Unit =
+  def updateOne(writeConcern: WriteConcern)(implicit ev: RequireShardKey[M, State]): Unit =
     db.updateOne(query, writeConcern)
 
-  def upsertOne(writeConcern: WriteConcern): Unit =
+  def upsertOne(writeConcern: WriteConcern)(implicit ev: RequireShardKey[M, State]): Unit =
     db.upsertOne(query, writeConcern)
 }
 
@@ -154,12 +155,12 @@ case class ExecutableFindAndModifyQuery[MB, M <: MB, R](
     db.findAndUpsertOne(query, returnNew)
 }
 
-class BasePaginatedQuery[MB, M <: MB, R](
-    q: AbstractQuery[M, R, Unlimited with Unskipped],
+class BasePaginatedQuery[MB, M <: MB, R, State](
+    q: AbstractQuery[M, R, State],
     db: QueryExecutor[MB],
     val countPerPage: Int,
     val pageNum: Int = 1
-) {
+)(implicit ev: ShardingOk[M, State]) {
   def copy() = new BasePaginatedQuery(q, db, countPerPage, pageNum)
 
   def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, db, countPerPage, p)
@@ -168,7 +169,10 @@ class BasePaginatedQuery[MB, M <: MB, R](
 
   lazy val countAll: Long = db.count(q)
 
-  def fetch[S2, S3](): List[R] = {
+  def fetch[S2, S3]()
+                   (implicit ev1: AddSkip[State, S2],
+                    ev2: AddLimit[S2, S3],
+                    ev3: ShardingOk[M, S3]) : List[R] = {
     db.fetch(q.skip(countPerPage * (pageNum - 1)).limit(countPerPage))
   }
 
