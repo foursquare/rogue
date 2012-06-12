@@ -235,15 +235,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
         queryClause.lim.foreach(cursor.limit _)
         queryClause.sk.foreach(cursor.skip _)
         ord.foreach(cursor.sort _)
-        queryClause.slaveOk.foreach(so => {
-          if (so) {
-            // Use bitwise-or to add in slave-ok
-            cursor.setOptions(cursor.getOptions | Bytes.QUERYOPTION_SLAVEOK)
-          } else {
-            // Remove slave-ok from options
-            cursor.setOptions(cursor.getOptions & ~Bytes.QUERYOPTION_SLAVEOK)
-          }
-        })
+        queryClause.readPreference.foreach(cursor.setReadPreference _)
         queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
         queryClause.comment.foreach(cursor addSpecial("$comment", _))
         hnt.foreach(cursor hint _)

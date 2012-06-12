@@ -2,6 +2,7 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.LiftRogue._
+import com.mongodb.ReadPreference
 
 import java.util.regex.Pattern
 import net.liftweb.mongodb.record._
@@ -523,13 +524,13 @@ class QueryTest extends SpecsMatchers {
   }
 
   @Test
-  def testSetSlaveOk: Unit = {
+  def testSetReadPreference: Unit = {
     type Q = BaseQuery[Venue, Venue, _, _, _, _, _]
 
-    Venue.where(_.mayor eqs 2).asInstanceOf[Q].slaveOk must_== None
-    Venue.where(_.mayor eqs 2).setSlaveOk(true).asInstanceOf[Q].slaveOk must_== Some(true)
-    Venue.where(_.mayor eqs 2).setSlaveOk(false).asInstanceOf[Q].slaveOk must_== Some(false)
-    Venue.where(_.mayor eqs 2).setSlaveOk(true).setSlaveOk(false).asInstanceOf[Q].slaveOk must_== Some(false)
+    Venue.where(_.mayor eqs 2).asInstanceOf[Q].readPreference must_== None
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.SECONDARY)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.PRIMARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.PRIMARY)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).setReadPreference(ReadPreference.PRIMARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.PRIMARY)
   }
 
   @Test
