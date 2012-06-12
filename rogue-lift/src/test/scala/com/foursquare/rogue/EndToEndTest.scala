@@ -3,6 +3,7 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.LiftRogue._
 import com.foursquare.rogue.Rogue.Iter._
+import com.mongodb.ReadPreference
 
 import java.util.regex.Pattern
 import net.liftweb.common.{Box, Empty, Full}
@@ -182,16 +183,16 @@ class EndToEndTest extends SpecsMatchers {
   }
 
   @Test
-  def testSlaveOk: Unit = {
-    // Note: this isn't a real test of slaveok because the test mongo setup
-    // doesn't have replicas. This basically just makes sure that slaveok
+  def testReadPreference: Unit = {
+    // Note: this isn't a real test of readpreference because the test mongo setup
+    // doesn't have replicas. This basically just makes sure that readpreference
     // doesn't break everything.
     val v = baseTestVenue().save
 
     // eqs
     Venue.where(_._id eqs v.id).fetch().map(_.id)                         must_== List(v.id)
-    Venue.where(_._id eqs v.id).setSlaveOk(true).fetch().map(_.id)        must_== List(v.id)
-    Venue.where(_._id eqs v.id).setSlaveOk(false).fetch().map(_.id)       must_== List(v.id)
+    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.SECONDARY).fetch().map(_.id)        must_== List(v.id)
+    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.PRIMARY).fetch().map(_.id)       must_== List(v.id)
   }
 
   @Test
