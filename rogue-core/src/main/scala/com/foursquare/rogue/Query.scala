@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers.{
     AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect}
-import com.mongodb.{BasicDBObjectBuilder, DBObject, WriteConcern}
+import com.mongodb.{BasicDBObjectBuilder, DBObject, ReadPreference, WriteConcern}
 import net.liftweb.common.{Box, Full}
 import org.bson.types.BasicBSONList
 import scala.collection.immutable.ListMap
@@ -66,7 +66,7 @@ case class BaseQuery[
     condition: AndCondition,
     order: Option[MongoOrder],
     select: Option[MongoSelect[R]],
-    slaveOk: Option[Boolean]
+    readPreference: Option[ReadPreference]
 ) {
 
   private def addClause[F](clause: M => QueryClause[F],
@@ -149,7 +149,7 @@ case class BaseQuery[
         condition = AndCondition(Nil, None),
         order = None,
         select = None,
-        slaveOk = None)
+        readPreference = None)
     val queries = subqueries.toList.map(q => q(queryBuilder))
     val orCondition = QueryHelpers.orConditionFromQueries(queries)
     this.copy(condition = condition.copy(orCondition = Some(orCondition)))
@@ -236,17 +236,17 @@ case class BaseQuery[
   def comment(c: String): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(comment = Some(c))
 
   /**
-   * Set a flag to indicate whether this query may hit secondaries. This only
-   * really makes sense if you're using replica sets. If this field is
+   * Set a flag to indicate whether this query should hit primaries or secondaries.
+   * This only really makes sense if you're using replica sets. If this field is
    * unspecified, rogue will leave the option untouched, so you'll use
    * secondaries or not depending on how you configure the mongo java driver.
    * Also, this only works if you're doing a query -- findAndModify, updates,
    * and deletes always go to the primaries.
    *
    * For more info, see
-   * http://www.mongodb.org/display/DOCS/Querying#Querying-slaveOk%28QueryingSecondaries%29.
+   * http://www.mongodb.org/display/DOCS/slaveOk
    */
-  def setSlaveOk(b: Boolean): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(slaveOk = Some(b))
+  def setReadPreference(r: ReadPreference): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(readPreference = Some(r))
 
   def hint(index: MongoIndex[M]): AbstractQuery[M, R, Ord, Sel, Lim, Sk, Or] = this.copy(hint = Some(index.asListMap))
 
