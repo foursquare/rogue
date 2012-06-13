@@ -5,7 +5,6 @@ package com.foursquare.rogue
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.Rogue.Iter._
 import com.mongodb.{BasicDBObjectBuilder, Bytes, DBCollection, DBCursor, DBObject, WriteConcern}
-import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.ListBuffer
 
 trait DBCollectionFactory[MB] {
@@ -162,23 +161,21 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     )
   }
 
-  def iterateBatch[M <: MB, R, S, CollType <: Traversable[R]](
-                                  query: GenericQuery[M, R],
+  def iterateBatch[M <: MB, R, S](query: GenericQuery[M, R],
                                   batchSize: Int,
                                   initialState: S,
                                   f: DBObject => R)
-                                 (handler: (S, Event[CollType]) => Command[S])
-                                 (implicit cbf: CanBuildFrom[Nothing, R, CollType]): S = {
+                                 (handler: (S, Event[List[R]]) => Command[S]): S = {
+    val buf = new ListBuffer[R]
 
-    def getBatch(cursor: DBCursor): Either[Exception, CollType] = {
+    def getBatch(cursor: DBCursor): Either[Exception, List[R]] = {
       try {
-        val buf = cbf()
-        var count = 0
-        while (cursor.hasNext && count < batchSize) {
+        buf.clear()
+        // ListBuffer#length is O(1) vs ListBuffer#size is O(N) (true in 2.9.x, fixed in 2.10.x)
+        while (cursor.hasNext && buf.length < batchSize) {
           buf += f(cursor.next)
-          count += 1
         }
-        Right(buf.result())
+        Right(buf.toList)
       } catch {
         case e: Exception => Left(e)
       }
