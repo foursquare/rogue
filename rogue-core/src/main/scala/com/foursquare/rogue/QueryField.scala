@@ -74,15 +74,15 @@ abstract class AbstractQueryField[V, DB, M](val field: Field[V, M]) {
 
   def between(v1: V, v2: V) =
     new BetweenQueryClause(field.name, valueToDB(v1), valueToDB(v2))
+
+  def exists(b: Boolean) = new ExistsQueryClause(field.name, b)
+
+  def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
 class QueryField[V, M](field: Field[V, M])
     extends AbstractQueryField[V, V, M](field) {
   override def valueToDB(v: V) = v
-
-  def exists(b: Boolean) = new ExistsQueryClause(field.name, b)
-
-  def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
 class CalendarQueryField[M](val field: Field[java.util.Calendar, M]) {
@@ -177,7 +177,11 @@ class ForeignObjectIdQueryField[M, T](
     new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(getId)))
 }
 
-class StringQueryField[M](val field: Field[String, M]) {
+class StringQueryField[M](override val field: Field[String, M])
+    extends AbstractQueryField[String, String, M](field) {
+
+  override def valueToDB(v: String): String = v
+
   def startsWith(s: String): RegexQueryClause[PartialIndexScan] =
     new RegexQueryClause[PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
 

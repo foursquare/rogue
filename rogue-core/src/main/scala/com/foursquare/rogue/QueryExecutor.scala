@@ -2,6 +2,7 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.field.Field
 import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
 import com.mongodb.{DBObject, ReadPreference, WriteConcern}
 import scala.collection.mutable.ListBuffer
@@ -43,7 +44,7 @@ trait QueryExecutor[MB] {
   ](
       query: AbstractQuery[M, _, _, Sel, Lim, Sk, _]
   )(
-      field: M => QueryField[V, M]
+      field: M => Field[V, M]
   )(
       implicit
       // ev1: Sel =:= SelectedOne,
@@ -53,7 +54,7 @@ trait QueryExecutor[MB] {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
-      adapter.countDistinct(query, field(query.meta).field.name)
+      adapter.countDistinct(query, field(query.meta).name)
     }
   }
 

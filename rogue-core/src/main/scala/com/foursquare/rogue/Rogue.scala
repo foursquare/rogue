@@ -7,6 +7,7 @@ import com.foursquare.field.{
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
+import com.mongodb.DBObject
 import java.util.{Calendar, Date}
 import net.liftweb.common.Box
 import org.bson.types.ObjectId
@@ -51,46 +52,29 @@ trait Rogue {
   }
 
   // QueryField implicits
-  implicit def rfieldToQueryField[M, F](f: RField[F, M]): QueryField[F, M] = new QueryField(f)
+  // implicit def rfieldToQueryField[M, F](f: RField[F, M]): QueryField[F, M] = new QueryField(f)
 
-  implicit def rcalendarFieldToCalendarQueryField[M, F]
-      (f: RField[java.util.Calendar, M]): CalendarQueryField[M] =
-    new CalendarQueryField(f)
+  implicit def rbooleanFieldtoQueryField[M](f: RField[Boolean, M]): QueryField[Boolean, M] = new QueryField(f)
+  implicit def rcharFieldtoQueryField[M](f: RField[Char, M]): QueryField[Char, M] = new QueryField(f)
 
-  implicit def rdoubleFieldtoNumericQueryField[M, F]
-      (f: RField[Double, M]): NumericQueryField[Double, M] =
-    new NumericQueryField(f)
+  implicit def rbyteFieldtoNumericQueryField[M](f: RField[Byte, M]): NumericQueryField[Byte, M] = new NumericQueryField(f)
+  implicit def rshortFieldtoNumericQueryField[M](f: RField[Short, M]): NumericQueryField[Short, M] = new NumericQueryField(f)
+  implicit def rintFieldtoNumericQueryField[M](f: RField[Int, M]): NumericQueryField[Int, M] = new NumericQueryField(f)
+  implicit def rlongFieldtoNumericQueryField[M](f: RField[Long, M]): NumericQueryField[Long, M] = new NumericQueryField(f)
+  implicit def rfloatFieldtoNumericQueryField[M](f: RField[Float, M]): NumericQueryField[Float, M] = new NumericQueryField(f)
+  implicit def rdoubleFieldtoNumericQueryField[M](f: RField[Double, M]): NumericQueryField[Double, M] = new NumericQueryField(f)
 
-  implicit def renumNameFieldToEnumNameQueryField[M, F <: Enumeration#Value]
-      (f: RField[F, M]): EnumNameQueryField[M, F] =
-    new EnumNameQueryField(f)
+  implicit def rstringFieldToStringQueryField[M](f: RField[String, M]): StringQueryField[M] = new StringQueryField(f)
+  implicit def robjectIdFieldToObjectIdQueryField[M](f: RField[ObjectId, M]): ObjectIdQueryField[M] = new ObjectIdQueryField(f)
+  implicit def rdateFieldToQueryField[M](f: RField[Date, M]): QueryField[Date, M] = new QueryField(f)
+  implicit def rcalendarFieldToCalendarQueryField[M](f: RField[Calendar, M]): CalendarQueryField[M] = new CalendarQueryField(f)
+  implicit def rdbobjectFieldToQueryField[M](f: RField[DBObject, M]): QueryField[DBObject, M] = new QueryField(f)
 
-  implicit def renumerationListFieldToEnumerationListQueryField[M, F <: Enumeration#Value]
-      (f: RField[List[F], M]): EnumerationListQueryField[F, M] =
-    new EnumerationListQueryField[F, M](f)
-
-  implicit def rintFieldtoNumericQueryField[M, F](f: RField[Int, M]): NumericQueryField[Int, M] =
-    new NumericQueryField(f)
-
-  implicit def rlatLongFieldToGeoQueryField[M](f: RField[LatLong, M]): GeoQueryField[M] =
-    new GeoQueryField(f)
-
-  implicit def rlistFieldToListQueryField[M, F](f: RField[List[F], M]): ListQueryField[F, M] =
-    new ListQueryField[F, M](f)
-
-  implicit def rlongFieldtoNumericQueryField[M](f: RField[Long, M]): NumericQueryField[Long, M] =
-    new NumericQueryField(f)
-
-  implicit def robjectIdFieldToObjectIdQueryField[M, F](f: RField[ObjectId, M])
-      : ObjectIdQueryField[M] =
-    new ObjectIdQueryField(f)
-
-  implicit def rmapFieldToMapQueryField[M, F](f: RField[Map[String, F], M]): MapQueryField[F, M] =
-    new MapQueryField[F, M](f)
-
-  implicit def rstringFieldToStringQueryField[M](f: RField[String, M]): StringQueryField[M] =
-    new StringQueryField(f)
-
+  implicit def renumNameFieldToEnumNameQueryField[M, F <: Enumeration#Value](f: RField[F, M]): EnumNameQueryField[M, F] = new EnumNameQueryField(f)
+  implicit def renumerationListFieldToEnumerationListQueryField[M, F <: Enumeration#Value](f: RField[List[F], M]): EnumerationListQueryField[F, M] = new EnumerationListQueryField[F, M](f)
+  implicit def rlatLongFieldToGeoQueryField[M](f: RField[LatLong, M]): GeoQueryField[M] = new GeoQueryField(f)
+  implicit def rlistFieldToListQueryField[M, F](f: RField[List[F], M]): ListQueryField[F, M] = new ListQueryField[F, M](f)
+  implicit def rmapFieldToMapQueryField[M, F](f: RField[Map[String, F], M]): MapQueryField[F, M] = new MapQueryField[F, M](f)
 
   /** ModifyField implicits
     *
