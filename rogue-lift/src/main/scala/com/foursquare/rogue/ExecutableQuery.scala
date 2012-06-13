@@ -2,6 +2,7 @@ package com.foursquare.rogue
 
 // Copyright 2012 Foursquare Labs Inc. All Rights Reserved.
 
+import com.foursquare.field.Field
 import com.foursquare.rogue.MongoHelpers.MongoSelect
 import com.mongodb.WriteConcern
 
@@ -30,9 +31,9 @@ case class ExecutableQuery[
    * Returns the number of distinct values returned by a query. The query must not have
    * limit or skip clauses.
    */
-  def countDistinct[V](field: M => QueryField[V, _])
+  def countDistinct[V](field: M => Field[V, _])
                       (implicit ev1: Lim =:= Unlimited, ev2: Sk =:= Unskipped): Long =
-    db.countDistinct(query)(field.asInstanceOf[M => QueryField[V, M]])
+    db.countDistinct(query)(field.asInstanceOf[M => Field[V, M]])
 
   /**
    * Checks if there are any records that match this query.
@@ -126,7 +127,7 @@ case class ExecutableQuery[
   def iterate[S](state: S)(handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]): S =
     db.iterate(query, state)(handler)
 
-  def iterateBatch[S, CollType <: Traversable[R]](batchSize: Int, state: S)(handler: (S, Rogue.Iter.Event[Traversable[R]]) => Rogue.Iter.Command[S]): S =
+  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]): S =
     db.iterateBatch(query, batchSize, state)(handler)
 }
 

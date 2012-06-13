@@ -2,9 +2,9 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.field.Field
 import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
 import com.mongodb.{DBObject, ReadPreference, WriteConcern}
-import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.ListBuffer
 
 trait RogueSerializer[R] {
@@ -44,7 +44,7 @@ trait QueryExecutor[MB] {
   ](
       query: AbstractQuery[M, _, _, Sel, Lim, Sk, _]
   )(
-      field: M => QueryField[V, M]
+      field: M => Field[V, M]
   )(
       implicit
       // ev1: Sel =:= SelectedOne,
@@ -54,7 +54,7 @@ trait QueryExecutor[MB] {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
-      adapter.countDistinct(query, field(query.meta).field.name)
+      adapter.countDistinct(query, field(query.meta).name)
     }
   }
 
@@ -236,14 +236,12 @@ trait QueryExecutor[MB] {
     }
   }
 
-  def iterateBatch[S, M <: MB, R, CollType <: Traversable[R]](
+  def iterateBatch[S, M <: MB, R](
       query: AbstractQuery[M, R, _, _, _, _, _],
       batchSize: Int,
       state: S
   )(
-      handler: (S, Rogue.Iter.Event[CollType]) => Rogue.Iter.Command[S]
-  )(
-      implicit cbf: CanBuildFrom[Nothing, R, CollType]
+      handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]
   ): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Rogue.Iter.EOF).state
