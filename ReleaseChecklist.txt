@@ -9,7 +9,7 @@ Pre-release checklist:
         [ ] Add the features listed in CHANGELOG.md to the "New in ..." section
   [ ] Remove the "-SNAPSHOT" from the version in RogueBuild.scala
   [ ] Run "; +clean; +test" in sbt to make sure everything works.
-  [ ] Run "publish-local" (NOTE(jorge): might need to clean first... there's a weird scaldoc issue I can't figure out)
+  [ ] Run "publish-local"
   [ ] Commit these changes (but don't push!)
 
 Release checklist:

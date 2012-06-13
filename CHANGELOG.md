@@ -3,6 +3,8 @@
 # 2.0.0-beta5
 
 - Internal: Use standard Either convention of failure on the Left.
+- Use readPreference instead of slaveOk
+- Remove generic Field[V, M] => QueryField[V, M] implicit
 
 # 2.0.0-beta4
 
