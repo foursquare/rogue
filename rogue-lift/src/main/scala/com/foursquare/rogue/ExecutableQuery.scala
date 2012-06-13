@@ -126,7 +126,7 @@ case class ExecutableQuery[
   def iterate[S](state: S)(handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]): S =
     db.iterate(query, state)(handler)
 
-  def iterateBatch[S, CollType <: Traversable[R]](batchSize: Int, state: S)(handler: (S, Rogue.Iter.Event[Traversable[R]]) => Rogue.Iter.Command[S]): S =
+  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]): S =
     db.iterateBatch(query, batchSize, state)(handler)
 }
 
