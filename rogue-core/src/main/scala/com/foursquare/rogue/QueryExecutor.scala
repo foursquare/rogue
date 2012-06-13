@@ -243,7 +243,7 @@ trait QueryExecutor[MB] {
   )(
       handler: (S, Rogue.Iter.Event[CollType]) => Rogue.Iter.Command[S]
   )(
-      implicit cbf: CanBuildFrom[Nothing, R, CollType]
+      implicit cbf: CanBuildFrom[Traversable[_], R, CollType]
   ): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Rogue.Iter.EOF).state
