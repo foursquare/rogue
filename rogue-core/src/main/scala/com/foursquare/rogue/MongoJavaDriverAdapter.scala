@@ -229,7 +229,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       val coll = dbCollectionFactory.getDBCollection(query)
       try {
         val cursor = coll.find(cnd, sel)
-        queryClause.lim.foreach(cursor.limit _)
+        // Always use a negative limit so that the db closes the cursor.
+        queryClause.lim.foreach(lim => cursor.limit(-math.abs(lim)))
         queryClause.sk.foreach(cursor.skip _)
         ord.foreach(cursor.sort _)
         queryClause.readPreference.foreach(cursor.setReadPreference _)
