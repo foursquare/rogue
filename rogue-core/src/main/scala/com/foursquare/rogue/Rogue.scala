@@ -19,48 +19,9 @@ import org.bson.types.ObjectId
  */
 trait Rogue {
 
-  type InitialState = Unordered with Unselected with Unlimited with Unskipped with HasNoOrClause with ShardKeyNotSpecified
-  type OrderedState = Ordered with Unselected with Unlimited with Unskipped with HasNoOrClause with ShardKeyNotSpecified
-
-  type Query[T] =
-    BaseQuery[T, T, InitialState]
-
-  type OrderedQuery[T] =
-    BaseQuery[T, T, OrderedState]
-
-  // type PaginatedQuery[T <: MongoRecord[T]] = BasePaginatedQuery[T, T]
-  type ModifyQuery[T, _] = BaseModifyQuery[T, _]
-  type GenericQuery[M, R] = BaseQuery[M, R, _]
-  type GenericBaseQuery[M, R] = GenericQuery[M, R]
-
-  trait Sharded
-
-  trait ShardKey[V] {
-    def name: String
-    def eqs(v: V) = new EqClause(this.name, v) with ShardKeyClause
-    def in[L <% Traversable[V]](vs: L) = new InQueryClause(this.name, QueryHelpers.validatedList(vs.toSet)) with ShardKeyClause
-  }
-
   object Asc extends IndexModifier(1)
   object Desc extends IndexModifier(-1)
   object TwoD extends IndexModifier("2d")
-
-  /**
-   * Iteratee helper classes
-   * @tparam S state type
-   */
-  object Iter {
-    sealed trait Command[S] {
-      def state: S
-    }
-    case class Continue[S](state: S) extends Command[S]
-    case class Return[S](state: S) extends Command[S]
-
-    sealed trait Event[+R]
-    case class Item[R](r: R) extends Event[R]
-    case class Error(e: Exception) extends Event[Nothing]
-    case object EOF extends Event[Nothing]
-  }
 
   // QueryField implicits
   // implicit def rfieldToQueryField[M, F](f: RField[F, M]): QueryField[F, M] = new QueryField(f)

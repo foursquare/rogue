@@ -2,7 +2,6 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.rogue.Rogue.GenericQuery
 import com.mongodb.{DBObject, WriteConcern}
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
@@ -30,17 +29,17 @@ object QueryHelpers {
     (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
-    def log(query: GenericQuery[_, _], msg: => String, timeMillis: Long): Unit
-    def logIndexMismatch(query: GenericQuery[_, _], msg: => String)
-    def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_])
-    def warn(query: GenericQuery[_, _], msg: => String): Unit
+    def log(query: Query[_, _, _], msg: => String, timeMillis: Long): Unit
+    def logIndexMismatch(query: Query[_, _, _], msg: => String)
+    def logIndexHit(query: Query[_, _, _], index: MongoIndex[_])
+    def warn(query: Query[_, _, _], msg: => String): Unit
   }
 
   class DefaultQueryLogger extends QueryLogger {
-    override def log(query: GenericQuery[_, _], msg: => String, timeMillis: Long) {}
-    override def logIndexMismatch(query: GenericQuery[_, _], msg: => String) {}
-    override def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_]) {}
-    override def warn(query: GenericQuery[_, _], msg: => String) {}
+    override def log(query: Query[_, _, _], msg: => String, timeMillis: Long) {}
+    override def logIndexMismatch(query: Query[_, _, _], msg: => String) {}
+    override def logIndexHit(query: Query[_, _, _], index: MongoIndex[_]) {}
+    override def warn(query: Query[_, _, _], msg: => String) {}
   }
 
   object NoopQueryLogger extends DefaultQueryLogger
@@ -50,17 +49,17 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
-    def validateQuery[M](query: BaseQuery[M, _, _]): Unit
-    def validateModify[M](modify: BaseModifyQuery[M, _]): Unit
-    def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): Unit
+    def validateQuery[M](query: Query[M, _, _]): Unit
+    def validateModify[M](modify: ModifyQuery[M, _]): Unit
+    def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R]): Unit
   }
 
   class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
-    override def validateQuery[M](query: BaseQuery[M, _, _]) {}
-    override def validateModify[M](modify: BaseModifyQuery[M, _]) {}
-    override def validateFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]) {}
+    override def validateQuery[M](query: Query[M, _, _]) {}
+    override def validateModify[M](modify: ModifyQuery[M, _]) {}
+    override def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R]) {}
   }
 
   object NoopQueryValidator extends DefaultQueryValidator
@@ -68,15 +67,15 @@ object QueryHelpers {
   var validator: QueryValidator = NoopQueryValidator
 
   trait QueryTransformer {
-    def transformQuery[M](query: BaseQuery[M, _, _]): BaseQuery[M, _, _]
-    def transformModify[M](modify: BaseModifyQuery[M, _]): BaseModifyQuery[M, _]
-    def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R]
+    def transformQuery[M](query: Query[M, _, _]): Query[M, _, _]
+    def transformModify[M](modify: ModifyQuery[M, _]): ModifyQuery[M, _]
+    def transformFindAndModify[M, R](modify: FindAndModifyQuery[M, R]): FindAndModifyQuery[M, R]
   }
 
   class DefaultQueryTransformer extends QueryTransformer {
-    override def transformQuery[M](query: BaseQuery[M, _, _]): BaseQuery[M, _, _] = { query }
-    override def transformModify[M](modify: BaseModifyQuery[M, _]): BaseModifyQuery[M, _] = { modify }
-    override def transformFindAndModify[M, R](modify: BaseFindAndModifyQuery[M, R]): BaseFindAndModifyQuery[M, R] = { modify }
+    override def transformQuery[M](query: Query[M, _, _]): Query[M, _, _] = { query }
+    override def transformModify[M](modify: ModifyQuery[M, _]): ModifyQuery[M, _] = { modify }
+    override def transformFindAndModify[M, R](modify: FindAndModifyQuery[M, R]): FindAndModifyQuery[M, R] = { modify }
   }
 
   object NoopQueryTransformer extends DefaultQueryTransformer
@@ -140,10 +139,10 @@ object QueryHelpers {
     JObjectParser.parse(Extraction.decompose(x).asInstanceOf[JObject])
   }
 
-  def orConditionFromQueries(subqueries: List[AbstractQuery[_, _, _]]) = {
+  def orConditionFromQueries(subqueries: List[Query[_, _, _]]) = {
     MongoHelpers.OrCondition(subqueries.flatMap(subquery => {
       subquery match {
-        case q: BaseQuery[_, _, _] => Some(q.condition)
+        case q: Query[_, _, _] => Some(q.condition)
         case _ => None
       }
     }))

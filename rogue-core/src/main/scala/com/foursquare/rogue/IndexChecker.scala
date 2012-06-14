@@ -1,9 +1,6 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue
 
-import com.foursquare.rogue.Rogue.{GenericBaseQuery, GenericQuery}
-import scala.collection.immutable.ListMap
-
 /**
  * A trait that represents the fact that a record type includes a list
  * of the indexes that exist in MongoDB for that type.
@@ -44,7 +41,7 @@ object MongoIndexChecker {
    * @param query the query
    * @return the list of indexes, or an empty list.
    */
-  def getIndexes(query: GenericBaseQuery[_, _]): List[MongoIndex[_]] = {
+  def getIndexes(query: Query[_, _, _]): List[MongoIndex[_]] = {
     val queryMetaRecord = query.meta
     if (queryMetaRecord.isInstanceOf[IndexedRecord[_]]) {
       queryMetaRecord.asInstanceOf[IndexedRecord[_]].mongoIndexList
@@ -61,7 +58,7 @@ object MongoIndexChecker {
    * @param query the query being validated.
    * @return true if the required indexes are found, false otherwise.
    */
-  def validateIndexExpectations(query: GenericBaseQuery[_, _]): Boolean = {
+  def validateIndexExpectations(query: Query[_, _, _]): Boolean = {
     val indexes = getIndexes(query)
     validateIndexExpectations(query, indexes)
   }
@@ -76,7 +73,7 @@ object MongoIndexChecker {
    * @param indexes a list of the indexes
    * @return true if the required indexes are found, false otherwise.
    */
-  def validateIndexExpectations(query: GenericBaseQuery[_, _], indexes: List[MongoIndex[_]]): Boolean = {
+  def validateIndexExpectations(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean = {
     val baseConditions = normalizeCondition(query.condition);
     val conditions = baseConditions.map(_.filter(_.expectedIndexBehavior != DocumentScan))
 
@@ -105,9 +102,8 @@ object MongoIndexChecker {
    * to execute that query. (Due to vagaries of the MongoDB implementation, sometimes a
    * conceptually usable index won't be found.)
    * @param query the query
-   * @param the query clauses in DNF form.
    */
-  def validateQueryMatchesSomeIndex(query: GenericBaseQuery[_, _]): Boolean = {
+  def validateQueryMatchesSomeIndex(query: Query[_, _, _]): Boolean = {
     val indexes = getIndexes(query)
     validateQueryMatchesSomeIndex(query, indexes)
   }
@@ -118,9 +114,8 @@ object MongoIndexChecker {
    * conceptually usable index won't be found.)
    * @param query the query
    * @param indexes the list of indexes that exist in the database
-   * @param the query clauses in DNF form.
    */
-  def validateQueryMatchesSomeIndex(query: GenericBaseQuery[_, _], indexes: List[MongoIndex[_]]) = {
+  def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[MongoIndex[_]]) = {
     val conditions = normalizeCondition(query.condition)
     lazy val indexString = indexes.map(idx => "{%s}".format(idx.toString())).mkString(", ")
     conditions.forall(clauses => {
@@ -195,12 +190,12 @@ object MongoIndexChecker {
    * @param query the query involved
    * @param msg a message string describing the error.
    */
-  private def signalError(query: GenericBaseQuery[_, _], msg: String): Boolean = {
+  private def signalError(query: Query[_, _, _], msg: String): Boolean = {
     QueryHelpers.logger.logIndexMismatch(query, "Indexing error: " + msg)
     false
   }
 
-  private def logIndexHit(query: GenericQuery[_, _], index: MongoIndex[_]): Boolean = {
+  private def logIndexHit(query: Query[_, _, _], index: MongoIndex[_]): Boolean = {
     QueryHelpers.logger.logIndexHit(query, index)
     true
   }

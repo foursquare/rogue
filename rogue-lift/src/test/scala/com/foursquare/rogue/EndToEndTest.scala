@@ -2,7 +2,7 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.LiftRogue._
-import com.foursquare.rogue.Rogue.Iter._
+import com.foursquare.rogue.Iter._
 import com.mongodb.ReadPreference
 
 import java.util.regex.Pattern

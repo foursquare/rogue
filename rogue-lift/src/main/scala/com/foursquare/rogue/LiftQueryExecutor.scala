@@ -2,7 +2,6 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.rogue.Rogue.GenericQuery
 import com.foursquare.rogue.MongoHelpers.MongoSelect
 import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
@@ -11,17 +10,17 @@ import net.liftweb.mongodb.MongoDB
 import com.mongodb.{DBCollection, DBObject, ReadPreference}
 
 object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]] {
-  override def getDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: GenericQuery[M, _]): DBCollection = {
+  override def getDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
     MongoDB.useSession(query.meta.mongoIdentifier){ db =>
       db.getCollection(query.collectionName)
     }
   }
-  override def getPrimaryDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: GenericQuery[M, _]): DBCollection = {
+  override def getPrimaryDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
     MongoDB.useSession(query.meta/* TODO: .master*/.mongoIdentifier){ db =>
       db.getCollection(query.collectionName)
     }
   }
-  override def getInstanceName[M <: MongoRecord[_] with MongoMetaRecord[_]](query: GenericQuery[M, _]): String = {
+  override def getInstanceName[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): String = {
     query.meta.mongoIdentifier.toString
   }
 }

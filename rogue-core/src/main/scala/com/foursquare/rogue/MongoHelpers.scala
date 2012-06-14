@@ -92,7 +92,7 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
-    def buildQueryString[R, M](operation: String, collectionName: String, query: GenericBaseQuery[M, R]): String = {
+    def buildQueryString[R, M](operation: String, collectionName: String, query: Query[M, R, _]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
@@ -106,14 +106,14 @@ object MongoHelpers extends Rogue {
       sb.toString
     }
 
-    def buildConditionString[R, M](operation: String, collectionName: String, query: GenericBaseQuery[M, R]): String = {
+    def buildConditionString[R, M](operation: String, collectionName: String, query: Query[M, R, _]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(collectionName, operation))
       sb.append(buildCondition(query.condition, signature = false).toString)
       sb.append(")")
       sb.toString
     }
 
-    def buildModifyString[R, M](collectionName: String, modify: BaseModifyQuery[M, _],
+    def buildModifyString[R, M](collectionName: String, modify: ModifyQuery[M, _],
                                 upsert: Boolean = false, multi: Boolean = false): String = {
       "db.%s.update(%s, %s, %s, %s)".format(
         collectionName,
@@ -124,7 +124,7 @@ object MongoHelpers extends Rogue {
       )
     }
 
-    def buildFindAndModifyString[R, M](collectionName: String, mod: BaseFindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
+    def buildFindAndModifyString[R, M](collectionName: String, mod: FindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
       val query = mod.query
       val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(
           collectionName, buildCondition(query.condition)))
@@ -138,7 +138,7 @@ object MongoHelpers extends Rogue {
       sb.toString
     }
 
-    def buildSignature[R, M](collectionName: String, query: GenericBaseQuery[M, R]): String = {
+    def buildSignature[R, M](collectionName: String, query: Query[M, R, _]): String = {
       val sb = new StringBuilder("db.%s.find(".format(collectionName))
       sb.append(buildCondition(query.condition, signature = true).toString)
       sb.append(")")

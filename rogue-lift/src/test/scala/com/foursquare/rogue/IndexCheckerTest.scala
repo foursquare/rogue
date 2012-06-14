@@ -40,14 +40,14 @@ class MongoIndexCheckerTest extends SpecsMatchers {
 
   @Test
   def testIndexExpectations {
-    def test(query: GenericQuery[_, _]) = {
-      val q = query.asInstanceOf[GenericBaseQuery[_, _]]
+    def test(query: Query[_, _, _]) = {
+      val q = query.asInstanceOf[Query[_, _, _]]
       MongoIndexChecker.validateIndexExpectations(q)
     }
 
-    def yes(query: GenericQuery[_, _]) =
+    def yes(query: Query[_, _, _]) =
       test(query) must beTrue
-    def no(query: GenericQuery[_, _]) =
+    def no(query: Query[_, _, _]) =
       test(query) must beFalse
 
     yes(TestModel where (_.a eqs 1))
@@ -83,16 +83,16 @@ class MongoIndexCheckerTest extends SpecsMatchers {
 
   @Test
   def testMatchesIndex {
-    def test(query: GenericQuery[_, _]) = {
-      val q = query.asInstanceOf[GenericBaseQuery[_, _]]
+    def test(query: Query[_, _, _]) = {
+      val q = query.asInstanceOf[Query[_, _, _]]
       MongoIndexChecker.validateIndexExpectations(q) &&
         MongoIndexChecker.validateQueryMatchesSomeIndex(q)
     }
 
-    def yes(query: GenericQuery[_, _]) =
+    def yes(query: Query[_, _, _]) =
       test(query) must beTrue
 
-    def no(query: GenericQuery[_, _]) =
+    def no(query: Query[_, _, _]) =
       test(query) must beFalse
 
     yes(TestModel where (_.a eqs 1))

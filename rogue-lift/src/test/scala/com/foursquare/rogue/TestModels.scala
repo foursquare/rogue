@@ -141,7 +141,7 @@ object Tip extends Tip with MongoMetaRecord[Tip] {
   override def mongoIdentifier = RogueTestMongo
 }
 
-class Like extends MongoRecord[Like] with MongoId[Like] with Rogue.Sharded {
+class Like extends MongoRecord[Like] with MongoId[Like] with Sharded {
   def meta = Like
   object userid extends LongField(this) with ShardKey[Long]
   object checkin extends LongField(this)

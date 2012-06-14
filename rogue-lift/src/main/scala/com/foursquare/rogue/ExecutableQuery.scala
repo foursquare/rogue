@@ -8,7 +8,7 @@ import com.foursquare.rogue.Rogue._
 import com.mongodb.WriteConcern
 
 case class ExecutableQuery[MB, M <: MB, R, State](
-    query: AbstractQuery[M, R, State],
+    query: Query[M, R, State],
     db: QueryExecutor[MB]
 )(implicit ev: ShardingOk[M, State]) {
 
@@ -80,8 +80,9 @@ case class ExecutableQuery[MB, M <: MB, R, State](
    * @param countPerPage the number of records to be contained in each page of the result.
    */
   def paginate(countPerPage: Int)
-              (implicit ev: ShardingOk[M, State]) = {
-    new BasePaginatedQuery[MB, M, R, State](query, db, countPerPage)
+              (implicit ev1: Required[State, Unlimited with Unskipped],
+               ev2: ShardingOk[M, State]) = {
+    new PaginatedQuery(ev1(query), db, countPerPage)
   }
 
   /**
@@ -116,14 +117,14 @@ case class ExecutableQuery[MB, M <: MB, R, State](
   def explain(): String =
     db.explain(query)
 
-  def iterate[S](state: S)(handler: (S, Rogue.Iter.Event[R]) => Rogue.Iter.Command[S]): S =
+  def iterate[S](state: S)(handler: (S, Iter.Event[R]) => Iter.Command[S]): S =
     db.iterate(query, state)(handler)
 
-  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Rogue.Iter.Event[List[R]]) => Rogue.Iter.Command[S]): S =
+  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Iter.Event[List[R]]) => Iter.Command[S]): S =
     db.iterateBatch(query, batchSize, state)(handler)
 }
 
-case class ExecutableModifyQuery[MB, M <: MB, State](query: AbstractModifyQuery[M, State],
+case class ExecutableModifyQuery[MB, M <: MB, State](query: ModifyQuery[M, State],
                                                      db: QueryExecutor[MB]) {
   def updateMulti(): Unit =
     db.updateMulti(query)
@@ -145,7 +146,7 @@ case class ExecutableModifyQuery[MB, M <: MB, State](query: AbstractModifyQuery[
 }
 
 case class ExecutableFindAndModifyQuery[MB, M <: MB, R](
-    query: AbstractFindAndModifyQuery[M, R],
+    query: FindAndModifyQuery[M, R],
     db: QueryExecutor[MB]
 ) {
   def updateOne(returnNew: Boolean = false): Option[R] =
@@ -155,24 +156,21 @@ case class ExecutableFindAndModifyQuery[MB, M <: MB, R](
     db.findAndUpsertOne(query, returnNew)
 }
 
-class BasePaginatedQuery[MB, M <: MB, R, State](
-    q: AbstractQuery[M, R, State],
+class PaginatedQuery[MB, M <: MB, R, +State <: Unlimited with Unskipped](
+    q: Query[M, R, State],
     db: QueryExecutor[MB],
     val countPerPage: Int,
     val pageNum: Int = 1
 )(implicit ev: ShardingOk[M, State]) {
-  def copy() = new BasePaginatedQuery(q, db, countPerPage, pageNum)
+  def copy() = new PaginatedQuery(q, db, countPerPage, pageNum)
 
-  def setPage(p: Int) = if (p == pageNum) this else new BasePaginatedQuery(q, db, countPerPage, p)
+  def setPage(p: Int) = if (p == pageNum) this else new PaginatedQuery(q, db, countPerPage, p)
 
-  def setCountPerPage(c: Int) = if (c == countPerPage) this else new BasePaginatedQuery(q, db, c, pageNum)
+  def setCountPerPage(c: Int) = if (c == countPerPage) this else new PaginatedQuery(q, db, c, pageNum)
 
   lazy val countAll: Long = db.count(q)
 
-  def fetch[S2, S3]()
-                   (implicit ev1: AddSkip[State, S2],
-                    ev2: AddLimit[S2, S3],
-                    ev3: ShardingOk[M, S3]) : List[R] = {
+  def fetch(): List[R] = {
     db.fetch(q.skip(countPerPage * (pageNum - 1)).limit(countPerPage))
   }
 

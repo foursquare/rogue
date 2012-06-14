@@ -9,13 +9,13 @@ class QueryOptimizer {
     case _ => false
   }
 
-  def isEmptyQuery(query: BaseQuery[_, _, _]): Boolean = {
+  def isEmptyQuery(query: Query[_, _, _]): Boolean = {
     query.condition.clauses.exists(isEmptyClause)
   }
 
-  def isEmptyQuery(query: BaseModifyQuery[_, _]): Boolean =
+  def isEmptyQuery(query: ModifyQuery[_, _]): Boolean =
     isEmptyQuery(query.query)
 
-  def isEmptyQuery(query: BaseFindAndModifyQuery[_, _]): Boolean =
+  def isEmptyQuery(query: FindAndModifyQuery[_, _]): Boolean =
     isEmptyQuery(query.query)
 }

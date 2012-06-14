@@ -3,14 +3,14 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
-import com.foursquare.rogue.Rogue.Iter._
+import com.foursquare.rogue.Iter._
 import com.mongodb.{BasicDBObjectBuilder, Bytes, DBCollection, DBCursor, DBObject, WriteConcern}
 import scala.collection.mutable.ListBuffer
 
 trait DBCollectionFactory[MB] {
-  def getDBCollection[M <: MB](query: GenericQuery[M, _]): DBCollection
-  def getPrimaryDBCollection[M <: MB](query: GenericQuery[M, _]): DBCollection
-  def getInstanceName[M <: MB](query: GenericQuery[M, _]): String
+  def getDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
+  def getPrimaryDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
+  def getInstanceName[M <: MB](query: Query[M, _, _]): String
 }
 
 class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
@@ -19,7 +19,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   import MongoHelpers.MongoBuilder._
 
   private[rogue] def runCommand[M <: MB, T](description: => String,
-                                            query: GenericQuery[M, _])(f: => T): T = {
+                                            query: Query[M, _, _])(f: => T): T = {
     // Use nanoTime instead of currentTimeMillis to time the query since
     // currentTimeMillis only has 10ms granularity on many systems.
     val start = System.nanoTime
@@ -35,7 +35,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def count[M <: MB](query: GenericQuery[M, _]): Long = {
+  def count[M <: MB](query: Query[M, _, _]): Long = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
     val cnd = buildCondition(queryClause.condition)
@@ -48,7 +48,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def countDistinct[M <: MB](query: GenericQuery[M, _],
+  def countDistinct[M <: MB](query: Query[M, _, _],
                              key: String): Long = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
@@ -63,7 +63,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def delete[M <: MB](query: GenericQuery[M, _],
+  def delete[M <: MB](query: Query[M, _, _],
                       writeConcern: WriteConcern): Unit = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
@@ -76,7 +76,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def modify[M <: MB](mod: AbstractModifyQuery[M, _],
+  def modify[M <: MB](mod: ModifyQuery[M, _],
                       upsert: Boolean,
                       multi: Boolean,
                       writeConcern: WriteConcern): Unit = {
@@ -94,7 +94,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def findAndModify[M <: MB, R](mod: AbstractFindAndModifyQuery[M, R],
+  def findAndModify[M <: MB, R](mod: FindAndModifyQuery[M, R],
                                 returnNew: Boolean,
                                 upsert: Boolean,
                                 remove: Boolean)
@@ -119,7 +119,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     else None
   }
 
-  def query[M <: MB](query: GenericQuery[M, _],
+  def query[M <: MB](query: Query[M, _, _],
                      batchSize: Option[Int])
                     (f: DBObject => Unit): Unit = {
     doQuery("find", query){cursor =>
@@ -129,7 +129,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def iterate[M <: MB, R, S](query: GenericQuery[M, R],
+  def iterate[M <: MB, R, S](query: Query[M, R, _],
                              initialState: S,
                              f: DBObject => R)
                             (handler: (S, Event[R]) => Command[S]): S = {
@@ -161,7 +161,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     )
   }
 
-  def iterateBatch[M <: MB, R, S](query: GenericQuery[M, R],
+  def iterateBatch[M <: MB, R, S](query: Query[M, R, _],
                                   batchSize: Int,
                                   initialState: S,
                                   f: DBObject => R)
@@ -204,7 +204,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   }
 
 
-  def explain[M <: MB](query: GenericQuery[M, _]): String = {
+  def explain[M <: MB](query: Query[M, _, _]): String = {
     doQuery("find", query){cursor =>
       cursor.explain.toString
     }
@@ -212,7 +212,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
 
   private def doQuery[M <: MB, T](
       operation: String,
-      query: GenericQuery[M, _]
+      query: Query[M, _, _]
   )(
       f: DBCursor => T
   ): T = {

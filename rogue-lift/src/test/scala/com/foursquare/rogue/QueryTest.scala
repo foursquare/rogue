@@ -537,7 +537,7 @@ class QueryTest extends SpecsMatchers {
 
   @Test
   def testSetReadPreference: Unit = {
-    type Q = BaseQuery[Venue, Venue, _]
+    type Q = Query[Venue, Venue, _]
 
     Venue.where(_.mayor eqs 2).asInstanceOf[Q].readPreference must_== None
     Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.SECONDARY)
