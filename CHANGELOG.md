@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 2.0.0-beta7
+
+- revert change where we always pass a negative limit
+- fix weird interaction between negative limits and batchSize
+
 # 2.0.0-beta6
 
 - simplified phantom types
