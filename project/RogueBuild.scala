@@ -9,12 +9,12 @@ object RogueBuild extends Build {
   lazy val all: Project = Project("all", file(".")) aggregate(
     field, core, lift)
 
-  lazy val field = Project("rogue-field", file("rogue-field/"))
+  lazy val field = Project("rogue-field", file("rogue-field/")) dependsOn()
   lazy val core = Project("rogue-core", file("rogue-core/")) dependsOn(field % "compile;test->test;runtime->runtime")
   lazy val lift = Project("rogue-lift", file("rogue-lift/")) dependsOn(core % "compile;test->test;runtime->runtime")
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
-    version := "2.0.0-beta6-SNAPSHOT",
+    version := "2.0.0-beta6",
     organization := "com.foursquare",
     crossScalaVersions := Seq("2.9.1", "2.9.0-1", "2.9.0"),
     publishMavenStyle := true,
@@ -56,6 +56,11 @@ object RogueBuild extends Build {
     },
     retrieveManaged := true,
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
+
+    // Hack to work around SBT bug generating scaladoc for projects with no dependencies.
+    // https://github.com/harrah/xsbt/issues/85
+    unmanagedClasspath in Compile += Attributed.blank(new java.io.File("doesnotexist")),
+
     testFrameworks += new TestFramework("com.novocode.junit.JUnitFrameworkNoMarker"),
     credentials ++= {
       val sonatype = ("Sonatype Nexus Repository Manager", "oss.sonatype.org")

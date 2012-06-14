@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 2.0.0-beta6
+
+- simplified phantom types
+- use size() instead of count() to respect skip and limit
+- shardkey awareness
+- lots of renames, most notably AbstractQuery and ModifyQuery => Query
+- pass a negative number to DBCursor.limit() so that the cursor closes
+
 # 2.0.0-beta5
 
 - Internal: Use standard Either convention of failure on the Left.
