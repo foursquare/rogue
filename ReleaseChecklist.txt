@@ -8,6 +8,7 @@ Pre-release checklist:
         [ ] Move the existing "New in ..." section to the "Lots of new features since..." section
         [ ] Add the features listed in CHANGELOG.md to the "New in ..." section
   [ ] Remove the "-SNAPSHOT" from the version in RogueBuild.scala
+  [ ] Reload sbt
   [ ] Run "; +clean; +test" in sbt to make sure everything works.
   [ ] Run "publish-local"
   [ ] Commit these changes (but don't push!)

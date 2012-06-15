@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta8
+
+- Make ObjectIdQueryField more generic
+
 # 2.0.0-beta7
 
 - revert change where we always pass a negative limit
