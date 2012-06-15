@@ -171,8 +171,8 @@ trait LiftRogue extends Rogue {
 
   implicit def foreignObjectIdFieldToForeignObjectIdQueryField[M <: BsonRecord[M],
                                                                T <: MongoRecord[T] with MongoId[T]]
-      (f: Field[ObjectId, M] with HasMongoForeignObjectId[T]): ForeignObjectIdQueryField[M, T] =
-    new ForeignObjectIdQueryField[M, T](f, _.id)
+      (f: Field[ObjectId, M] with HasMongoForeignObjectId[T]): ForeignObjectIdQueryField[ObjectId, M, T] =
+    new ForeignObjectIdQueryField[ObjectId, M, T](f, _.id)
 
   implicit def intFieldtoNumericQueryField[M <: BsonRecord[M], F](f: Field[Int, M]): NumericQueryField[Int, M] =
     new NumericQueryField(f)
@@ -186,8 +186,7 @@ trait LiftRogue extends Rogue {
   implicit def longFieldtoNumericQueryField[M <: BsonRecord[M]](f: Field[Long, M]): NumericQueryField[Long, M] =
     new NumericQueryField(f)
 
-  implicit def objectIdFieldToObjectIdQueryField[M <: BsonRecord[M], F](f: Field[ObjectId, M])
-      : ObjectIdQueryField[M] =
+  implicit def objectIdFieldToObjectIdQueryField[M <: BsonRecord[M], F <: ObjectId](f: Field[F, M]): ObjectIdQueryField[F, M] =
     new ObjectIdQueryField(f)
 
   implicit def mapFieldToMapQueryField[M <: BsonRecord[M], F](f: Field[Map[String, F], M]): MapQueryField[F, M] =
