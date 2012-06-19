@@ -5,7 +5,6 @@ package com.foursquare.rogue
 import com.foursquare.rogue.MongoHelpers.{
     AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect}
 import com.mongodb.{BasicDBObjectBuilder, DBObject, ReadPreference, WriteConcern}
-import net.liftweb.common.{Box, Full}
 import org.bson.types.BasicBSONList
 import scala.collection.immutable.ListMap
 

@@ -8,7 +8,6 @@ import com.foursquare.field.{
     RequiredField => RRequiredField}
 import com.mongodb.DBObject
 import java.util.{Calendar, Date}
-import net.liftweb.common.Box
 import org.bson.types.ObjectId
 
 /**
@@ -90,7 +89,7 @@ trait Rogue {
   // SelectField implicits
   implicit def roptionalFieldToSelectField[M, V](
       f: ROptionalField[V, M]
-  ): SelectField[Box[V], M] = new OptionalSelectField(f)
+  ): SelectField[Option[V], M] = new OptionalSelectField(f)
 
   class Flattened[A, B]
   implicit def anyValIsFlattened[A <: AnyVal]: Flattened[A, A] = new Flattened[A, A]

@@ -48,29 +48,15 @@ class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord
         case Some(MongoSelect(fields, transformer)) =>
           val inst = meta.createRecord.asInstanceOf[MongoRecord[_]]
 
-          def setInstanceFieldFromDbo(fieldName: String) = {
-            inst.fieldByName(fieldName) match {
-              case Full(fld) => fld.setFromAny(dbo.get(fieldName))
-              case _ => {
-                val splitName = fieldName.split('.').toList
-                Box.!!(splitName.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
-                  obj match {
-                    case dbl: BasicBSONList =>
-                      (for {
-                        index <- 0 to dbl.size - 1
-                        val item: DBObject = dbl.get(index).asInstanceOf[DBObject]
-                      } yield item.get(fieldName)).toList
-                    case dbo: DBObject =>
-                      dbo.get(fieldName)
-                    case null => null
-                  }
-                }))
-              }
-            }
-          }
+          LiftQueryExecutorHelpers.setInstanceFieldFromDbo(inst, dbo, "_id")
 
-          setInstanceFieldFromDbo("_id")
-          transformer(fields.map(fld => fld.valueOrDefault(setInstanceFieldFromDbo(fld.field.name))))
+          val values =
+            fields.map(fld => {
+              val valueOpt = LiftQueryExecutorHelpers.setInstanceFieldFromDbo(inst, dbo, fld.field.name)
+              fld.valueOrDefault(valueOpt)
+            })
+
+          transformer(values)
         case None =>
           meta.fromDBObject(dbo).asInstanceOf[R]
       }
@@ -80,3 +66,25 @@ class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord
 
 object LiftQueryExecutor extends LiftQueryExecutor(LiftAdapter)
 
+object LiftQueryExecutorHelpers {
+  def setInstanceFieldFromDbo(instance: MongoRecord[_], dbo: DBObject, fieldName: String): Option[_] = {
+    instance.fieldByName(fieldName) match {
+      case Full(field) => field.setFromAny(dbo.get(fieldName)).toOption
+      case _ => {
+        val splitName = fieldName.split('.').toList
+        Box.!!(splitName.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
+          obj match {
+            case dbl: BasicBSONList =>
+              (for {
+                index <- 0 to dbl.size - 1
+                val item: DBObject = dbl.get(index).asInstanceOf[DBObject]
+              } yield item.get(fieldName)).toList
+            case dbo: DBObject =>
+              dbo.get(fieldName)
+            case null => null
+          }
+        })).toOption
+      }
+    }
+  }
+}

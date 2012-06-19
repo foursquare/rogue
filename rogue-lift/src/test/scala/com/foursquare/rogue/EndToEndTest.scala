@@ -6,7 +6,6 @@ import com.foursquare.rogue.Iter._
 import com.mongodb.ReadPreference
 
 import java.util.regex.Pattern
-import net.liftweb.common.{Box, Empty, Full}
 import org.bson.types.ObjectId
 import org.junit.{Before, After, Ignore, Test}
 import org.specs.SpecsMatchers
@@ -143,19 +142,19 @@ class EndToEndTest extends SpecsMatchers {
     val t = baseTestTip().save
 
     // select subfields
-    Tip.where(_._id eqs t.id).select(_.counts at "foo").fetch() must_== List(Full(1L))
+    Tip.where(_._id eqs t.id).select(_.counts at "foo").fetch() must_== List(Some(1L))
 
-    Venue.where(_._id eqs v.id).select(_.geolatlng.unsafeField[Double]("lat")).fetch() must_== List(Full(40.73))
+    Venue.where(_._id eqs v.id).select(_.geolatlng.unsafeField[Double]("lat")).fetch() must_== List(Some(40.73))
 
-    val subuserids: List[Box[List[Long]]] = Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch()
-    subuserids must_== List(Full(List(1234, 5678)))
+    val subuserids: List[Option[List[Long]]] = Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch()
+    subuserids must_== List(Some(List(1234, 5678)))
 
     // selecting a claims.userid when there is no top-level claims list should
     // have one element in the List for the one Venue, but an Empty for that
     // Venue since there's no list of claims there.
     Venue.where(_._id eqs v.id).modify(_.claims unset).and(_.lastClaim unset).updateOne()
-    Venue.where(_._id eqs v.id).select(_.lastClaim.subselect(_.userid)).fetch() must_== List(Empty)
-    Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch() must_== List(Empty)
+    Venue.where(_._id eqs v.id).select(_.lastClaim.subselect(_.userid)).fetch() must_== List(None)
+    Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch() must_== List(None)
   }
 
   @Ignore("These tests are broken because DummyField doesn't know how to convert a String to an Enum")
@@ -166,22 +165,22 @@ class EndToEndTest extends SpecsMatchers {
     // that point we only have a DummyField for the subfield, and that doesn't
     // know how to convert the String to an Enum.
 
-    val statuses: List[Box[VenueClaimBson.status.MyType]] =
+    val statuses: List[Option[VenueClaimBson.status.MyType]] =
           Venue.where(_._id eqs v.id).select(_.lastClaim.subselect(_.status)) .fetch()
     // This assertion works.
-    statuses must_== List(Full("Approved"))
+    statuses must_== List(Some("Approved"))
     // This assertion is what we want, and it fails.
-    // statuses must_== List(Full(ClaimStatus.approved))
+    // statuses must_== List(Some(ClaimStatus.approved))
 
-    val subuseridsAndStatuses: List[(Box[List[Long]], Box[List[VenueClaimBson.status.MyType]])] =
+    val subuseridsAndStatuses: List[(Option[List[Long]], Option[List[VenueClaimBson.status.MyType]])] =
           Venue.where(_._id eqs v.id)
                .select(_.claims.subselect(_.userid), _.claims.subselect(_.status))
                .fetch()
     // This assertion works.
-    subuseridsAndStatuses must_== List((Full(List(1234, 5678)), Full(List("Pending approval", "Approved"))))
+    subuseridsAndStatuses must_== List((Some(List(1234, 5678)), Some(List("Pending approval", "Approved"))))
 
     // This assertion is what we want, and it fails.
-    // subuseridsAndStatuses must_== List((Full(List(1234, 5678)), Full(List(ClaimStatus.pending, ClaimStatus.approved))))
+    // subuseridsAndStatuses must_== List((Some(List(1234, 5678)), Some(List(ClaimStatus.pending, ClaimStatus.approved))))
   }
 
   @Test

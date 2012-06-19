@@ -8,7 +8,6 @@ import com.foursquare.field.{
     RequiredField => RRequiredField}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Calendar
-import net.liftweb.common.Box
 import net.liftweb.json.JsonAST.{JArray, JInt}
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
 import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField, Record}
@@ -255,7 +254,7 @@ trait LiftRogue extends Rogue {
     new MandatorySelectField(f)
 
   implicit def optionalFieldToSelectField[M <: BsonRecord[M], V]
-      (f: Field[V, M] with OptionalTypedField[V]): SelectField[Box[V], M] =
+      (f: Field[V, M] with OptionalTypedField[V]): SelectField[Option[V], M] =
     new OptionalSelectField(new ROptionalField[V, M] {
       override def name = f.name
       override def owner = f.owner

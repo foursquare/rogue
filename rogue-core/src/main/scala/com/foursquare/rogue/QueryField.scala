@@ -6,7 +6,6 @@ import com.foursquare.field.{Field, OptionalField, RequiredField}
 import com.mongodb.DBObject
 import java.util.Calendar
 import java.util.regex.Pattern
-import net.liftweb.common.Box
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import scala.util.matching.Regex
@@ -201,7 +200,7 @@ class CaseClassQueryField[V, M](val field: Field[V, M]) {
 }
 
 class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, defaultValue: B)
-    extends AbstractNumericQueryField[B, DBObject, M](field) {
+    extends AbstractQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
   def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
@@ -223,7 +222,7 @@ class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, 
 // So, normally, we need to just have one level of nesting, but here we want two.
 class BsonRecordQueryFieldInPullContext[M, B]
     (field: Field[B, M], rec: B, asDBObject: B => DBObject)
-    extends AbstractNumericQueryField[B, DBObject, M](field) {
+    extends AbstractQueryField[B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
   def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
@@ -280,7 +279,7 @@ class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObjec
     new SelectableDummyField[List[V1], M](field.name + "." + f(rec).name, field.owner)
   }
 
-  def subselect[V, V1](f: B => Field[V, B])(implicit ev: Rogue.Flattened[V, V1]): SelectField[Box[List[V1]], M] = {
+  def subselect[V, V1](f: B => Field[V, B])(implicit ev: Rogue.Flattened[V, V1]): SelectField[Option[List[V1]], M] = {
     Rogue.roptionalFieldToSelectField(subfield(f))
   }
 
@@ -451,17 +450,17 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
  */
 sealed abstract class SelectField[V, M](val field: Field[_, M]) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
-  def valueOrDefault(v: Any): Any
+  def valueOrDefault(v: Option[_]): Any
 }
 
 final class MandatorySelectField[V, M](override val field: RequiredField[V, M])
     extends SelectField[V, M](field) {
-  override def valueOrDefault(v: Any): Any = v.asInstanceOf[Box[V]].openOr(field.defaultValue)
+  override def valueOrDefault(v: Option[_]): Any = v.getOrElse(field.defaultValue)
 }
 
 final class OptionalSelectField[V, M](override val field: OptionalField[V, M])
-    extends SelectField[Box[V], M](field) {
-  override def valueOrDefault(v: Any): Any = v.asInstanceOf[Box[V]]
+    extends SelectField[Option[V], M](field) {
+  override def valueOrDefault(v: Option[_]): Any = v
 }
 
 // ********************************************************************************
