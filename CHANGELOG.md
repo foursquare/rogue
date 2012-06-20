@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta9
+
+- Replace Box with Option in rogue-core
+
 # 2.0.0-beta8
 
 - Make ObjectIdQueryField more generic
