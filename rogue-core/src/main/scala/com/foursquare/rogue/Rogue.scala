@@ -38,6 +38,7 @@ trait Rogue {
   implicit def renumerationListFieldToEnumerationListQueryField[M, F <: Enumeration#Value](f: RField[List[F], M]): EnumerationListQueryField[F, M] = new EnumerationListQueryField[F, M](f)
   implicit def rlatLongFieldToGeoQueryField[M](f: RField[LatLong, M]): GeoQueryField[M] = new GeoQueryField(f)
   implicit def rlistFieldToListQueryField[M, F](f: RField[List[F], M]): ListQueryField[F, M] = new ListQueryField[F, M](f)
+  implicit def rseqFieldToSeqQueryField[M, F](f: RField[Seq[F], M]): SeqQueryField[F, M] = new SeqQueryField[F, M](f)
   implicit def rmapFieldToMapQueryField[M, F](f: RField[Map[String, F], M]): MapQueryField[F, M] = new MapQueryField[F, M](f)
 
   /** ModifyField implicits
@@ -76,6 +77,9 @@ trait Rogue {
   implicit def rlistFieldToListModifyField[M, F](f: RField[List[F], M]): ListModifyField[F, M] =
     new ListModifyField[F, M](f)
 
+  implicit def rSeqFieldToSeqModifyField[M, F](f: RField[Seq[F], M]): SeqModifyField[F, M] =
+    new SeqModifyField[F, M](f)
+
   implicit def rmapFieldToMapModifyField[M, F](f: RField[Map[String, F], M]): MapModifyField[F, M] =
     new MapModifyField[F, M](f)
 
@@ -89,7 +93,8 @@ trait Rogue {
   implicit def stringIsFlattened[A <: String]: Flattened[A, A] = new Flattened[A, A]
   implicit def objectIdIsFlattened[A <: ObjectId]: Flattened[A, A] = new Flattened[A, A]
   implicit def enumIsFlattened[A <: Enumeration#Value]: Flattened[A, A] = new Flattened[A, A]
-  implicit def recursiveFlatten[A, B](implicit ev: Flattened[A, B]) = new Flattened[List[A], B]
+  implicit def recursiveFlattenList[A, B](implicit ev: Flattened[A, B]) = new Flattened[List[A], B]
+  implicit def recursiveFlattenSeq[A, B](implicit ev: Flattened[A, B]) = new Flattened[Seq[A], B]
 }
 
 object Rogue extends Rogue
