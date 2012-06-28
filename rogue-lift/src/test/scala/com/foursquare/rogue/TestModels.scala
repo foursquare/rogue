@@ -2,6 +2,7 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.LiftRogue._
+import com.foursquare.rogue.index.{Asc, Desc, IndexedRecord, IndexModifier, TwoD}
 
 import com.mongodb.{Mongo, ServerAddress}
 import net.liftweb.mongodb.{MongoDB, MongoIdentifier}

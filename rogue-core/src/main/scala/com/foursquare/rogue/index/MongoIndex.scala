@@ -1,11 +1,9 @@
-// Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
+// Copyright 2012 Foursquare Labs Inc. All Rights Reserved.
 
-package com.foursquare.rogue
+package com.foursquare.rogue.index
 
 import com.foursquare.field.Field
 import scala.collection.immutable.ListMap
-
-case class IndexModifier(value: Any)
 
 trait MongoIndex[R] {
   def asListMap: ListMap[String, Any]

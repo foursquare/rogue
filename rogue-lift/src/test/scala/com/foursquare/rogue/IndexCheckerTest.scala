@@ -3,6 +3,7 @@
 package com.foursquare.rogue
 
 import com.foursquare.rogue.LiftRogue._
+import com.foursquare.rogue.index.{Asc, IndexedRecord, MongoIndexChecker, TwoD}
 import net.liftweb.mongodb.record._
 import net.liftweb.mongodb.record.field._
 import net.liftweb.record._

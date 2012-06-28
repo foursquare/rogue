@@ -1,5 +1,7 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
-package com.foursquare.rogue
+package com.foursquare.rogue.index
+
+import com.foursquare.rogue.{DocumentScan, Index, IndexScan, PartialIndexScan, MongoHelpers, Query, QueryClause, QueryHelpers}
 
 /**
  * A trait that represents the fact that a record type includes a list

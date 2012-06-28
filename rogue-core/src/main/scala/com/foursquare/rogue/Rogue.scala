@@ -17,14 +17,7 @@ import org.bson.types.ObjectId
  *@see AbstractQuery for an example of the use of implicit conversions.
  */
 trait Rogue {
-
-  object Asc extends IndexModifier(1)
-  object Desc extends IndexModifier(-1)
-  object TwoD extends IndexModifier("2d")
-
   // QueryField implicits
-  // implicit def rfieldToQueryField[M, F](f: RField[F, M]): QueryField[F, M] = new QueryField(f)
-
   implicit def rbooleanFieldtoQueryField[M](f: RField[Boolean, M]): QueryField[Boolean, M] = new QueryField(f)
   implicit def rcharFieldtoQueryField[M](f: RField[Char, M]): QueryField[Char, M] = new QueryField(f)
 

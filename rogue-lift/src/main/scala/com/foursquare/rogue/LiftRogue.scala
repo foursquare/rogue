@@ -6,6 +6,7 @@ import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
+import com.foursquare.rogue.index.IndexBuilder
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Calendar
 import net.liftweb.json.JsonAST.{JArray, JInt}

@@ -1,6 +1,6 @@
 // // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 
-// package com.foursquare.rogue
+// package com.foursquare.rogue.index
 
 // import com.foursquare.rogue.MongoHelpers.AndCondition
 // import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
