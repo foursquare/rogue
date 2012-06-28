@@ -330,4 +330,17 @@ class EndToEndTest extends SpecsMatchers {
     q.limit(35).fetchBatch(20)(x => List(x.length)) must_== List(20, 15)
     q.limit(-35).fetchBatch(20)(x => List(x.length)) must_== List(20, 15)
   }
+
+  @Test
+  def testCount {
+    (1 to 10).foreach(_ => baseTestVenue().save)
+    val q = Venue.select(_._id)
+    q.count() must_== 10
+    q.limit(3).count() must_== 3
+    q.limit(15).count() must_== 10
+    q.skip(5).count() must_== 5
+    q.skip(12).count() must_== 0
+    q.skip(3).limit(5).count() must_== 5
+    q.skip(8).limit(4).count() must_== 2
+  }
 }

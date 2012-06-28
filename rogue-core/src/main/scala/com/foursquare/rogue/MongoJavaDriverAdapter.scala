@@ -44,6 +44,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     runCommand(description, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
       val cursor = coll.find(cnd)
+      queryClause.lim.foreach(cursor.limit _)
+      queryClause.sk.foreach(cursor.skip _)
       cursor.size()
     }
   }
