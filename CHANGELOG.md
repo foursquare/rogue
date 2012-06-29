@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 2.0.0-beta10
+
+- Move index classes to com.foursquare.rogue.index
+- Add SeqQueryField and SeqModifyField
+
 # 2.0.0-beta9
 
 - Replace Box with Option in rogue-core
