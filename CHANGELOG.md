@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 2.0.0-beta11
+
+- fixed bug around count() respecting skip and limit
+- added QueryLogger.onExecuteQuery callback
+
 # 2.0.0-beta10
 
 - Move index classes to com.foursquare.rogue.index
