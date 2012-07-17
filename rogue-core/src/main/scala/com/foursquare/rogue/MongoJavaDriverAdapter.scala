@@ -24,7 +24,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     // currentTimeMillis only has 10ms granularity on many systems.
     val start = System.nanoTime
     try {
-      logger.callback(query, description, f)
+      logger.onExecuteQuery(query, description, f)
     } catch {
       case e: Exception =>
         throw new RogueException("Mongo query on %s [%s] failed after %d ms".
