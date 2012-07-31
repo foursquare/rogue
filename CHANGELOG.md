@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta12
+
+- report cluster name to QueryLogger
+
 # 2.0.0-beta11
 
 - fixed bug around count() respecting skip and limit
