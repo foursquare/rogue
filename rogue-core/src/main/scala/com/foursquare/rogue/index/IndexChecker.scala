@@ -39,16 +39,16 @@ object MongoIndexChecker {
 
   /**
    * Retrieves the list of indexes declared for the record type associated with a
-   * query. If the record type doesn't declare any indexes, then returns an empty list.
+   * query. If the record type doesn't declare any indexes, then returns None.
    * @param query the query
    * @return the list of indexes, or an empty list.
    */
-  def getIndexes(query: Query[_, _, _]): List[MongoIndex[_]] = {
+  def getIndexes(query: Query[_, _, _]): Option[List[MongoIndex[_]]] = {
     val queryMetaRecord = query.meta
     if (queryMetaRecord.isInstanceOf[IndexedRecord[_]]) {
-      queryMetaRecord.asInstanceOf[IndexedRecord[_]].mongoIndexList
+      Some(queryMetaRecord.asInstanceOf[IndexedRecord[_]].mongoIndexList)
     } else {
-      List()
+      None
     }
   }
 
@@ -61,8 +61,9 @@ object MongoIndexChecker {
    * @return true if the required indexes are found, false otherwise.
    */
   def validateIndexExpectations(query: Query[_, _, _]): Boolean = {
-    val indexes = getIndexes(query)
-    validateIndexExpectations(query, indexes)
+    getIndexes(query).forall(indexes =>
+      validateIndexExpectations(query, indexes)
+    )
   }
 
   /**
@@ -106,8 +107,9 @@ object MongoIndexChecker {
    * @param query the query
    */
   def validateQueryMatchesSomeIndex(query: Query[_, _, _]): Boolean = {
-    val indexes = getIndexes(query)
-    validateQueryMatchesSomeIndex(query, indexes)
+    getIndexes(query).forall(indexes =>
+      validateQueryMatchesSomeIndex(query, indexes)
+    )
   }
 
   /**
