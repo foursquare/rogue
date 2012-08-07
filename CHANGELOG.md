@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta13
+
+- Index checker: don't validate indexes if there are no indexes
+
 # 2.0.0-beta12
 
 - report cluster name to QueryLogger
