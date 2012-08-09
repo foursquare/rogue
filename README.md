@@ -5,7 +5,7 @@ MongoDB in the Lift web framework. It is fully expressive with respect to the ba
 by MongoDB's native query language, but in a type-safe manner, building on the record types specified in 
 your Lift models. An example:
 
-    Venue where (_.mayor eqs 1234) and (_.categories contains "Thai") fetch(10)
+    Venue.where(_.mayor eqs 1234).and(_.tags contains "Thai").fetch(10)
 
 The type system enforces the following constraints:
 
@@ -16,7 +16,7 @@ The type system enforces the following constraints:
 In addition, the type system ensures that certain builder methods are only used in certain circumstances.
 For example, take this more complex query:
 
-    Venue where (_.closed eqs false) orderAsc(_.popularity) limit(10) modify (_.closed setTo true) updateMulti
+    Venue.where(_.closed eqs false).orderAsc(_.popularity).limit(10).modify(_.closed setTo true).updateMulti
 
 This query purportedly finds the 10 least popular open venues and closes them. However, MongoDB
 does not (currently) allow you to specify limits on modify queries, so Rogue won't let you either.
@@ -24,7 +24,7 @@ The above will generate a compiler error.
 
 Constructions like this:
 
-    def myMayorships = Venue where (_.mayor eqs 1234) limit(5)
+    def myMayorships = Venue.where(_.mayor eqs 1234).limit(5)
     ...
     myMayorships.fetch(10)
 
@@ -61,7 +61,7 @@ they are not demonstrated in QueryTest):
 
 For "find" query objects
 
-    val query = Venue where (_.venuename eqs "Starbucks")
+    val query = Venue.where(_.venuename eqs "Starbucks")
     query.count()
     query.countDistinct(_.mayor)
     query.fetch()
@@ -70,20 +70,19 @@ For "find" query objects
     query.foreach{v: Venue => ... }
     query.paginate(pageSize)
     query.fetchBatch(pageSize){vs: List[Venue] => ...}
-    query.bulkDelete_!!
-    query.blockingBulkDelete_!!
+    query.bulkDelete_!!(WriteConcern.SAFE)
     query.findAndDeleteOne()
 
 For "modify" query objects
 
-    val modify = query modify (_.popularity inc 1)
+    val modify = query.modify(_.mayor_count inc 1)
     modify.updateMulti()
     modify.updateOne()
     modify.upsertOne()
 
 for "findAndModify" query objects
 
-    val modify = query where (_.legacyid eqs 222) findAndModify (_.zip setTo "10003")
+    val modify = query.where(_.legacyid eqs 222).findAndModify(_.closed setTo true)
     modify.updateOne(returnNew = ...)
     modify.upsertOne(returnNew = ...)
 
