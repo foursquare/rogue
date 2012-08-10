@@ -4,7 +4,8 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.Iter._
-import com.mongodb.{BasicDBObjectBuilder, Bytes, DBCollection, DBCursor, DBObject, WriteConcern}
+import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, Bytes, CommandResult, DBCollection,
+  DBCursor, DBObject, WriteConcern}
 import scala.collection.mutable.ListBuffer
 
 trait DBCollectionFactory[MB] {
@@ -39,15 +40,36 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   def count[M <: MB](query: Query[M, _, _]): Long = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
-    val cnd = buildCondition(queryClause.condition)
-    val description = buildConditionString("count", query.collectionName, queryClause)
+    val condition: DBObject = buildCondition(queryClause.condition)
+    val description: String = buildConditionString("count", query.collectionName, queryClause)
 
     runCommand(description, queryClause) {
+      // there's a bug in mongo-java-driver 2.7.0 - 2.8.0 that
+      // doesn't set the ReadPreference into commands correctly
       val coll = dbCollectionFactory.getDBCollection(query)
-      val cursor = coll.find(cnd)
-      queryClause.lim.foreach(cursor.limit _)
-      queryClause.sk.foreach(cursor.skip _)
-      cursor.size()
+      val db = coll.getDB
+      val cmd = new BasicDBObject()
+      cmd.put("count", query.collectionName)
+      cmd.put("query", condition)
+      
+      queryClause.lim.filter(_ > 0).foreach( cmd.put("limit", _) )
+      queryClause.sk.filter(_ > 0).foreach( cmd.put("skip", _) )
+      
+      // 4sq dynamically throttles ReadPreference via an override of
+      // DBCursor creation.  We don't want to override for the whole
+      // DBCollection because those are cached for the life of the DB
+      val result: CommandResult = db.command(cmd, coll.getOptions, coll.find().getReadPreference)
+      if (!result.ok) {
+        result.getErrorMessage match {
+          // pretend count is zero craziness from the mongo-java-driver
+          case "ns does not exist" | "ns missing" => 0L
+          case _ => 
+            result.throwOnError()
+            0L
+        }
+      } else {
+        result.getLong("n")
+      }
     }
   }
 
