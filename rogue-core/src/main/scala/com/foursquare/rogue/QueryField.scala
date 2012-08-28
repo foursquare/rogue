@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.field.{Field, OptionalField, RequiredField}
 import com.mongodb.DBObject
-import java.util.Calendar
+import java.util.{Calendar, Date}
 import java.util.regex.Pattern
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -52,7 +52,7 @@ object MongoType extends Enumeration {
 // The types of fields that can be queried, and the particular query operations that each supports
 // are defined below.
 
-abstract class AbstractQueryField[V, DB, M](val field: Field[V, M]) {
+abstract class AbstractQueryField[F, V, DB, M](val field: Field[F, M]) {
   def valueToDB(v: V): DB
   def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
 
@@ -74,38 +74,40 @@ abstract class AbstractQueryField[V, DB, M](val field: Field[V, M]) {
   def between(v1: V, v2: V) =
     new BetweenQueryClause(field.name, valueToDB(v1), valueToDB(v2))
 
+  def between(range: (V, V)) =
+    new BetweenQueryClause(field.name, valueToDB(range._1), valueToDB(range._2))
+
   def exists(b: Boolean) = new ExistsQueryClause(field.name, b)
 
   def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
 class QueryField[V, M](field: Field[V, M])
-    extends AbstractQueryField[V, V, M](field) {
+    extends AbstractQueryField[V, V, V, M](field) {
   override def valueToDB(v: V) = v
 }
 
-class CalendarQueryField[M](val field: Field[java.util.Calendar, M]) {
+class CalendarQueryField[M](field: Field[Calendar, M]) extends AbstractQueryField[Calendar, DateTime, Date, M](field) {
+  override def valueToDB(d: DateTime) = d.toDate
+
   def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
-
   def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
-
-  def between(d1: DateTime, d2: DateTime) = new StrictBetweenQueryClause(field.name, d1.toDate, d2.toDate)
-
-  def between(range: (DateTime, DateTime)) = new StrictBetweenQueryClause(field.name, range._1.toDate, range._2.toDate)
+  def onOrBefore(d: DateTime) = new LtEqQueryClause(field.name, d.toDate)
+  def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
 }
 
 class EnumNameQueryField[M, E <: Enumeration#Value](field: Field[E, M])
-    extends AbstractQueryField[E, String, M](field) {
+    extends AbstractQueryField[E, E, String, M](field) {
   override def valueToDB(e: E) = e.toString
 }
 
 class EnumIdQueryField[M, E <: Enumeration#Value](field: Field[E, M])
-    extends AbstractQueryField[E, Int, M](field) {
+    extends AbstractQueryField[E, E, Int, M](field) {
   override def valueToDB(e: E) = e.id
 }
 
 class GeoQueryField[M](field: Field[LatLong, M])
-    extends AbstractQueryField[LatLong, java.util.List[Double], M](field) {
+    extends AbstractQueryField[LatLong, LatLong, java.util.List[Double], M](field) {
   override def valueToDB(ll: LatLong) =
     QueryHelpers.list(List(ll.lat, ll.long))
 
@@ -125,19 +127,17 @@ class GeoQueryField[M](field: Field[LatLong, M])
     new WithinBoxClause(field.name, lat1, lng1, lat2, lng2)
 }
 
-abstract class AbstractNumericQueryField[V, DB, M](field: Field[V, M])
-    extends AbstractQueryField[V, DB, M](field) {
+class NumericQueryField[V, M](field: Field[V, M])
+    extends AbstractQueryField[V, V, V, M](field) {
   def mod(by: Int, eq: Int) =
     new ModQueryClause(field.name, QueryHelpers.list(List(by, eq)))
-}
-
-class NumericQueryField[V, M](field: Field[V, M])
-    extends AbstractNumericQueryField[V, V, M](field) {
   override def valueToDB(v: V) = v
 }
 
-class ObjectIdQueryField[F <: ObjectId, M](override val field: Field[F, M])
-    extends NumericQueryField(field) {
+class ObjectIdQueryField[M](override val field: Field[ObjectId, M])
+    extends AbstractQueryField[ObjectId, ObjectId, ObjectId, M](field) {
+  override def valueToDB(oid: ObjectId) = oid
+
   def before(d: DateTime) =
     new LtQueryClause(field.name, new ObjectId(d.toDate, 0, 0))
 
@@ -151,10 +151,10 @@ class ObjectIdQueryField[F <: ObjectId, M](override val field: Field[F, M])
     new StrictBetweenQueryClause(field.name, new ObjectId(range._1.toDate, 0, 0), new ObjectId(range._2.toDate, 0, 0))
 }
 
-class ForeignObjectIdQueryField[F <: ObjectId, M, T](
-    override val field: Field[F, M],
-    val getId: T => F
-) extends ObjectIdQueryField[F, M](field) {
+class ForeignObjectIdQueryField[M, T](
+    override val field: Field[ObjectId, M],
+    val getId: T => ObjectId
+) extends ObjectIdQueryField[M](field) {
   // The implicit parameter is solely to get around the fact that because of
   // erasure, this method and the method in AbstractQueryField look the same.
   def eqs(obj: T)(implicit ev: T =:= T) =
@@ -177,7 +177,7 @@ class ForeignObjectIdQueryField[F <: ObjectId, M, T](
 }
 
 class StringQueryField[M](override val field: Field[String, M])
-    extends AbstractQueryField[String, String, M](field) {
+    extends AbstractQueryField[String, String, String, M](field) {
 
   override def valueToDB(v: String): String = v
 
@@ -200,7 +200,7 @@ class CaseClassQueryField[V, M](val field: Field[V, M]) {
 }
 
 class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, defaultValue: B)
-    extends AbstractQueryField[B, DBObject, M](field) {
+    extends AbstractQueryField[B, B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
   def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
@@ -222,7 +222,7 @@ class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, 
 // So, normally, we need to just have one level of nesting, but here we want two.
 class BsonRecordQueryFieldInPullContext[M, B]
     (field: Field[B, M], rec: B, asDBObject: B => DBObject)
-    extends AbstractQueryField[B, DBObject, M](field) {
+    extends AbstractQueryField[B, B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
   def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {

@@ -48,21 +48,6 @@ trait LiftRogue extends Rogue {
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
       IndexBuilder(rec)
 
-  /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
-   * users to write "RecordType.where(...).modify(...)".
-   */
-  implicit def queryBuilderToModifyQuery[M <: MongoRecord[M], State <: Unordered with Unselected with Unlimited with Unskipped]
-    (query: Query[M, M, State])
-    (implicit ev: ShardingOk[M, State]): ModifyQuery[M, State] = {
-    new ModifyQuery[M, State](query, MongoModify(Nil))
-  }
-
-  implicit def queryBuilderToFindAndModifyQuery[M <: MongoRecord[M], R, State <: Unlimited with Unskipped]
-    (query: Query[M, R, State])
-    (implicit ev: RequireShardKey[M, State]): FindAndModifyQuery[M, R] = {
-    FindAndModifyQuery[M, R](query, MongoModify(Nil))
-  }
-
   implicit def queryToLiftQuery[M <: MongoRecord[_], R, State]
     (query: Query[M, R, State])
     (implicit ev: ShardingOk[M with MongoMetaRecord[_], State]): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R, State] = {
@@ -171,8 +156,8 @@ trait LiftRogue extends Rogue {
 
   implicit def foreignObjectIdFieldToForeignObjectIdQueryField[M <: BsonRecord[M],
                                                                T <: MongoRecord[T] with MongoId[T]]
-      (f: Field[ObjectId, M] with HasMongoForeignObjectId[T]): ForeignObjectIdQueryField[ObjectId, M, T] =
-    new ForeignObjectIdQueryField[ObjectId, M, T](f, _.id)
+      (f: Field[ObjectId, M] with HasMongoForeignObjectId[T]): ForeignObjectIdQueryField[M, T] =
+    new ForeignObjectIdQueryField[M, T](f, _.id)
 
   implicit def intFieldtoNumericQueryField[M <: BsonRecord[M], F](f: Field[Int, M]): NumericQueryField[Int, M] =
     new NumericQueryField(f)
@@ -186,7 +171,7 @@ trait LiftRogue extends Rogue {
   implicit def longFieldtoNumericQueryField[M <: BsonRecord[M]](f: Field[Long, M]): NumericQueryField[Long, M] =
     new NumericQueryField(f)
 
-  implicit def objectIdFieldToObjectIdQueryField[M <: BsonRecord[M], F <: ObjectId](f: Field[F, M]): ObjectIdQueryField[F, M] =
+  implicit def objectIdFieldToObjectIdQueryField[M <: BsonRecord[M]](f: Field[ObjectId, M]): ObjectIdQueryField[M] =
     new ObjectIdQueryField(f)
 
   implicit def mapFieldToMapQueryField[M <: BsonRecord[M], F](f: Field[Map[String, F], M]): MapQueryField[F, M] =

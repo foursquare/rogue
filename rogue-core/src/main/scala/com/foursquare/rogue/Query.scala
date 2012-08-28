@@ -160,19 +160,19 @@ case class Query[M, R, +State](
    * type signature of the returned query is updated so that the "MaybeOrdered" type parameter is
    * now Ordered.
    */
-  def orderAsc[V, S2](field: M => AbstractQueryField[V, _, M])
+  def orderAsc[S2](field: M => AbstractQueryField[_, _, _, M])
                      (implicit ev: AddOrder[State, S2]): Query[M, R, S2] =
     this.copy(order = Some(MongoOrder(List((field(meta).field.name, true)))))
 
-  def orderDesc[V, S2](field: M => AbstractQueryField[V, _, M])
+  def orderDesc[S2](field: M => AbstractQueryField[_, _, _, M])
                       (implicit ev: AddOrder[State, S2]): Query[M, R, S2] =
     this.copy(order = Some(MongoOrder(List((field(meta).field.name, false)))))
 
-  def andAsc[V](field: M => AbstractQueryField[V, _, M])
+  def andAsc(field: M => AbstractQueryField[_, _, _, M])
                (implicit ev: State <:< Ordered): Query[M, R, State] =
     this.copy(order = Some(MongoOrder((field(meta).field.name, true) :: order.get.terms)))
 
-  def andDesc[V](field: M => AbstractQueryField[V, _, M])
+  def andDesc(field: M => AbstractQueryField[_, _, _, M])
                 (implicit ev: State <:< Ordered): Query[M, R, State] =
     this.copy(order = Some(MongoOrder((field(meta).field.name, false) :: order.get.terms)))
 
