@@ -9,6 +9,7 @@ import com.foursquare.field.{
 import com.mongodb.DBObject
 import java.util.{Calendar, Date}
 import org.bson.types.ObjectId
+import com.foursquare.rogue.MongoHelpers.MongoModify
 
 /**
  * A utility trait containing typing shorthands, and a collection of implicit conversions that make query
@@ -17,6 +18,23 @@ import org.bson.types.ObjectId
  *@see AbstractQuery for an example of the use of implicit conversions.
  */
 trait Rogue {
+
+  /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
+   * users to write "RecordType.where(...).modify(...)".
+   */
+  implicit def queryBuilderToModifyQuery[M, State <: Unordered with Unselected with Unlimited with Unskipped]
+    (query: Query[M, M, State])
+    (implicit ev: ShardingOk[M, State]): ModifyQuery[M, State] = {
+    new ModifyQuery[M, State](query, MongoModify(Nil))
+  }
+
+  implicit def queryBuilderToFindAndModifyQuery[M, R, State <: Unlimited with Unskipped]
+    (query: Query[M, R, State])
+    (implicit ev: RequireShardKey[M, State]): FindAndModifyQuery[M, R] = {
+    FindAndModifyQuery[M, R](query, MongoModify(Nil))
+  }
+
+
   // QueryField implicits
   implicit def rbooleanFieldtoQueryField[M](f: RField[Boolean, M]): QueryField[Boolean, M] = new QueryField(f)
   implicit def rcharFieldtoQueryField[M](f: RField[Char, M]): QueryField[Char, M] = new QueryField(f)
@@ -29,7 +47,7 @@ trait Rogue {
   implicit def rdoubleFieldtoNumericQueryField[M](f: RField[Double, M]): NumericQueryField[Double, M] = new NumericQueryField(f)
 
   implicit def rstringFieldToStringQueryField[M](f: RField[String, M]): StringQueryField[M] = new StringQueryField(f)
-  implicit def robjectIdFieldToObjectIdQueryField[F <: ObjectId, M](f: RField[F, M]): ObjectIdQueryField[F, M] = new ObjectIdQueryField[F, M](f)
+  implicit def robjectIdFieldToObjectIdQueryField[M](f: RField[ObjectId, M]): ObjectIdQueryField[M] = new ObjectIdQueryField[M](f)
   implicit def rdateFieldToQueryField[M](f: RField[Date, M]): QueryField[Date, M] = new QueryField(f)
   implicit def rcalendarFieldToCalendarQueryField[M](f: RField[Calendar, M]): CalendarQueryField[M] = new CalendarQueryField(f)
   implicit def rdbobjectFieldToQueryField[M](f: RField[DBObject, M]): QueryField[DBObject, M] = new QueryField(f)
@@ -90,9 +108,10 @@ trait Rogue {
 
   class Flattened[A, B]
   implicit def anyValIsFlattened[A <: AnyVal]: Flattened[A, A] = new Flattened[A, A]
-  implicit def stringIsFlattened[A <: String]: Flattened[A, A] = new Flattened[A, A]
-  implicit def objectIdIsFlattened[A <: ObjectId]: Flattened[A, A] = new Flattened[A, A]
   implicit def enumIsFlattened[A <: Enumeration#Value]: Flattened[A, A] = new Flattened[A, A]
+  implicit val stringIsFlattened = new Flattened[String, String]
+  implicit val objectIdIsFlattened = new Flattened[ObjectId, ObjectId]
+  implicit val dateIsFlattened = new Flattened[java.util.Date, java.util.Date]
   implicit def recursiveFlattenList[A, B](implicit ev: Flattened[A, B]) = new Flattened[List[A], B]
   implicit def recursiveFlattenSeq[A, B](implicit ev: Flattened[A, B]) = new Flattened[Seq[A], B]
 }
