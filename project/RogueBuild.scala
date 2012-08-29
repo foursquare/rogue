@@ -14,14 +14,14 @@ object RogueBuild extends Build {
   lazy val lift = Project("rogue-lift", file("rogue-lift/")) dependsOn(core % "compile;test->test;runtime->runtime")
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
-    version := "2.0.0-beta15",
+    version := "2.0.0-beta16-SNAPSHOT",
     organization := "com.foursquare",
     crossScalaVersions := Seq("2.9.1", "2.9.0-1", "2.9.0"),
     publishMavenStyle := true,
     publishArtifact in Test := false,
     pomIncludeRepository := { _ => false },
     publishTo <<= (version) { v =>
-      val nexus = "http://oss.sonatype.org/"
+      val nexus = "https://oss.sonatype.org/"
       if (v.endsWith("-SNAPSHOT"))
         Some("snapshots" at nexus+"content/repositories/snapshots")
       else
