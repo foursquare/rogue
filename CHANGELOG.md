@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-beta15
+
+- allow Date and List fields to act like any other field (eqs, etc)
+
 # 2.0.0-beta13
 
 - Index checker: don't validate indexes if there are no indexes

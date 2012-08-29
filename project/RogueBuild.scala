@@ -14,7 +14,7 @@ object RogueBuild extends Build {
   lazy val lift = Project("rogue-lift", file("rogue-lift/")) dependsOn(core % "compile;test->test;runtime->runtime")
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
-    version := "2.0.0-beta15-SNAPSHOT",
+    version := "2.0.0-beta15",
     organization := "com.foursquare",
     crossScalaVersions := Seq("2.9.1", "2.9.0-1", "2.9.0"),
     publishMavenStyle := true,
