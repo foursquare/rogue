@@ -230,18 +230,10 @@ class BsonRecordQueryFieldInPullContext[M, B]
   }
 }
 
-abstract class AbstractListQueryField[V, DB, M, CC[X] <: Seq[X]](val field: Field[CC[V], M]) {
-  def valueToDB(v: V): DB
-  def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
+abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field[CC[F], M]) extends AbstractQueryField[CC[F], V, DB, M](field) {
 
   def all(vs: Traversable[V]) =
     QueryHelpers.allListClause(field.name, valuesToDB(vs))
-
-  def in(vs: Traversable[V]) =
-    QueryHelpers.inListClause(field.name, valuesToDB(vs))
-
-  def nin(vs: Traversable[V]) =
-    new NinQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
 
   def size(s: Int) =
     new SizeQueryClause(field.name, s)
@@ -259,17 +251,27 @@ abstract class AbstractListQueryField[V, DB, M, CC[X] <: Seq[X]](val field: Fiel
 }
 
 class ListQueryField[V, M](field: Field[List[V], M])
-    extends AbstractListQueryField[V, V, M, List](field) {
+    extends AbstractListQueryField[V, V, V, M, List](field) {
   override def valueToDB(v: V) = v
 }
 
 class SeqQueryField[V, M](field: Field[Seq[V], M])
-    extends AbstractListQueryField[V, V, M, Seq](field) {
+    extends AbstractListQueryField[V, V, V, M, Seq](field) {
   override def valueToDB(v: V) = v
 }
 
+class CalendarListQueryField[M](field: Field[List[Calendar], M]) extends AbstractListQueryField[Calendar, DateTime, Date, M, List](field) {
+  override def valueToDB(d: DateTime) = d.toDate
+
+  def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
+  def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
+  def onOrBefore(d: DateTime) = new LtEqQueryClause(field.name, d.toDate)
+  def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
+}
+
+
 class CaseClassListQueryField[V, M](field: Field[List[V], M])
-    extends AbstractListQueryField[V, DBObject, M, List](field) {
+    extends AbstractListQueryField[V, V, DBObject, M, List](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
 
   def unsafeField[F](name: String): SelectableDummyField[List[F], M] =
@@ -277,7 +279,7 @@ class CaseClassListQueryField[V, M](field: Field[List[V], M])
 }
 
 class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObject: B => DBObject)
-    extends AbstractListQueryField[B, DBObject, M, List](field) {
+    extends AbstractListQueryField[B, B, DBObject, M, List](field) {
   override def valueToDB(b: B) = asDBObject(b)
 
   def subfield[V, V1](f: B => Field[V, B])(implicit ev: Rogue.Flattened[V, V1]): SelectableDummyField[List[V1], M] = {
@@ -299,7 +301,7 @@ class MapQueryField[V, M](val field: Field[Map[String, V], M]) {
 }
 
 class EnumerationListQueryField[V <: Enumeration#Value, M](field: Field[List[V], M])
-    extends AbstractListQueryField[V, String, M, List](field) {
+    extends AbstractListQueryField[V, V, String, M, List](field) {
   override def valueToDB(v: V) = v.toString
 }
 
