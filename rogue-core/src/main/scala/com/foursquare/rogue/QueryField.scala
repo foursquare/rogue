@@ -134,10 +134,9 @@ class NumericQueryField[V, M](field: Field[V, M])
   override def valueToDB(v: V) = v
 }
 
-class ObjectIdQueryField[M](override val field: Field[ObjectId, M])
-    extends AbstractQueryField[ObjectId, ObjectId, ObjectId, M](field) {
-  override def valueToDB(oid: ObjectId) = oid
 
+class ObjectIdQueryField[F <: ObjectId, M](override val field: Field[F, M])
+    extends NumericQueryField(field) {
   def before(d: DateTime) =
     new LtQueryClause(field.name, new ObjectId(d.toDate, 0, 0))
 
@@ -151,10 +150,10 @@ class ObjectIdQueryField[M](override val field: Field[ObjectId, M])
     new StrictBetweenQueryClause(field.name, new ObjectId(range._1.toDate, 0, 0), new ObjectId(range._2.toDate, 0, 0))
 }
 
-class ForeignObjectIdQueryField[M, T](
-    override val field: Field[ObjectId, M],
-    val getId: T => ObjectId
-) extends ObjectIdQueryField[M](field) {
+class ForeignObjectIdQueryField[F <: ObjectId, M, T](
+    override val field: Field[F, M],
+    val getId: T => F
+) extends ObjectIdQueryField[F, M](field) {
   // The implicit parameter is solely to get around the fact that because of
   // erasure, this method and the method in AbstractQueryField look the same.
   def eqs(obj: T)(implicit ev: T =:= T) =
