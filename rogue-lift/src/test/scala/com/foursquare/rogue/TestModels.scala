@@ -51,7 +51,7 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] with IndexedRecord[Ve
   object popularity extends MongoListField[Venue, Long](this)
   object categories extends MongoListField[Venue, ObjectId](this)
   object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
-  object last_updated extends DateTimeField(this)
+  object last_updated extends DateField(this)
   object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
   object claims extends BsonRecordListField(this, VenueClaimBson)
   object lastClaim extends BsonRecordField(this, VenueClaimBson)

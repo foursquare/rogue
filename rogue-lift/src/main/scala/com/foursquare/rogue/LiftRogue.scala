@@ -8,7 +8,7 @@ import com.foursquare.field.{
     RequiredField => RRequiredField}
 import com.foursquare.rogue.index.IndexBuilder
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
-import java.util.Calendar
+import java.util.Date
 import net.liftweb.json.JsonAST.{JArray, JInt}
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
 import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField, Record}
@@ -127,9 +127,9 @@ trait LiftRogue extends Rogue {
     new BsonRecordListQueryField[M, B](f, rec, _.asDBObject)
   }
 
-  implicit def calendarFieldToCalendarQueryField[M <: BsonRecord[M]]
-      (f: Field[java.util.Calendar, M]): CalendarQueryField[M] =
-    new CalendarQueryField(f)
+  implicit def dateFieldToDateQueryField[M <: BsonRecord[M]]
+      (f: Field[java.util.Date, M]): DateQueryField[M] =
+    new DateQueryField(f)
 
   implicit def ccFieldToQueryField[M <: BsonRecord[M], F](f: MongoCaseClassField[M, F]): CaseClassQueryField[F, M] =
     new CaseClassQueryField[F, M](f)
@@ -199,8 +199,8 @@ trait LiftRogue extends Rogue {
     new BsonRecordListModifyField[M, B](f, rec, _.asDBObject)(mf)
   }
 
-  implicit def calendarFieldToCalendarModifyField[M <: BsonRecord[M]](f: Field[Calendar, M]): CalendarModifyField[M] =
-    new CalendarModifyField(f)
+  implicit def dateFieldToDateModifyField[M <: BsonRecord[M]](f: Field[Date, M]): DateModifyField[M] =
+    new DateModifyField(f)
 
   implicit def ccListFieldToListModifyField[M <: BsonRecord[M], V]
       (f: MongoCaseClassListField[M, V]): CaseClassListModifyField[V, M] =

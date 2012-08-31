@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.field.{Field, OptionalField, RequiredField}
 import com.mongodb.DBObject
-import java.util.{Calendar, Date}
+import java.util.Date
 import java.util.regex.Pattern
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -87,7 +87,7 @@ class QueryField[V, M](field: Field[V, M])
   override def valueToDB(v: V) = v
 }
 
-class CalendarQueryField[M](field: Field[Calendar, M]) extends AbstractQueryField[Calendar, DateTime, Date, M](field) {
+class DateQueryField[M](field: Field[Date, M]) extends AbstractQueryField[Date, DateTime, Date, M](field) {
   override def valueToDB(d: DateTime) = d.toDate
 
   def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
@@ -259,16 +259,6 @@ class SeqQueryField[V, M](field: Field[Seq[V], M])
   override def valueToDB(v: V) = v
 }
 
-class CalendarListQueryField[M](field: Field[List[Calendar], M]) extends AbstractListQueryField[Calendar, DateTime, Date, M, List](field) {
-  override def valueToDB(d: DateTime) = d.toDate
-
-  def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
-  def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
-  def onOrBefore(d: DateTime) = new LtEqQueryClause(field.name, d.toDate)
-  def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
-}
-
-
 class CaseClassListQueryField[V, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, V, DBObject, M, List](field) {
   override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
@@ -322,9 +312,9 @@ class ModifyField[V, M](field: Field[V, M])
   def valueToDB(v: V) = v
 }
 
-class CalendarModifyField[M](field: Field[Calendar, M])
-    extends AbstractModifyField[Calendar, java.util.Date, M](field) {
-  override def valueToDB(c: Calendar) = c.getTime
+class DateModifyField[M](field: Field[Date, M])
+    extends AbstractModifyField[Date, Date, M](field) {
+  override def valueToDB(d: Date) = d
 
   def setTo(d: DateTime) = new ModifyClause(ModOps.Set, field.name -> d.toDate)
 }

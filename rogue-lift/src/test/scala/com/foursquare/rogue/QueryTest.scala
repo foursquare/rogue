@@ -225,7 +225,7 @@ class QueryTest extends SpecsMatchers {
 
     // Calendar
     Venue.where(_.legacyid eqs 1).modify(_.last_updated setTo d1).toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
-    Venue.where(_.legacyid eqs 1).modify(_.last_updated setTo d1.toGregorianCalendar).toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.last_updated setTo d1.toDate).toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
 
     // LatLong
     val ll = LatLong(37.4, -73.9)

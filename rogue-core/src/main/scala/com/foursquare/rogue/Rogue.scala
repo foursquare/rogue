@@ -7,7 +7,7 @@ import com.foursquare.field.{
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
 import com.mongodb.DBObject
-import java.util.{Calendar, Date}
+import java.util.Date
 import org.bson.types.ObjectId
 import com.foursquare.rogue.MongoHelpers.MongoModify
 
@@ -49,7 +49,7 @@ trait Rogue {
   implicit def rstringFieldToStringQueryField[M](f: RField[String, M]): StringQueryField[M] = new StringQueryField(f)
   implicit def robjectIdFieldToObjectIdQueryField[F <: ObjectId, M](f: RField[F, M]): ObjectIdQueryField[F, M] = new ObjectIdQueryField[F, M](f)
   implicit def rdateFieldToQueryField[M](f: RField[Date, M]): QueryField[Date, M] = new QueryField(f)
-  implicit def rcalendarFieldToCalendarQueryField[M](f: RField[Calendar, M]): CalendarQueryField[M] = new CalendarQueryField(f)
+  implicit def rdateFieldToDateQueryField[M](f: RField[Date, M]): DateQueryField[M] = new DateQueryField(f)
   implicit def rdbobjectFieldToQueryField[M](f: RField[DBObject, M]): QueryField[DBObject, M] = new QueryField(f)
 
   implicit def renumNameFieldToEnumNameQueryField[M, F <: Enumeration#Value](f: RField[F, M]): EnumNameQueryField[M, F] = new EnumNameQueryField(f)
@@ -76,10 +76,7 @@ trait Rogue {
 
   implicit def stringRFieldToModifyField[M](f: RField[String, M]): ModifyField[String, M] = new ModifyField(f)
   implicit def objectidRFieldToModifyField[M](f: RField[ObjectId, M]): ModifyField[ObjectId, M] = new ModifyField(f)
-  implicit def dateRFieldToModifyField[M](f: RField[Date, M]): ModifyField[Date, M] = new ModifyField(f)
-
-  implicit def rcalendarFieldToCalendarModifyField[M](f: RField[Calendar, M]): CalendarModifyField[M] =
-    new CalendarModifyField(f)
+  implicit def dateRFieldToDateModifyField[M](f: RField[Date, M]): DateModifyField[M] = new DateModifyField(f)
 
   implicit def renumerationFieldToEnumerationModifyField[M, F <: Enumeration#Value]
       (f: RField[F, M]): EnumerationModifyField[M, F] =
