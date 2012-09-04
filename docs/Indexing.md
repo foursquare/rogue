@@ -98,17 +98,17 @@ You can call either or both of these from the `validateQuery` and/or `validateMo
 when your application boots, set up the hooks like so:
 
     object MyQueryValidator extends QueryHelpers.DefaultQueryValidator {
-      override def validateQuery[M <: MongoRecord[M]](query: Implicits.GenericBaseQuery[M, _]) {
+      override def validateQuery[M](query: Query[M, _, _]) {
         if (Props.mode != Props.RunModes.Production) {
           MongoIndexChecker.validateIndexExpectations(query) &&
           MongoIndexChecker.validateQueryMatchesSomeIndex(query)
         }
 
-      override def validateModify[M <: MongoRecord[M]](modify: BaseModifyQuery[M]) {
+      override def validateModify[M](modify: ModifyQuery[M, _]) {
         validateQuery(modify.query)
       }
 
-      override def validateFindAndModify[M <: MongoRecord[M], R](modify: BaseFindAndModifyQuery[M, R]) {
+      override def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R]) {
         validateQuery(modify.query)
       }
     }
@@ -118,14 +118,20 @@ when your application boots, set up the hooks like so:
 When the index checker has something to warn about, it will call the `QueryHelpers.QueryLogger.logIndexMismatch` callback.
 At foursquare we have implemented it like this:
 
-    override def logIndexMismatch(msg: => String) {
-       val stack = Utils.currentStackTrace()
-       val prefix = stack.indexOf("validateQuery(MongoSetup.scala") // a hack
+    override def logIndexMismatch(query: Query[_, _, _], msg: => String) {
+       val stack = currentStackTrace()
+       val prefix = stack.indexOf("validateQuery(YOURCLASSFILENAME.scala") // a hack
        val trimmedStack = stack.drop(prefix).take(800)
        LOG.warn(msg + " from " + trimmedStack)
        if (services.exists(_.throttleService.throwOnQueryIndexMiss.isShown)) {
          throw new Exception(msg)
        }
+    }
+
+    def currentStackTrace() = {
+      val e = new Exception()
+      e.fillInStackTrace()
+      getStackTrace(e)
     }
 
 
