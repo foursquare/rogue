@@ -234,6 +234,9 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
   def all(vs: Traversable[V]) =
     QueryHelpers.allListClause(field.name, valuesToDB(vs))
 
+  def neqs(vs: Traversable[V]) =
+    new NeQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
+
   def size(s: Int) =
     new SizeQueryClause(field.name, s)
 

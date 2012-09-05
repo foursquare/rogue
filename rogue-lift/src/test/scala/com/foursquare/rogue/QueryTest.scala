@@ -89,6 +89,7 @@ class QueryTest extends SpecsMatchers {
     Venue.where(_.tags all List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$all" : [ "db" , "ka"]}})"""
     Venue.where(_.tags in  List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$in" : [ "db" , "ka"]}})"""
     Venue.where(_.tags nin List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$nin" : [ "db" , "ka"]}})"""
+    Venue.where(_.tags neqs List("db", "ka")) .toString() must_== """db.venues.find({ "tags" : { "$ne" : [ "db" , "ka"]}})"""
     Venue.where(_.tags size 3)                .toString() must_== """db.venues.find({ "tags" : { "$size" : 3}})"""
     Venue.where(_.tags contains "karaoke")    .toString() must_== """db.venues.find({ "tags" : "karaoke"})"""
     Venue.where(_.tags notcontains "karaoke") .toString() must_== """db.venues.find({ "tags" : { "$ne" : "karaoke"}})"""
