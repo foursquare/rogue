@@ -452,19 +452,35 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
  * This class is sealed because only RequiredFields and OptionalFields should
  * be selectable. Be careful when adding subclasses of this class.
  */
-sealed abstract class SelectField[V, M](val field: Field[_, M]) {
+sealed abstract class SelectField[V, M](val field: Field[_, M], val slc: Option[(Int, Option[Int])] = None) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
   def valueOrDefault(v: Option[_]): Any
+  def slice(s: Int): SelectField[V, M]
+  def slice(s: Int, e: Int): SelectField[V, M]
 }
 
-final class MandatorySelectField[V, M](override val field: RequiredField[V, M])
-    extends SelectField[V, M](field) {
+final class MandatorySelectField[V, M](override val field: RequiredField[V, M],
+                                       override val slc: Option[(Int, Option[Int])] = None)
+    extends SelectField[V, M](field, slc) {
   override def valueOrDefault(v: Option[_]): Any = v.getOrElse(field.defaultValue)
+  override def slice(s: Int): MandatorySelectField[V, M] = {
+    new MandatorySelectField(field, Some((s, None)))
+  }
+  override def slice(s: Int, e: Int): MandatorySelectField[V, M] = {
+    new MandatorySelectField(field, Some((s, Some(e))))
+  }
 }
 
-final class OptionalSelectField[V, M](override val field: OptionalField[V, M])
-    extends SelectField[Option[V], M](field) {
+final class OptionalSelectField[V, M](override val field: OptionalField[V, M],
+                                      override val slc: Option[(Int, Option[Int])] = None)
+    extends SelectField[Option[V], M](field, slc) {
   override def valueOrDefault(v: Option[_]): Any = v
+  override def slice(s: Int): OptionalSelectField[V, M] = {
+    new OptionalSelectField(field, Some((s, None)))
+  }
+  override def slice(s: Int, e: Int): OptionalSelectField[V, M] = {
+    new OptionalSelectField(field, Some((s, Some(e))))
+  }
 }
 
 // ********************************************************************************

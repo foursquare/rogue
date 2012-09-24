@@ -343,4 +343,12 @@ class EndToEndTest extends SpecsMatchers {
     q.skip(3).limit(5).count() must_== 5
     q.skip(8).limit(4).count() must_== 2
   }
+
+  @Test
+  def testSlice {
+    baseTestVenue().tags(List("1", "2", "3", "4")).save
+    Venue.select(_.tags.slice(2)).get() must_== Some(List("1", "2"))
+    Venue.select(_.tags.slice(-2)).get() must_== Some(List("3", "4"))
+    Venue.select(_.tags.slice(1, 2)).get() must_== Some(List("2", "3"))
+  }
 }

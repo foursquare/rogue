@@ -182,6 +182,11 @@ class QueryTest extends SpecsMatchers {
     Venue.where(_.legacyid eqs 1).select(_.lastClaim.subselect(_.status)).toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
     Venue.where(_.legacyid eqs 1).select(_.claims.subselect(_.userid)).toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
 
+    // select slice
+    Venue.where(_.legacyid eqs 1).select(_.tags).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : 1})"""
+    Venue.where(_.legacyid eqs 1).select(_.tags.slice(4)).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : { "$slice" : 4}})"""
+    Venue.where(_.legacyid eqs 1).select(_.tags.slice(4, 7)).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : { "$slice" : [ 4 , 7]}})"""
+
     // TODO: case class list fields
     // Comment.select(_.comments.unsafeField[Long]("userid")).toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
 

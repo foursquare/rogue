@@ -70,17 +70,22 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
-    def buildSelect[R](s: MongoSelect[R]): DBObject = {
-      buildSelectFromNames(s.fields.view.map(_.field.name))
-    }
-
-    def buildSelectFromNames(_names: Iterable[String]): DBObject = {
-      // If _names is empty, then a MongoSelect clause exists, but has an empty
+    def buildSelect[R](select: MongoSelect[R]): DBObject = {
+      val builder = BasicDBObjectBuilder.start
+      // If select.fields is empty, then a MongoSelect clause exists, but has an empty
       // list of fields. In this case (used for .exists()), we select just the
       // _id field.
-      val names = if (_names.isEmpty) List("_id") else _names
-      val builder = BasicDBObjectBuilder.start
-      names.foreach(n => builder.add(n, 1))
+      if (select.fields.isEmpty) {
+        builder.add("_id", 1)
+      } else {
+        select.fields.foreach(f => {
+          f.slc match {
+            case None => builder.add(f.field.name, 1)
+            case Some((s, None)) => builder.push(f.field.name).add("$slice", s).pop()
+            case Some((s, Some(e))) => builder.push(f.field.name).add("$slice", QueryHelpers.makeJavaList(List(s, e))).pop()
+          }
+        })
+      }
       builder.get
     }
 
