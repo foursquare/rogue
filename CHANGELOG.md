@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 2.0.0-beta17
+
+- $slice support
+- list neqs
+- updated Indexing.md
+
 # 2.0.0-beta15
 
 - allow Date and List fields to act like any other field (eqs, etc)
