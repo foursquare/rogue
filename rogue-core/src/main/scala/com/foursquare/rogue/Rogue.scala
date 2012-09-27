@@ -22,8 +22,9 @@ trait Rogue {
   /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
    * users to write "RecordType.where(...).modify(...)".
    */
-  implicit def queryBuilderToModifyQuery[M, State <: Unordered with Unselected with Unlimited with Unskipped]
-    (query: Query[M, M, State])
+
+  implicit def queryBuilderToModifyQuery[M, R, State <: Unordered with Unselected with Unlimited with Unskipped]
+    (query: Query[M, R, State])
     (implicit ev: ShardingOk[M, State]): ModifyQuery[M, State] = {
     new ModifyQuery[M, State](query, MongoModify(Nil))
   }
