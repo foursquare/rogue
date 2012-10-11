@@ -445,24 +445,24 @@ case class ModifyQuery[M, +State](
     mod: MongoModify
 ) {
 
-  private def addClause[F](clause: M => ModifyClause[F]) = {
+  private def addClause(clause: M => ModifyClause) = {
     this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
 
-  def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
-  def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def modify(clause: M => ModifyClause) = addClause(clause)
+  def and(clause: M => ModifyClause) = addClause(clause)
 
-  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
+  private def addClauseOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) = {
     opt match {
       case Some(v) => addClause(clause(_, v))
       case None => this
     }
   }
 
-  def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def modifyOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
-  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def andOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
   override def toString: String = MongoBuilder.buildModifyString(query.collectionName, this)
@@ -479,25 +479,25 @@ case class FindAndModifyQuery[M, R](
     mod: MongoModify
 ) {
 
-  private def addClause[F](clause: M => ModifyClause[F]) = {
+  private def addClause(clause: M => ModifyClause) = {
     this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
 
-  def findAndModify[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def findAndModify[F](clause: M => ModifyClause) = addClause(clause)
 
-  def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def and[F](clause: M => ModifyClause) = addClause(clause)
 
-  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
+  private def addClauseOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) = {
     opt match {
       case Some(v) => addClause(clause(_, v))
       case None => this
     }
   }
 
-  def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def findAndModifyOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
-  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def andOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
   override def toString: String = MongoBuilder.buildFindAndModifyString(query.collectionName, this, false, false, false)

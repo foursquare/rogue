@@ -80,7 +80,7 @@ case class TypeQueryClause(override val fieldName: String, v: MongoType.Value, o
 }
 
 case class ExistsQueryClause(override val fieldName: String, v: Boolean, override val expectedIndexBehavior: MaybeIndexed = Index)
-    extends IndexableQueryClause[Boolean, DocumentScan](fieldName, DocumentScan, CondOps.Exists -> v) {
+    extends IndexableQueryClause[Boolean, IndexScan](fieldName, IndexScan, CondOps.Exists -> v) {
   override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
@@ -162,33 +162,33 @@ case class WithinBoxClause[V](override val fieldName: String, lat1: Double, lng1
   override def withExpectedIndexBehavior(b: MaybeIndexed) = this.copy(expectedIndexBehavior = b)
 }
 
-class ModifyClause[V](val operator: ModOps.Value, fields: (String, V)*) {
+class ModifyClause(val operator: ModOps.Value, fields: (String, _)*) {
   def extend(q: BasicDBObjectBuilder): Unit = {
     fields foreach { case (name, value) => q.add(name, value) }
   }
 }
 
-class ModifyAddEachClause[V](fieldName: String, values: Traversable[V])
-    extends ModifyClause[V](ModOps.AddToSet) {
+class ModifyAddEachClause(fieldName: String, values: Traversable[_])
+    extends ModifyClause(ModOps.AddToSet) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     q.push(fieldName).add("$each", QueryHelpers.list(values)).pop
   }
 }
 
-class ModifyBitAndClause[V](fieldName: String, value: V) extends ModifyClause[V](ModOps.Bit) {
+class ModifyBitAndClause(fieldName: String, value: Int) extends ModifyClause(ModOps.Bit) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     q.push(fieldName).add("and", value).pop
   }
 }
 
-class ModifyBitOrClause[V](fieldName: String, value: V) extends ModifyClause[V](ModOps.Bit) {
+class ModifyBitOrClause(fieldName: String, value: Int) extends ModifyClause(ModOps.Bit) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     q.push(fieldName).add("or", value).pop
   }
 }
 
 class ModifyPullWithPredicateClause[V](fieldName: String, clauses: QueryClause[_]*)
-    extends ModifyClause[DBObject](ModOps.Pull) {
+    extends ModifyClause(ModOps.Pull) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     import com.foursquare.rogue.MongoHelpers.AndCondition
     MongoHelpers.MongoBuilder.buildCondition(AndCondition(clauses.toList, None), q, false)
@@ -196,7 +196,7 @@ class ModifyPullWithPredicateClause[V](fieldName: String, clauses: QueryClause[_
 }
 
 class ModifyPullObjWithPredicateClause[V](fieldName: String, clauses: QueryClause[_]*)
-    extends ModifyClause[DBObject](ModOps.Pull) {
+    extends ModifyClause(ModOps.Pull) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     import com.foursquare.rogue.MongoHelpers.AndCondition
     val nested = q.push(fieldName)

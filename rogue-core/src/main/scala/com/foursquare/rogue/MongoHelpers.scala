@@ -12,7 +12,7 @@ object MongoHelpers extends Rogue {
 
   sealed case class MongoOrder(terms: List[(String, Boolean)])
 
-  sealed case class MongoModify(clauses: List[ModifyClause[_]])
+  sealed case class MongoModify(clauses: List[ModifyClause])
 
   sealed case class MongoSelect[R](fields: List[SelectField[_, _]], transformer: List[_] => R)
 

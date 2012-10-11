@@ -305,7 +305,11 @@ class EnumerationListQueryField[V <: Enumeration#Value, M](field: Field[List[V],
 
 abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
   def valueToDB(v: V): DB
-  def setTo(v: V) = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
+  def setTo(v: V): ModifyClause = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
+  def setTo(vOpt: Option[V]): ModifyClause = vOpt match {
+    case Some(v) => setTo(v)
+    case none => unset
+  }
   def unset = new ModifyClause(ModOps.Unset, field.name -> 1)
   def rename(newName: String) = new ModifyClause(ModOps.Rename, field.name -> newName)
 }
@@ -338,11 +342,11 @@ class GeoModifyField[M](field: Field[LatLong, M])
 }
 
 class NumericModifyField[V, M](override val field: Field[V, M]) extends ModifyField[V, M](field) {
-  def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
+  def inc(v: Int) = new ModifyClause(ModOps.Inc, field.name -> v)
 
-  def bitAnd(v: V) = new ModifyBitAndClause(field.name, v)
+  def bitAnd(v: Int) = new ModifyBitAndClause(field.name, v)
 
-  def bitOr(v: V) = new ModifyBitOrClause(field.name, v)
+  def bitOr(v: Int) = new ModifyBitOrClause(field.name, v)
 }
 
 class BsonRecordModifyField[M, B](field: Field[B, M], asDBObject: B => DBObject)

@@ -221,6 +221,8 @@ class QueryTest extends SpecsMatchers {
     Venue.where(_.legacyid eqs 1).modify(_.venuename setTo "fshq").toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count setTo 3)   .toString() must_== query + """{ "$set" : { "mayor_count" : 3}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count unset)     .toString() must_== query + """{ "$unset" : { "mayor_count" : 1}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.mayor_count setTo Some(3L)).toString() must_== query + """{ "$set" : { "mayor_count" : 3}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.mayor_count setTo None)   .toString() must_== query + """{ "$unset" : { "mayor_count" : 1}}""" + suffix
 
     // Numeric
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count inc 3).toString() must_== query + """{ "$inc" : { "mayor_count" : 3}}""" + suffix
@@ -266,7 +268,7 @@ class QueryTest extends SpecsMatchers {
     Tip.where(_.legacyid eqs 1).modify(_.counts at "foo" setTo 3).toString() must_== query3 + """{ "$set" : { "counts.foo" : 3}}""" + suffix
     Tip.where(_.legacyid eqs 1).modify(_.counts at "foo" inc 5)  .toString() must_== query3 + """{ "$inc" : { "counts.foo" : 5}}""" + suffix
     Tip.where(_.legacyid eqs 1).modify(_.counts at "foo" unset)  .toString() must_== query3 + """{ "$unset" : { "counts.foo" : 1}}""" + suffix
-    Tip.where(_.legacyid eqs 1).modify(_.counts setTo Map("foo" -> 3, "bar" -> 5)).toString() must_== query3 + """{ "$set" : { "counts" : { "foo" : 3 , "bar" : 5}}}""" + suffix
+    Tip.where(_.legacyid eqs 1).modify(_.counts setTo Map("foo" -> 3L, "bar" -> 5L)).toString() must_== query3 + """{ "$set" : { "counts" : { "foo" : 3 , "bar" : 5}}}""" + suffix
 
     // Multiple updates
     Venue.where(_.legacyid eqs 1).modify(_.venuename setTo "fshq").and(_.mayor_count setTo 3).toString() must_== query + """{ "$set" : { "mayor_count" : 3 , "venuename" : "fshq"}}""" + suffix
