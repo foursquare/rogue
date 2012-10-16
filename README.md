@@ -49,9 +49,19 @@ of Lift, please let us know.
 Join the [rogue-users google group](http://groups.google.com/group/rogue-users) for help, bug reports,
 feature requests, and general discussion on Rogue.
 
+## Setup
+
+Define your record classes in Lift like you would normally (see [TestModels.scala](https://github.com/foursquare/rogue/blob/v2/rogue-lift/src/test/scala/com/foursquare/rogue/TestModels.scala) for examples).
+
+Then anywhere you want to use rogue queries against these records, import the following:
+
+    import com.foursquare.rogue.LiftRogue._
+
+See [EndToEndTest.scala](https://github.com/foursquare/rogue/blob/v2/rogue-lift/src/test/scala/com/foursquare/rogue/EndToEndTest.scala) for a complete working example.
+
 ## More Examples
 
-[QueryTest.scala](https://github.com/foursquare/rogue/blob/master/src/test/scala/com/foursquare/rogue/QueryTest.scala) contains sample Records and examples of every kind of query supported by Rogue.
+[QueryTest.scala](https://github.com/foursquare/rogue/blob/v2/rogue-lift/src/test/scala/com/foursquare/rogue/QueryTest.scala) contains sample Records and examples of every kind of query supported by Rogue.
 It also indicates what each query translates to in MongoDB's JSON query language.
 It's a good place to look when getting started using Rogue.
 
