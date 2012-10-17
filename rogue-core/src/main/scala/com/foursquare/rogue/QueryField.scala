@@ -344,6 +344,8 @@ class GeoModifyField[M](field: Field[LatLong, M])
 class NumericModifyField[V, M](override val field: Field[V, M]) extends ModifyField[V, M](field) {
   def inc(v: Int) = new ModifyClause(ModOps.Inc, field.name -> v)
 
+  def inc(v: Long) = new ModifyClause(ModOps.Inc, field.name -> v)
+
   def bitAnd(v: Int) = new ModifyBitAndClause(field.name, v)
 
   def bitOr(v: Int) = new ModifyBitOrClause(field.name, v)

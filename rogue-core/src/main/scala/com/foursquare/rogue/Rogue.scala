@@ -43,7 +43,8 @@ trait Rogue {
   implicit def rbyteFieldtoNumericQueryField[M](f: RField[Byte, M]): NumericQueryField[Byte, M] = new NumericQueryField(f)
   implicit def rshortFieldtoNumericQueryField[M](f: RField[Short, M]): NumericQueryField[Short, M] = new NumericQueryField(f)
   implicit def rintFieldtoNumericQueryField[M](f: RField[Int, M]): NumericQueryField[Int, M] = new NumericQueryField(f)
-  implicit def rlongFieldtoNumericQueryField[M](f: RField[Long, M]): NumericQueryField[Long, M] = new NumericQueryField(f)
+  implicit def rlongFieldtoNumericQueryField[F <: Long, M](f: RField[F, M]): NumericQueryField[F, M] = new NumericQueryField(f)
+  implicit def rjlongFieldtoNumericQueryField[F <: java.lang.Long, M](f: RField[F, M]): NumericQueryField[F, M] = new NumericQueryField(f)
   implicit def rfloatFieldtoNumericQueryField[M](f: RField[Float, M]): NumericQueryField[Float, M] = new NumericQueryField(f)
   implicit def rdoubleFieldtoNumericQueryField[M](f: RField[Double, M]): NumericQueryField[Double, M] = new NumericQueryField(f)
 
