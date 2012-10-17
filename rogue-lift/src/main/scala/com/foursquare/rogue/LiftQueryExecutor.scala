@@ -36,7 +36,7 @@ class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord
 
   override protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       meta: M,
-      select: Option[MongoSelect[R]]
+      select: Option[MongoSelect[M, R]]
   ): RogueSerializer[R] = {
     new RogueSerializer[R] {
       override def fromDBObject(dbo: DBObject): R = select match {

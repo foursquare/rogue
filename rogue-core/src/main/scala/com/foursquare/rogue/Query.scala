@@ -51,7 +51,7 @@ case class Query[M, R, +State](
     hint: Option[ListMap[String, Any]],
     condition: AndCondition,
     order: Option[MongoOrder],
-    select: Option[MongoSelect[R]],
+    select: Option[MongoSelect[M, R]],
     readPreference: Option[ReadPreference]
 ) {
 
