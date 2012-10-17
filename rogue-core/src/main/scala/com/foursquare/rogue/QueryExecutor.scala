@@ -20,7 +20,7 @@ trait QueryExecutor[MB] extends Rogue {
 
   protected def serializer[M <: MB, R](
       meta: M,
-      select: Option[MongoSelect[R]]
+      select: Option[MongoSelect[M, R]]
   ): RogueSerializer[R]
 
   def count[M <: MB, State](query: Query[M, _, State])
