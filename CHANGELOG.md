@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 2.0.0-beta18
+
+- setTo overload takes an Option (setTo None == unset)
+- fixed some implicit conversions
+
 # 2.0.0-beta17
 
 - $slice support
