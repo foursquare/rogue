@@ -14,7 +14,7 @@ object MongoHelpers extends Rogue {
 
   sealed case class MongoModify(clauses: List[ModifyClause])
 
-  sealed case class MongoSelect[R](fields: List[SelectField[_, _]], transformer: List[_] => R)
+  sealed case class MongoSelect[M, R](fields: List[SelectField[_, M]], transformer: List[Any] => R)
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
@@ -70,7 +70,7 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
-    def buildSelect[R](select: MongoSelect[R]): DBObject = {
+    def buildSelect[M, R](select: MongoSelect[M, R]): DBObject = {
       val builder = BasicDBObjectBuilder.start
       // If select.fields is empty, then a MongoSelect clause exists, but has an empty
       // list of fields. In this case (used for .exists()), we select just the
