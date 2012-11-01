@@ -57,6 +57,7 @@ trait Rogue {
   implicit def renumNameFieldToEnumNameQueryField[M, F <: Enumeration#Value](f: RField[F, M]): EnumNameQueryField[M, F] = new EnumNameQueryField(f)
   implicit def renumerationListFieldToEnumerationListQueryField[M, F <: Enumeration#Value](f: RField[List[F], M]): EnumerationListQueryField[F, M] = new EnumerationListQueryField[F, M](f)
   implicit def rlatLongFieldToGeoQueryField[M](f: RField[LatLong, M]): GeoQueryField[M] = new GeoQueryField(f)
+  implicit def rStringsListFieldToStringsListQueryField[M](f: RField[List[String], M]): StringsListQueryField[M] = new StringsListQueryField[M](f)
   implicit def rlistFieldToListQueryField[M, F](f: RField[List[F], M]): ListQueryField[F, M] = new ListQueryField[F, M](f)
   implicit def rseqFieldToSeqQueryField[M, F](f: RField[Seq[F], M]): SeqQueryField[F, M] = new SeqQueryField[F, M](f)
   implicit def rmapFieldToMapQueryField[M, F](f: RField[Map[String, F], M]): MapQueryField[F, M] = new MapQueryField[F, M](f)

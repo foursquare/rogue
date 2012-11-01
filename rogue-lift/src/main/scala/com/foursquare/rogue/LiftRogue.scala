@@ -168,6 +168,9 @@ trait LiftRogue extends Rogue {
   implicit def listFieldToListQueryField[M <: BsonRecord[M], F](f: Field[List[F], M]): ListQueryField[F, M] =
     new ListQueryField[F, M](f)
 
+  implicit def stringsListFieldToStringsListQueryField[M <: BsonRecord[M]](f: Field[List[String], M]): StringsListQueryField[M] =
+    new StringsListQueryField[M](f)
+
   implicit def longFieldtoNumericQueryField[M <: BsonRecord[M], F <: Long](f: Field[F, M]): NumericQueryField[F, M] =
     new NumericQueryField(f)
 
