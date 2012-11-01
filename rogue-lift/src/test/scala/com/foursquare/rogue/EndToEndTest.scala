@@ -29,6 +29,7 @@ class EndToEndTest extends SpecsMatchers {
          .claims(List(VenueClaimBson.createRecord.userid(1234).status(ClaimStatus.pending),
                       VenueClaimBson.createRecord.userid(5678).status(ClaimStatus.approved)))
          .lastClaim(VenueClaimBson.createRecord.userid(5678).status(ClaimStatus.approved))
+         .tags(List("test tag1", "some tag"))
   }
 
   def baseTestVenueClaim(vid: ObjectId): VenueClaim = {
@@ -228,6 +229,7 @@ class EndToEndTest extends SpecsMatchers {
     Venue.where(_._id eqs v.id).and(_.venuename matches Pattern.compile("Tes. v", Pattern.CASE_INSENSITIVE)).count must_== 1
     Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid in List(v.legacyid.value)).count must_== 1
     Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid nin List(v.legacyid.value)).count must_== 0
+    Venue.where(_.tags matches """some\s.*""".r).count must_== 1
   }
 
   @Test

@@ -175,10 +175,7 @@ class ForeignObjectIdQueryField[F <: ObjectId, M, T](
     new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(getId)))
 }
 
-class StringQueryField[M](override val field: Field[String, M])
-    extends AbstractQueryField[String, String, String, M](field) {
-
-  override def valueToDB(v: String): String = v
+trait StringRegexOps[V, M] { self: AbstractQueryField[V, String, String, M] =>
 
   def startsWith(s: String): RegexQueryClause[PartialIndexScan] =
     new RegexQueryClause[PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
@@ -191,6 +188,13 @@ class StringQueryField[M](override val field: Field[String, M])
 
   def regexWarningNotIndexed(p: Pattern) =
     matches(p)
+}
+
+class StringQueryField[M](override val field: Field[String, M])
+    extends AbstractQueryField[String, String, String, M](field)
+    with StringRegexOps[String, M] {
+
+  override def valueToDB(v: String): String = v
 }
 
 class CaseClassQueryField[V, M](val field: Field[V, M]) {
@@ -255,6 +259,13 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
 class ListQueryField[V, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, V, V, M, List](field) {
   override def valueToDB(v: V) = v
+}
+
+class StringsListQueryField[M](override val field: Field[List[String], M])
+    extends AbstractListQueryField[String, String, String, M, List](field)
+    with StringRegexOps[List[String], M] {
+
+  override def valueToDB(v: String) = v
 }
 
 class SeqQueryField[V, M](field: Field[Seq[V], M])
