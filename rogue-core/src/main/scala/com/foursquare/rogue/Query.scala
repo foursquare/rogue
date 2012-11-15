@@ -37,9 +37,9 @@ import scala.collection.immutable.ListMap
  * parameters. The inference system will find an implicit parameter that is type compatible with
  * what's used in the rest of the expression.
  *
- * @param M the record type being queried.
- * @param R
- * @param State a phantom type which defines the state of the builder.
+ * @tparam M the record type being queried.
+ * @tparam R
+ * @tparam State a phantom type which defines the state of the builder.
  */
 case class Query[M, R, +State](
     meta: M,

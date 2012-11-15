@@ -7,7 +7,7 @@ import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
 import org.bson.types.BasicBSONList
 import net.liftweb.mongodb.MongoDB
-import com.mongodb.{DBCollection, DBObject, ReadPreference}
+import com.mongodb.{DBCollection, DBObject}
 
 object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]] {
   override def getDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
@@ -32,7 +32,6 @@ object LiftAdapter extends LiftAdapter(LiftDBCollectionFactory)
 
 class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_]]) extends QueryExecutor[MongoRecord[_] with MongoMetaRecord[_]] {
   override def defaultWriteConcern = QueryHelpers.config.defaultWriteConcern
-  override def defaultReadPreference = ReadPreference.secondary
 
   override protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       meta: M,
