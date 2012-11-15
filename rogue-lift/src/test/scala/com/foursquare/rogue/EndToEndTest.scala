@@ -193,8 +193,8 @@ class EndToEndTest extends SpecsMatchers {
 
     // eqs
     Venue.where(_._id eqs v.id).fetch().map(_.id)                         must_== List(v.id)
-    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.SECONDARY).fetch().map(_.id)        must_== List(v.id)
-    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.PRIMARY).fetch().map(_.id)       must_== List(v.id)
+    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.secondary).fetch().map(_.id)        must_== List(v.id)
+    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.primary).fetch().map(_.id)       must_== List(v.id)
   }
 
   @Test

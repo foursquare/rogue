@@ -551,9 +551,9 @@ class QueryTest extends SpecsMatchers {
     type Q = Query[Venue, Venue, _]
 
     Venue.where(_.mayor eqs 2).asInstanceOf[Q].readPreference must_== None
-    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.SECONDARY)
-    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.PRIMARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.PRIMARY)
-    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).setReadPreference(ReadPreference.PRIMARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.PRIMARY)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.secondary).asInstanceOf[Q].readPreference must_== Some(ReadPreference.secondary)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.primary).asInstanceOf[Q].readPreference must_== Some(ReadPreference.primary)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.secondary).setReadPreference(ReadPreference.primary).asInstanceOf[Q].readPreference must_== Some(ReadPreference.primary)
   }
 
   @Test
