@@ -96,6 +96,15 @@ class DateQueryField[M](field: Field[Date, M]) extends AbstractQueryField[Date, 
   def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
 }
 
+class DateTimeQueryField[M](field: Field[DateTime, M]) extends AbstractQueryField[DateTime, DateTime, Date, M](field) {
+  override def valueToDB(d: DateTime) = d.toDate
+
+  def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
+  def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
+  def onOrBefore(d: DateTime) = new LtEqQueryClause(field.name, d.toDate)
+  def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
+}
+
 class EnumNameQueryField[M, E <: Enumeration#Value](field: Field[E, M])
     extends AbstractQueryField[E, E, String, M](field) {
   override def valueToDB(e: E) = e.toString
@@ -335,6 +344,11 @@ class DateModifyField[M](field: Field[Date, M])
   override def valueToDB(d: Date) = d
 
   def setTo(d: DateTime) = new ModifyClause(ModOps.Set, field.name -> d.toDate)
+}
+
+class DateTimeModifyField[M](field: Field[DateTime, M])
+    extends AbstractModifyField[DateTime, Date, M](field) {
+  override def valueToDB(d: DateTime) = d.toDate
 }
 
 class EnumerationModifyField[M, E <: Enumeration#Value](field: Field[E, M])
