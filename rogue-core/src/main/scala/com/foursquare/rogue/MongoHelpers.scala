@@ -49,8 +49,12 @@ object MongoHelpers extends Rogue {
       rawClauses.foreach(_.extend(builder, signature))
 
       // Optional $or clause (only one per "and" chain)
-      cond.orCondition.foreach(or =>
-        builder.add("$or", QueryHelpers.list(or.conditions.map(buildCondition(_, signature = false)))))
+      cond.orCondition.foreach(or => {
+        val subclauses = or.conditions
+            .map(buildCondition(_, signature = false))
+            .filterNot(_.keySet.isEmpty)
+        builder.add("$or", QueryHelpers.list(subclauses))
+      })
       builder.get
     }
 
