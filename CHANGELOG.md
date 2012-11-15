@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 2.0.0-beta19
+
+- fixed bug in $or clause serialization
+- support for DateTime fields
+- defaultReadPreference should be 'secondary'
+
 # 2.0.0-beta18
 
 - setTo overload takes an Option (setTo None == unset)
