@@ -8,12 +8,12 @@ import com.mongodb.ReadPreference
 import java.util.regex.Pattern
 import org.bson.types.ObjectId
 import org.junit.{Before, After, Ignore, Test}
-import org.specs.SpecsMatchers
+import org.specs2.matcher.JUnitMustMatchers
 
 /**
  * Contains tests that test the interaction of Rogue with a real mongo.
  */
-class EndToEndTest extends SpecsMatchers {
+class EndToEndTest extends JUnitMustMatchers {
   def baseTestVenue(): Venue = {
     Venue.createRecord
          .legacyid(123)

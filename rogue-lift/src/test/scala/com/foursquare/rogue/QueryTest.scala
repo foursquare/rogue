@@ -13,9 +13,9 @@ import org.bson.types._
 import org.joda.time.{DateTime, DateTimeZone}
 
 import org.junit._
-import org.specs.SpecsMatchers
+import org.specs2.matcher.JUnitMustMatchers
 
-class QueryTest extends SpecsMatchers {
+class QueryTest extends JUnitMustMatchers {
 
   @Test
   def testProduceACorrectJSONQueryString {
@@ -580,8 +580,8 @@ class QueryTest extends SpecsMatchers {
     val compiler = new Compiler
     def check(code: String, expectedErrorREOpt: Option[String] = Some("")): Unit = {
       (expectedErrorREOpt, compiler.typeCheck(code)) aka "'%s' compiles!".format(code) must beLike {
-        case (Some(expectedErrorRE), Some(actualError)) => expectedErrorRE.r.findFirstIn(actualError.replaceAll("\n", "")).isDefined
-        case (None, None) => true
+        case (Some(expectedErrorRE), Some(actualError)) => expectedErrorRE.r.findFirstIn(actualError.replaceAll("\n", "")) must beSome
+        case (None, None) => true must_== true
       }
     }
 

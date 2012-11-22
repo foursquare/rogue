@@ -8,6 +8,7 @@ sbtlib
 target
 out
 *~
+*.sw[opn]
 mongo-testdb
 dependencies
 mongo.log

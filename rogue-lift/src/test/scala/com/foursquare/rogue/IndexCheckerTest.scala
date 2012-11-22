@@ -13,7 +13,7 @@ import scala.collection.immutable.ListMap
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import org.junit._
-import org.specs.SpecsMatchers
+import org.specs2.matcher.JUnitMustMatchers
 
 
 class TestModel extends MongoRecord[TestModel] with MongoId[TestModel] {
@@ -39,7 +39,7 @@ object TestModel extends TestModel with MongoMetaRecord[TestModel] with IndexedR
     TestModel.index(_.ll, TwoD, _.b, Asc))
 }
 
-class MongoIndexCheckerTest extends SpecsMatchers {
+class MongoIndexCheckerTest extends JUnitMustMatchers {
 
   @Test
   def testIndexExpectations {
