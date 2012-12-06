@@ -27,6 +27,13 @@ case class ExecutableQuery[MB, M <: MB, R, State](
     db.countDistinct(query)(field.asInstanceOf[M => Field[V, M]])
 
   /**
+   * Returns a list of distinct values returned by a query. The query must not have
+   * limit or skip clauses.
+   */
+  def distinct[V](field: M => Field[V, _]): List[V] =
+    db.distinct(query)(field.asInstanceOf[M => Field[V, M]])
+
+  /**
    * Checks if there are any records that match this query.
    */
   def exists()(implicit ev: State <:< Unlimited with Unskipped): Boolean = {

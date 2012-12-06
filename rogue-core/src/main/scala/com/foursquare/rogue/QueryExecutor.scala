@@ -41,6 +41,16 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
+  def distinct[M <: MB, V, State](query: Query[M, _, State])
+                                 (field: M => Field[V, M])
+                                 (implicit ev: ShardingOk[M, State]): List[V] = {
+    if (optimizer.isEmptyQuery(query)) {
+      Nil
+    } else {
+      adapter.distinct(query, field(query.meta).name)
+    }
+  }
+
   def fetch[M <: MB, R, State](query: Query[M, R, State],
                                readPreference: Option[ReadPreference] = None)
                               (implicit ev: ShardingOk[M, State]): List[R] = {

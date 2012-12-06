@@ -51,10 +51,10 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       val cmd = new BasicDBObject()
       cmd.put("count", query.collectionName)
       cmd.put("query", condition)
-      
+
       queryClause.lim.filter(_ > 0).foreach( cmd.put("limit", _) )
       queryClause.sk.filter(_ > 0).foreach( cmd.put("skip", _) )
-      
+
       // 4sq dynamically throttles ReadPreference via an override of
       // DBCursor creation.  We don't want to override for the whole
       // DBCollection because those are cached for the life of the DB
@@ -63,7 +63,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
         result.getErrorMessage match {
           // pretend count is zero craziness from the mongo-java-driver
           case "ns does not exist" | "ns missing" => 0L
-          case _ => 
+          case _ =>
             result.throwOnError()
             0L
         }
@@ -85,6 +85,24 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     runCommand(description, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
       coll.distinct(key, cnd).size()
+    }
+  }
+
+  def distinct[M <: MB, R](query: Query[M, _, _],
+                           key: String): List[R] = {
+    val queryClause = transformer.transformQuery(query)
+    validator.validateQuery(queryClause)
+    val cnd = buildCondition(queryClause.condition)
+
+    // TODO: fix this so it looks like the correct mongo shell command
+    val description = buildConditionString("distinct", query.collectionName, queryClause)
+
+    runCommand(description, queryClause) {
+      val coll = dbCollectionFactory.getDBCollection(query)
+      val rv = new ListBuffer[R]
+      val rj = coll.distinct(key, cnd)
+      for (i <- 0 until rj.size) rv += rj.get(i).asInstanceOf[R]
+      rv.toList
     }
   }
 
