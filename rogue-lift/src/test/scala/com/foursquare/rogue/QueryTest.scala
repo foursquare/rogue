@@ -384,6 +384,9 @@ class QueryTest extends SpecsMatchers {
 
     // Scan should be the same as and/where
     Venue.where(_.mayor eqs 1).scan(_.tags contains "karaoke").signature() must_== """db.venues.find({ "mayor" : 0 , "tags" : 0})"""
+
+    // or queries
+    Venue.where(_.mayor eqs 1).or(_.where(_._id eqs oid)).signature() must_== """db.venues.find({ "mayor" : 0 , "$or" : [ { "_id" : 0}]})"""
   }
 
   @Test
