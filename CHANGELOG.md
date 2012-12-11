@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 2.0.0-beta21
+
+- fix signatures for $or queries
+
+# 2.0.0-beta20
+
+- hook up readPreference, remove notion of defaultReadPreference
+
 # 2.0.0-beta19
 
 - fixed bug in $or clause serialization
