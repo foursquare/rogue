@@ -51,7 +51,7 @@ feature requests, and general discussion on Rogue.
 
 ## More Examples
 
-[QueryTest.scala](https://github.com/foursquare/rogue/blob/master/src/test/scala/com/foursquare/rogue/QueryTest.scala) contains sample Records and examples of every kind of query supported by Rogue.
+[QueryTest.scala](https://github.com/foursquare/rogue/blob/master/rogue-lift/src/test/scala/com/foursquare/rogue/QueryTest.scala) contains sample Records and examples of every kind of query supported by Rogue.
 It also indicates what each query translates to in MongoDB's JSON query language.
 It's a good place to look when getting started using Rogue.
 
@@ -141,7 +141,7 @@ Lots of new features since 1.0.18!:
 - support for BsonRecordField and BsonRecordListField (thanks Marc!)
 - type-safe foreign key condtions, e.g., Tip.where(_.venueid eqs venueObj) (thanks dtaylor!)
 
-Please see [QueryTest.scala](https://github.com/foursquare/rogue/blob/master/src/test/scala/com/foursquare/rogue/QueryTest.scala) for examples of these new features.
+Please see [QueryTest.scala](https://github.com/foursquare/rogue/blob/master/rogue-lift/src/test/scala/com/foursquare/rogue/QueryTest.scala) for examples of these new features.
 
 Other recent notable changes:
 
