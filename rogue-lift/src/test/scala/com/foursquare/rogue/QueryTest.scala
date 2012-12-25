@@ -424,6 +424,17 @@ class QueryTest extends SpecsMatchers {
         _.where(_.mayor eqs 2))
       .modify(_.userid setTo 1).toString() must_== """db.venues.update({ "$or" : [ { "legid" : 1} , { "mayor" : 2}]}, { "$set" : { "userid" : 1}}, false, false)"""
 
+    // $or with optional where clause
+    Venue.or(
+        _.where(_.legacyid eqs 1),
+        _.whereOpt(None)(_.mayor eqs _))
+    .modify(_.userid setTo 1).toString() must_== """db.venues.update({ "$or" : [ { "legid" : 1}]}, { "$set" : { "userid" : 1}}, false, false)"""
+
+    Venue.or(
+        _.where(_.legacyid eqs 1),
+        _.whereOpt(Some(2))(_.mayor eqs _))
+    .modify(_.userid setTo 1).toString() must_== """db.venues.update({ "$or" : [ { "legid" : 1} , { "mayor" : 2}]}, { "$set" : { "userid" : 1}}, false, false)"""
+
     // OrQuery syntax
     val q1 = Venue.where(_.legacyid eqs 1)
     val q2 = Venue.where(_.legacyid eqs 2)

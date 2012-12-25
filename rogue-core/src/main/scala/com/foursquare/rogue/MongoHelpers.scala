@@ -6,7 +6,9 @@ import com.mongodb.{BasicDBObjectBuilder, DBObject}
 import scala.collection.immutable.ListMap
 
 object MongoHelpers extends Rogue {
-  case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition])
+  case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition]) {
+    def isEmpty: Boolean = clauses.isEmpty && orCondition.isEmpty
+  }
 
   case class OrCondition(conditions: List[AndCondition])
 
