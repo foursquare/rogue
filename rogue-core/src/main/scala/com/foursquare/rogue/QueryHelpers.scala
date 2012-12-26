@@ -145,6 +145,7 @@ object QueryHelpers {
   def orConditionFromQueries(subqueries: List[Query[_, _, _]]) = {
     MongoHelpers.OrCondition(subqueries.flatMap(subquery => {
       subquery match {
+        case q: Query[_, _, _] if q.condition.isEmpty => None
         case q: Query[_, _, _] => Some(q.condition)
         case _ => None
       }
