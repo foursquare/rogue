@@ -67,7 +67,8 @@ object LiftQueryExecutor extends LiftQueryExecutor(LiftAdapter)
 
 object LiftQueryExecutorHelpers {
   def setInstanceFieldFromDbo(instance: MongoRecord[_], dbo: DBObject, fieldName: String): Option[_] = {
-    instance.fieldByName(fieldName) match {
+    val fieldBox: Box[net.liftweb.record.Field[_, _]] = instance.fieldByName(fieldName)
+    fieldBox match {
       case Full(field) => field.setFromAny(dbo.get(fieldName)).toOption
       case _ => {
         val splitName = fieldName.split('.').toList

@@ -16,7 +16,7 @@ object RogueBuild extends Build {
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
     version := "2.0.0-beta22-SNAPSHOT",
     organization := "com.foursquare",
-    crossScalaVersions := Seq("2.9.1", "2.9.2", "2.9.0-1", "2.9.0"),
+    crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0", "2.9.0-1", "2.9.0"),
     publishMavenStyle := true,
     publishArtifact in Test := false,
     pomIncludeRepository := { _ => false },
@@ -47,15 +47,18 @@ object RogueBuild extends Build {
           <url>http://github.com/jliszka</url>
         </developer>
       </developers>),
-    resolvers += "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/",
-    resolvers <++= (version) { v =>
-      if (v.endsWith("-SNAPSHOT"))
-        Seq(ScalaToolsSnapshots)
-      else
-        Seq()
-    },
+    resolvers ++= Seq(
+        "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/",
+        "Releases" at "http://oss.sonatype.org/content/repositories/releases",
+        "Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"),
     retrieveManaged := true,
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
+    scalacOptions <++= scalaVersion map { scalaVersion =>
+        scalaVersion.split('.') match {
+            case Array(major, minor, _*) if major.toInt >= 2 && minor.toInt >= 10 => Seq("-feature", "-language:_")
+            case _ => Seq()
+        }
+    },
 
     // Hack to work around SBT bug generating scaladoc for projects with no dependencies.
     // https://github.com/harrah/xsbt/issues/85
