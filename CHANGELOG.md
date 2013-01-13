@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 2.0.0-beta22
+
+- support for scala 2.9.2 and 2.10.0 (mattpap)
+- support for Model.distinct(_.field) (mattpap)
+- sbt 0.12.0 (mattpap)
+
 # 2.0.0-beta21
 
 - fix signatures for $or queries
