@@ -13,7 +13,7 @@ trait RogueSerializer[R] {
 
 trait QueryExecutor[MB] extends Rogue {
   def adapter: MongoJavaDriverAdapter[MB]
-  def optimizer: QueryOptimizer = new QueryOptimizer
+  def optimizer: QueryOptimizer
 
   def defaultWriteConcern: WriteConcern
 
