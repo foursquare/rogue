@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-RC1
+
+- support for type-safe ID fields
+
 # 2.0.0-beta22
 
 - support for scala 2.9.2 and 2.10.0 (mattpap)
