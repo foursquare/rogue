@@ -60,8 +60,8 @@ trait Rogue {
   implicit def renumerationListFieldToEnumerationListQueryField[M, F <: Enumeration#Value](f: RField[List[F], M]): EnumerationListQueryField[F, M] = new EnumerationListQueryField[F, M](f)
   implicit def rlatLongFieldToGeoQueryField[M](f: RField[LatLong, M]): GeoQueryField[M] = new GeoQueryField(f)
   implicit def rStringsListFieldToStringsListQueryField[M](f: RField[List[String], M]): StringsListQueryField[M] = new StringsListQueryField[M](f)
-  implicit def rlistFieldToListQueryField[M, F](f: RField[List[F], M]): ListQueryField[F, M] = new ListQueryField[F, M](f)
-  implicit def rseqFieldToSeqQueryField[M, F](f: RField[Seq[F], M]): SeqQueryField[F, M] = new SeqQueryField[F, M](f)
+  implicit def rlistFieldToListQueryField[M, F: BSONType](f: RField[List[F], M]): ListQueryField[F, M] = new ListQueryField[F, M](f)
+  implicit def rseqFieldToSeqQueryField[M, F: BSONType](f: RField[Seq[F], M]): SeqQueryField[F, M] = new SeqQueryField[F, M](f)
   implicit def rmapFieldToMapQueryField[M, F](f: RField[Map[String, F], M]): MapQueryField[F, M] = new MapQueryField[F, M](f)
 
   /** ModifyField implicits
@@ -69,6 +69,7 @@ trait Rogue {
     * These are dangerous in the general case, unless the field type can be safely serialized
     * or the field class handles necessary serialization. We specialize some safe cases.
     **/
+  implicit def rfieldToSafeModifyField[M, F](f: RField[F, M]): SafeModifyField[F, M] = new SafeModifyField(f)
   implicit def booleanRFieldToModifyField[M](f: RField[Boolean, M]): ModifyField[Boolean, M] = new ModifyField(f)
   implicit def charRFieldToModifyField[M](f: RField[Char, M]): ModifyField[Char, M] = new ModifyField(f)
 
@@ -95,10 +96,10 @@ trait Rogue {
   implicit def rlatLongFieldToGeoQueryModifyField[M](f: RField[LatLong, M]): GeoModifyField[M] =
     new GeoModifyField(f)
 
-  implicit def rlistFieldToListModifyField[M, F](f: RField[List[F], M]): ListModifyField[F, M] =
+  implicit def rlistFieldToListModifyField[M, F: BSONType](f: RField[List[F], M]): ListModifyField[F, M] =
     new ListModifyField[F, M](f)
 
-  implicit def rSeqFieldToSeqModifyField[M, F](f: RField[Seq[F], M]): SeqModifyField[F, M] =
+  implicit def rSeqFieldToSeqModifyField[M, F: BSONType](f: RField[Seq[F], M]): SeqModifyField[F, M] =
     new SeqModifyField[F, M](f)
 
   implicit def rmapFieldToMapModifyField[M, F](f: RField[Map[String, F], M]): MapModifyField[F, M] =

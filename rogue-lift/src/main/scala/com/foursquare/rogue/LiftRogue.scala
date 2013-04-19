@@ -83,7 +83,7 @@ trait LiftRogue extends Rogue {
     liftQuery
   }
 
-  implicit def fieldToQueryField[M <: BsonRecord[M], F](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
+  implicit def fieldToQueryField[M <: BsonRecord[M], F: BSONType](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
 
   implicit def bsonRecordFieldToBsonRecordQueryField[
       M <: BsonRecord[M],
@@ -165,7 +165,7 @@ trait LiftRogue extends Rogue {
   implicit def latLongFieldToGeoQueryField[M <: BsonRecord[M]](f: Field[LatLong, M]): GeoQueryField[M] =
     new GeoQueryField(f)
 
-  implicit def listFieldToListQueryField[M <: BsonRecord[M], F](f: Field[List[F], M]): ListQueryField[F, M] =
+  implicit def listFieldToListQueryField[M <: BsonRecord[M], F: BSONType](f: Field[List[F], M]): ListQueryField[F, M] =
     new ListQueryField[F, M](f)
 
   implicit def stringsListFieldToStringsListQueryField[M <: BsonRecord[M]](f: Field[List[String], M]): StringsListQueryField[M] =
@@ -184,7 +184,8 @@ trait LiftRogue extends Rogue {
     new StringQueryField(f)
 
   // ModifyField implicits
-  implicit def fieldToModifyField[M <: BsonRecord[M], F](f: Field[F, M]): ModifyField[F, M] = new ModifyField(f)
+  implicit def fieldToModifyField[M <: BsonRecord[M], F: BSONType](f: Field[F, M]): ModifyField[F, M] = new ModifyField(f)
+  implicit def fieldToSafeModifyField[M <: BsonRecord[M], F](f: Field[F, M]): SafeModifyField[F, M] = new SafeModifyField(f)
 
   implicit def bsonRecordFieldToBsonRecordModifyField[M <: BsonRecord[M], B <: BsonRecord[B]]
       (f: BsonRecordField[M, B]): BsonRecordModifyField[M, B] =
@@ -228,7 +229,7 @@ trait LiftRogue extends Rogue {
   implicit def latLongFieldToGeoQueryModifyField[M <: BsonRecord[M]](f: Field[LatLong, M]): GeoModifyField[M] =
     new GeoModifyField(f)
 
-  implicit def listFieldToListModifyField[M <: BsonRecord[M], F](f: Field[List[F], M]): ListModifyField[F, M] =
+  implicit def listFieldToListModifyField[M <: BsonRecord[M], F: BSONType](f: Field[List[F], M]): ListModifyField[F, M] =
     new ListModifyField[F, M](f)
 
   implicit def longFieldToNumericModifyField[M <: BsonRecord[M]](f: Field[Long, M]): NumericModifyField[Long, M] =
@@ -261,6 +262,14 @@ trait LiftRogue extends Rogue {
     override def name = f.name
     override def owner = f.owner
   }
+
+  class BsonRecordIsBSONType[T <: BsonRecord[T]] extends BSONType[T] {
+    override def asBSONObject(v: T): AnyRef = v.asDBObject
+  }
+
+  object _BsonRecordIsBSONType extends BsonRecordIsBSONType[Nothing]
+
+  implicit def BsonRecordIsBSONType[T <: BsonRecord[T]]: BSONType[T] = _BsonRecordIsBSONType.asInstanceOf[BSONType[T]]
 }
 
 object LiftRogue extends LiftRogue
