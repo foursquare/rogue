@@ -55,7 +55,7 @@ class QueryTest extends JUnitMustMatchers {
     VenueClaim.where(_.reason eqs RejectReason.wrongCode).toString() must_== """db.venueclaims.find({ "reason" : 2})"""
 
     // comparison even when type information is unavailable
-    def doLessThan[M <: MongoRecord[M], T](meta: M with MongoMetaRecord[M], f: M => Field[T, M], otherVal: T) =
+    def doLessThan[M <: MongoRecord[M], T: BSONType](meta: M with MongoMetaRecord[M], f: M => Field[T, M], otherVal: T) =
       meta.where(r => f(r) < otherVal)
     doLessThan(Venue, (v: Venue) => v.mayor_count, 5L).toString() must_== """db.venues.find({ "mayor_count" : { "$lt" : 5}})"""
 

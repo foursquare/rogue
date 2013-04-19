@@ -82,9 +82,9 @@ abstract class AbstractQueryField[F, V, DB, M](val field: Field[F, M]) {
   def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
-class QueryField[V, M](field: Field[V, M])
-    extends AbstractQueryField[V, V, V, M](field) {
-  override def valueToDB(v: V) = v
+class QueryField[V: BSONType, M](field: Field[V, M])
+    extends AbstractQueryField[V, V, AnyRef, M](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
 class DateQueryField[M](field: Field[Date, M]) extends AbstractQueryField[Date, DateTime, Date, M](field) {
@@ -265,9 +265,9 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
   def idx(i: Int): DummyField[V, M] = at(i)
 }
 
-class ListQueryField[V, M](field: Field[List[V], M])
-    extends AbstractListQueryField[V, V, V, M, List](field) {
-  override def valueToDB(v: V) = v
+class ListQueryField[V: BSONType, M](field: Field[List[V], M])
+    extends AbstractListQueryField[V, V, AnyRef, M, List](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
 class StringsListQueryField[M](override val field: Field[List[String], M])
@@ -277,9 +277,9 @@ class StringsListQueryField[M](override val field: Field[List[String], M])
   override def valueToDB(v: String) = v
 }
 
-class SeqQueryField[V, M](field: Field[Seq[V], M])
-    extends AbstractListQueryField[V, V, V, M, Seq](field) {
-  override def valueToDB(v: V) = v
+class SeqQueryField[V: BSONType, M](field: Field[Seq[V], M])
+    extends AbstractListQueryField[V, V, AnyRef, M, Seq](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
 class CaseClassListQueryField[V, M](field: Field[List[V], M])
@@ -322,21 +322,23 @@ class EnumerationListQueryField[V <: Enumeration#Value, M](field: Field[List[V],
 // *** Modify fields
 // ********************************************************************************
 
+class SafeModifyField[V, M](val field: Field[V, M]) {
+  def unset = new ModifyClause(ModOps.Unset, field.name -> 1)
+  def rename(newName: String) = new ModifyClause(ModOps.Rename, field.name -> newName)
+}
 
 abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
   def valueToDB(v: V): DB
   def setTo(v: V): ModifyClause = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
   def setTo(vOpt: Option[V]): ModifyClause = vOpt match {
     case Some(v) => setTo(v)
-    case none => unset
+    case none => new SafeModifyField(field).unset
   }
-  def unset = new ModifyClause(ModOps.Unset, field.name -> 1)
-  def rename(newName: String) = new ModifyClause(ModOps.Rename, field.name -> newName)
 }
 
-class ModifyField[V, M](field: Field[V, M])
-    extends AbstractModifyField[V, V, M](field) {
-  def valueToDB(v: V) = v
+class ModifyField[V: BSONType, M](field: Field[V, M])
+    extends AbstractModifyField[V, AnyRef, M](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
 class DateModifyField[M](field: Field[Date, M])
@@ -366,7 +368,9 @@ class GeoModifyField[M](field: Field[LatLong, M])
                      field.name -> QueryHelpers.list(List(lat, long)))
 }
 
-class NumericModifyField[V, M](override val field: Field[V, M]) extends ModifyField[V, M](field) {
+class NumericModifyField[V, M](override val field: Field[V, M]) extends AbstractModifyField[V, V, M](field) {
+  override def valueToDB(v: V): V = v
+
   def inc(v: Int) = new ModifyClause(ModOps.Inc, field.name -> v)
 
   def inc(v: Long) = new ModifyClause(ModOps.Inc, field.name -> v)
@@ -431,14 +435,14 @@ abstract class AbstractListModifyField[V, DB, M, CC[X] <: Seq[X]](val field: Fie
                                       clauseFuncs.map(cf => cf(new DummyField[V, M](field.name, field.owner))): _*)
 }
 
-class SeqModifyField[V, M](field: Field[Seq[V], M])
-    extends AbstractListModifyField[V, V, M, Seq](field) {
-  override def valueToDB(v: V) = v
+class SeqModifyField[V: BSONType, M](field: Field[Seq[V], M])
+    extends AbstractListModifyField[V, AnyRef, M, Seq](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
-class ListModifyField[V, M](field: Field[List[V], M])
-    extends AbstractListModifyField[V, V, M, List](field) {
-  override def valueToDB(v: V) = v
+class ListModifyField[V: BSONType, M](field: Field[List[V], M])
+    extends AbstractListModifyField[V, AnyRef, M, List](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
 class CaseClassListModifyField[V, M](field: Field[List[V], M])
