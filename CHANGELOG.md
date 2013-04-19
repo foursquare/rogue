@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-RC2
+
+- add BSONType type class to eliminate runtime serialization errors
+
 # 2.0.0-RC1
 
 - support for type-safe ID fields
