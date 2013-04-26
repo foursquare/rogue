@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-RC3
+
+- long subtypes are BSONTypes
+
 # 2.0.0-RC2
 
 - add BSONType type class to eliminate runtime serialization errors
