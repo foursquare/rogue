@@ -50,6 +50,9 @@ object BSONType {
   implicit def ObjectIdSubtypesAreBSONTypes[T <: ObjectId]: BSONType[T] =
     ObjectIdISBSONType.asInstanceOf[BSONType[T]]
 
+  implicit def LongSubtypesAreBSONTypes[T <: java.lang.Long]: BSONType[T] =
+    LongIsBSONType.asInstanceOf[BSONType[T]]
+
   class ListsOfBSONTypesAreBSONTypes[T: BSONType] extends BSONType[List[T]] {
     override def asBSONObject(v: List[T]): AnyRef = {
       val bsonType = BSONType[T]
