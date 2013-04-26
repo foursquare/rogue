@@ -10,7 +10,7 @@ Pre-release checklist:
   [ ] Remove the "-SNAPSHOT" from the version in RogueBuild.scala
   [ ] Reload sbt
   [ ] Run "; +clean; +test" in sbt to make sure everything works.
-  [ ] Run "publish-local"
+  [ ] Run "+publish-local"
   [ ] Commit these changes (but don't push!)
 
 Release checklist:
