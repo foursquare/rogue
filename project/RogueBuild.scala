@@ -4,13 +4,14 @@ import Keys._
 
 object RogueBuild extends Build {
   override lazy val projects =
-    Seq(all, field, core, lift)
+    Seq(all, field, index, core, lift)
 
   lazy val all: Project = Project("all", file(".")) aggregate(
-    field, core, lift)
+    field, index, core, lift)
 
   lazy val field = Project("rogue-field", file("rogue-field/")) dependsOn()
-  lazy val core = Project("rogue-core", file("rogue-core/")) dependsOn(field % "compile;test->test;runtime->runtime")
+  lazy val index = Project("rogue-index", file("rogue-index/")) dependsOn(field % "compile;test->test;runtime->runtime")
+  lazy val core = Project("rogue-core", file("rogue-core/")) dependsOn(field % "compile;test->test;runtime->runtime") dependsOn(index % "compile;test->test;runtime->runtime")
   lazy val lift = Project("rogue-lift", file("rogue-lift/")) dependsOn(core % "compile;test->test;runtime->runtime")
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
