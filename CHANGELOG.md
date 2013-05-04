@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.0.0-RC4
+
+- split off index code into rogue-index
+
 # 2.0.0-RC3
 
 - long subtypes are BSONTypes
