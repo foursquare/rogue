@@ -1,6 +1,6 @@
 // Copyright 2013 Foursquare Labs Inc. All Rights Reserved.
 
-package com.foursquare.rogue.index
+package com.foursquare.index
 
 /**
  * A trait that represents the fact that a record type includes a list

@@ -1,5 +1,5 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
-package com.foursquare.rogue.index
+package com.foursquare.index
 
 import com.foursquare.rogue.{DocumentScan, Index, IndexScan, PartialIndexScan, MongoHelpers, Query, QueryClause, QueryHelpers}
 

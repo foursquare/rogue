@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.rogue.index.MongoIndex
+import com.foursquare.index.MongoIndex
 import com.foursquare.rogue.MongoHelpers.{
     AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect}
 import com.mongodb.{BasicDBObjectBuilder, DBObject, ReadPreference, WriteConcern}
