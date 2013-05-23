@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.rogue.index.MongoIndex
+import com.foursquare.index.MongoIndex
 import com.mongodb.{DBObject, WriteConcern}
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}

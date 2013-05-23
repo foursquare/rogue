@@ -6,7 +6,7 @@ import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
-import com.foursquare.rogue.index.IndexBuilder
+import com.foursquare.index.IndexBuilder
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Date
 import net.liftweb.json.JsonAST.{JArray, JInt}
