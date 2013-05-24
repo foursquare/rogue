@@ -1,6 +1,6 @@
 // Copyright 2012 Foursquare Labs Inc. All Rights Reserved.
 
-package com.foursquare.rogue.index
+package com.foursquare.index
 
 case class IndexModifier(value: Any)
 
