@@ -49,7 +49,7 @@ trait Rogue {
   implicit def rfloatFieldtoNumericQueryField[M](f: RField[Float, M]): NumericQueryField[Float, M] = new NumericQueryField(f)
   implicit def rdoubleFieldtoNumericQueryField[M](f: RField[Double, M]): NumericQueryField[Double, M] = new NumericQueryField(f)
 
-  implicit def rstringFieldToStringQueryField[M](f: RField[String, M]): StringQueryField[M] = new StringQueryField(f)
+  implicit def rstringFieldToStringQueryField[F <: String, M](f: RField[F, M]): StringQueryField[F, M] = new StringQueryField(f)
   implicit def robjectIdFieldToObjectIdQueryField[F <: ObjectId, M](f: RField[F, M]): ObjectIdQueryField[F, M] = new ObjectIdQueryField[F, M](f)
   implicit def rdateFieldToQueryField[M](f: RField[Date, M]): QueryField[Date, M] = new QueryField(f)
   implicit def rdateFieldToDateQueryField[M](f: RField[Date, M]): DateQueryField[M] = new DateQueryField(f)

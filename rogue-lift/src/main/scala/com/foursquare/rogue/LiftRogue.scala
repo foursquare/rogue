@@ -180,7 +180,7 @@ trait LiftRogue extends Rogue {
   implicit def mapFieldToMapQueryField[M <: BsonRecord[M], F](f: Field[Map[String, F], M]): MapQueryField[F, M] =
     new MapQueryField[F, M](f)
 
-  implicit def stringFieldToStringQueryField[M <: BsonRecord[M]](f: Field[String, M]): StringQueryField[M] =
+  implicit def stringFieldToStringQueryField[F <: String, M <: BsonRecord[M]](f: Field[F, M]): StringQueryField[F, M] =
     new StringQueryField(f)
 
   // ModifyField implicits

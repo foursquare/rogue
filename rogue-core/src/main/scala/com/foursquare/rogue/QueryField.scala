@@ -184,7 +184,7 @@ class ForeignObjectIdQueryField[F <: ObjectId, M, T](
     new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(getId)))
 }
 
-trait StringRegexOps[V, M] { self: AbstractQueryField[V, String, String, M] =>
+trait StringRegexOps[V, M] { self: AbstractQueryField[V, _ <: String, _ <: String, M] =>
 
   def startsWith(s: String): RegexQueryClause[PartialIndexScan] =
     new RegexQueryClause[PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
@@ -199,11 +199,11 @@ trait StringRegexOps[V, M] { self: AbstractQueryField[V, String, String, M] =>
     matches(p)
 }
 
-class StringQueryField[M](override val field: Field[String, M])
-    extends AbstractQueryField[String, String, String, M](field)
-    with StringRegexOps[String, M] {
+class StringQueryField[F <: String, M](override val field: Field[F, M])
+    extends AbstractQueryField[F, F, F, M](field)
+    with StringRegexOps[F, M] {
 
-  override def valueToDB(v: String): String = v
+  override def valueToDB(v: F): F = v
 }
 
 class CaseClassQueryField[V, M](val field: Field[V, M]) {
