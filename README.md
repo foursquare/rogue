@@ -40,6 +40,7 @@ on the version of Lift you want to target. In sbt, that would look like the foll
     val rogueField      = "com.foursquare" %% "rogue-field"         % "2.0.0-RC4" intransitive()
     val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.0.0-RC4" intransitive()
     val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.0.0-RC4" intransitive()
+    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.0.0-RC4" intransitive()
     val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M5"
 
 You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
