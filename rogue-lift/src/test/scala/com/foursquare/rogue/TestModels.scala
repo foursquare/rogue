@@ -3,7 +3,6 @@ package com.foursquare.rogue
 
 import com.foursquare.index.{Asc, Desc, IndexedRecord, IndexModifier, TwoD}
 import com.foursquare.rogue.LiftRogue._
-
 import com.mongodb.{Mongo, ServerAddress}
 import net.liftweb.mongodb.{MongoDB, MongoIdentifier}
 import net.liftweb.mongodb.record._
@@ -173,3 +172,22 @@ case class V3(legacyid: Long, userid: Long, mayor: Long)
 case class V4(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long)
 case class V5(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long, closed: Boolean)
 case class V6(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long, closed: Boolean, tags: List[String])
+
+class CalendarFld private() extends MongoRecord[CalendarFld] with ObjectIdPk[CalendarFld] {
+  def meta = CalendarFld
+
+  object inner extends BsonRecordField(this, CalendarInner)
+}
+
+object CalendarFld extends CalendarFld with MongoMetaRecord[CalendarFld] {
+  override def mongoIdentifier = RogueTestMongo
+}
+
+class CalendarInner private() extends BsonRecord[CalendarInner] {
+  def meta = CalendarInner
+
+  object date extends DateTimeField(this) //actually calendar field, not joda DateTime
+}
+
+object CalendarInner extends CalendarInner with BsonMetaRecord[CalendarInner]
+

@@ -4,7 +4,7 @@ package com.foursquare.rogue
 import com.foursquare.rogue.LiftRogue._
 import com.foursquare.rogue.Iter._
 import com.mongodb.ReadPreference
-
+import java.util.Calendar
 import java.util.regex.Pattern
 import org.bson.types.ObjectId
 import org.junit.{Before, After, Ignore, Test}
@@ -291,6 +291,26 @@ class EndToEndTest extends JUnitMustMatchers {
     findIndexOfWithLimit(5, 2) must_== -1
     findIndexOfWithLimit(5, 7) must_== 5
     findIndexOfWithLimit(11, 12) must_== -2
+  }
+
+  @Test
+  def testDeserializationWithIteratee() {
+    val inner = CalendarInner.createRecord.date(Calendar.getInstance())
+    CalendarFld.createRecord.inner(inner).save
+
+    val q = CalendarFld select(_.inner.subfield(_.date))
+    val cnt = q.count()
+    val list = q.iterate(List[Calendar]()) {
+      case (list, Iter.Item(cal)) =>
+        val c: Calendar = cal.get //class cast exception was here
+        c.set(Calendar.HOUR_OF_DAY, 0)
+        Iter.Continue(c :: list)
+      case (list, Iter.Error(e)) => e.printStackTrace(); Iter.Continue(list)
+      case (list, _) => Iter.Return(list)
+    }
+    list.length must_== (cnt)
+
+    CalendarFld.bulkDelete_!!!()
   }
 
   @Test
