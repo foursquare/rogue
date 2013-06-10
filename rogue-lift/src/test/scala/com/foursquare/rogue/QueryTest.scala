@@ -100,6 +100,9 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.tags at 0 startsWith "kara").toString() must_== """db.venues.find({ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
     // alternative syntax
     Venue.where(_.tags idx 0 startsWith "kara").toString() must_== """db.venues.find({ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
+    Venue.where(_.tags startsWith "kara")      .toString() must_== """db.venues.find({ "tags" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
+    Venue.where(_.tags matches "k.*".r)        .toString() must_== """db.venues.find({ "tags" : { "$regex" : "k.*" , "$options" : ""}})"""
+
 
     // maps
     Tip.where(_.counts at "foo" eqs 3).toString() must_== """db.tips.find({ "counts.foo" : 3})"""
