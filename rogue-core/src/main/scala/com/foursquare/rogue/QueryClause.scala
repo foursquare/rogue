@@ -200,7 +200,7 @@ class ModifyBitOrClause(fieldName: String, value: Int) extends ModifyClause(ModO
   }
 }
 
-class ModifyPullWithPredicateClause[V](fieldName: String, clauses: QueryClause[_]*)
+class ModifyPullWithPredicateClause[V](fieldName: String, clauses: Seq[QueryClause[_]])
     extends ModifyClause(ModOps.Pull) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     import com.foursquare.rogue.MongoHelpers.AndCondition
@@ -208,7 +208,7 @@ class ModifyPullWithPredicateClause[V](fieldName: String, clauses: QueryClause[_
   }
 }
 
-class ModifyPullObjWithPredicateClause[V](fieldName: String, clauses: QueryClause[_]*)
+class ModifyPullObjWithPredicateClause[V](fieldName: String, clauses: Seq[QueryClause[_]])
     extends ModifyClause(ModOps.Pull) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     import com.foursquare.rogue.MongoHelpers.AndCondition

@@ -316,8 +316,8 @@ class QueryTest extends JUnitMustMatchers {
          .modify(_.popularity pullWhere(_ gt 2, _ lt 5))
          .toString() must_== query + """{ "$pull" : { "popularity" : { "$gt" : 2 , "$lt" : 5}}}""" + suffix
     Venue.where(_.legacyid eqs 1)
-         .modify(_.claims pullObjectWhere(_.subfield(_.status) eqs ClaimStatus.approved,
-                                          _.subfield(_.userid) eqs 2097))
+         .modify(_.claims pullObjectWhere(_.status eqs ClaimStatus.approved,
+                                          _.userid eqs 2097))
          .toString() must_== query + """{ "$pull" : { "claims" : { "uid" : 2097 , "status" : "Approved"}}}""" + suffix
   }
 

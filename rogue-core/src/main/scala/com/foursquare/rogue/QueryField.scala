@@ -226,22 +226,6 @@ class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, 
   def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
 }
 
-// This class is a hack to get $pull working for lists of objects. In that case,
-// the $pull should look like:
-//   "$pull" : { "field" : { "subfield" : { "$gt" : 3 }}}
-// whereas for normal queries, the same query would look like:
-//   { "field.subfield" : { "$gt" : 3 }}
-// So, normally, we need to just have one level of nesting, but here we want two.
-class BsonRecordQueryFieldInPullContext[M, B]
-    (field: Field[B, M], rec: B, asDBObject: B => DBObject)
-    extends AbstractQueryField[B, B, DBObject, M](field) {
-  override def valueToDB(b: B) = asDBObject(b)
-
-  def subfield[V](subfield: B => Field[V, B]): SelectableDummyField[V, M] = {
-    new SelectableDummyField[V, M](subfield(rec).name, field.owner)
-  }
-}
-
 abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field[CC[F], M]) extends AbstractQueryField[CC[F], V, DB, M](field) {
 
   def all(vs: Traversable[V]) =
@@ -438,8 +422,10 @@ abstract class AbstractListModifyField[V, DB, M, CC[X] <: Seq[X]](val field: Fie
   def $: Field[V, M] = new DummyField[V, M](field.name + ".$", field.owner)
 
   def pullWhere(clauseFuncs: (Field[V, M] => QueryClause[_])*) =
-    new ModifyPullWithPredicateClause(field.name,
-                                      clauseFuncs.map(cf => cf(new DummyField[V, M](field.name, field.owner))): _*)
+    new ModifyPullWithPredicateClause(
+      field.name,
+      clauseFuncs.map(cf => cf(new DummyField[V, M](field.name, field.owner)))
+    )
 }
 
 class SeqModifyField[V: BSONType, M](field: Field[Seq[V], M])
@@ -472,15 +458,11 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
   //   }
   // }
 
-  def pullObjectWhere[V](clauseFuncs: BsonRecordQueryFieldInPullContext[M, B] => QueryClause[_]*) = {
+  def pullObjectWhere[V](clauseFuncs: (B => QueryClause[_])*) = {
     new ModifyPullObjWithPredicateClause(
-        field.name,
-      clauseFuncs.map(cf => cf(
-        new BsonRecordQueryFieldInPullContext(
-          new RequiredDummyField[B, M](field.name, field.owner, rec),
-          rec,
-          asDBObject
-        ))): _*)
+      field.name,
+      clauseFuncs.map(cf => cf(rec))
+    )
   }
 }
 
