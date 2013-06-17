@@ -13,9 +13,9 @@ import org.bson.types._
 import org.joda.time.{DateTime, DateTimeZone}
 
 import org.junit._
-import org.specs.SpecsMatchers
+import org.specs2.matcher.JUnitMustMatchers
 
-class QueryTest extends SpecsMatchers {
+class QueryTest extends JUnitMustMatchers {
 
   @Test
   def testProduceACorrectJSONQueryString {
@@ -55,7 +55,7 @@ class QueryTest extends SpecsMatchers {
     VenueClaim.where(_.reason eqs RejectReason.wrongCode).toString() must_== """db.venueclaims.find({ "reason" : 2})"""
 
     // comparison even when type information is unavailable
-    def doLessThan[M <: MongoRecord[M], T](meta: M with MongoMetaRecord[M], f: M => Field[T, M], otherVal: T) =
+    def doLessThan[M <: MongoRecord[M], T: BSONType](meta: M with MongoMetaRecord[M], f: M => Field[T, M], otherVal: T) =
       meta.where(r => f(r) < otherVal)
     doLessThan(Venue, (v: Venue) => v.mayor_count, 5L).toString() must_== """db.venues.find({ "mayor_count" : { "$lt" : 5}})"""
 
@@ -89,6 +89,8 @@ class QueryTest extends SpecsMatchers {
     Venue.where(_.tags all List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$all" : [ "db" , "ka"]}})"""
     Venue.where(_.tags in  List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$in" : [ "db" , "ka"]}})"""
     Venue.where(_.tags nin List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$nin" : [ "db" , "ka"]}})"""
+    Venue.where(_.tags neqs List("db", "ka")) .toString() must_== """db.venues.find({ "tags" : { "$ne" : [ "db" , "ka"]}})"""
+    Venue.where(_.tags matches "kara.*".r) .toString() must_== """db.venues.find({ "tags" : { "$regex" : "kara.*" , "$options" : ""}})"""
     Venue.where(_.tags size 3)                .toString() must_== """db.venues.find({ "tags" : { "$size" : 3}})"""
     Venue.where(_.tags contains "karaoke")    .toString() must_== """db.venues.find({ "tags" : "karaoke"})"""
     Venue.where(_.tags notcontains "karaoke") .toString() must_== """db.venues.find({ "tags" : { "$ne" : "karaoke"}})"""
@@ -98,6 +100,9 @@ class QueryTest extends SpecsMatchers {
     Venue.where(_.tags at 0 startsWith "kara").toString() must_== """db.venues.find({ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
     // alternative syntax
     Venue.where(_.tags idx 0 startsWith "kara").toString() must_== """db.venues.find({ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
+    Venue.where(_.tags startsWith "kara")      .toString() must_== """db.venues.find({ "tags" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
+    Venue.where(_.tags matches "k.*".r)        .toString() must_== """db.venues.find({ "tags" : { "$regex" : "k.*" , "$options" : ""}})"""
+
 
     // maps
     Tip.where(_.counts at "foo" eqs 3).toString() must_== """db.tips.find({ "counts.foo" : 3})"""
@@ -130,6 +135,8 @@ class QueryTest extends SpecsMatchers {
 
     // BsonRecordField subfield queries
     Venue.where(_.claims.subfield(_.status) contains ClaimStatus.approved).toString() must_== """db.venues.find({ "claims.status" : "Approved"})"""
+    Venue.where(_.claims.subfield(_.userid) between (1, 10)).toString() must_== """db.venues.find({ "claims.uid" : { "$gte" : 1 , "$lte" : 10}})"""
+    Venue.where(_.claims.subfield(_.date) between (d1.toDate, d2.toDate)).toString() must_== """db.venues.find({ "claims.date" : { "$gte" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lte" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
     Venue.where(_.lastClaim.subfield(_.userid) eqs 123)              .toString()      must_== """db.venues.find({ "lastClaim.uid" : 123})"""
     Venue.where(_.claims.subfield(_.source.subfield(_.name)) contains "twitter").toString() must_== """db.venues.find({ "claims.source.name" : "twitter"})"""
 
@@ -181,6 +188,11 @@ class QueryTest extends SpecsMatchers {
     Venue.where(_.legacyid eqs 1).select(_.lastClaim.subselect(_.status)).toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
     Venue.where(_.legacyid eqs 1).select(_.claims.subselect(_.userid)).toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
 
+    // select slice
+    Venue.where(_.legacyid eqs 1).select(_.tags).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : 1})"""
+    Venue.where(_.legacyid eqs 1).select(_.tags.slice(4)).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : { "$slice" : 4}})"""
+    Venue.where(_.legacyid eqs 1).select(_.tags.slice(4, 7)).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : { "$slice" : [ 4 , 7]}})"""
+
     // TODO: case class list fields
     // Comment.select(_.comments.unsafeField[Long]("userid")).toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
 
@@ -215,6 +227,8 @@ class QueryTest extends SpecsMatchers {
     Venue.where(_.legacyid eqs 1).modify(_.venuename setTo "fshq").toString() must_== query + """{ "$set" : { "venuename" : "fshq"}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count setTo 3)   .toString() must_== query + """{ "$set" : { "mayor_count" : 3}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count unset)     .toString() must_== query + """{ "$unset" : { "mayor_count" : 1}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.mayor_count setTo Some(3L)).toString() must_== query + """{ "$set" : { "mayor_count" : 3}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.mayor_count setTo None)   .toString() must_== query + """{ "$unset" : { "mayor_count" : 1}}""" + suffix
 
     // Numeric
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count inc 3).toString() must_== query + """{ "$inc" : { "mayor_count" : 3}}""" + suffix
@@ -225,7 +239,7 @@ class QueryTest extends SpecsMatchers {
 
     // Calendar
     Venue.where(_.legacyid eqs 1).modify(_.last_updated setTo d1).toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
-    Venue.where(_.legacyid eqs 1).modify(_.last_updated setTo d1.toGregorianCalendar).toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.last_updated setTo d1.toDate).toString() must_== query + """{ "$set" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
 
     // LatLong
     val ll = LatLong(37.4, -73.9)
@@ -249,9 +263,9 @@ class QueryTest extends SpecsMatchers {
     OAuthConsumer.modify(_.privileges addToSet ConsumerPrivilege.awardBadges).toString() must_== """db.oauthconsumers.update({ }, { "$addToSet" : { "privileges" : "Award badges"}}""" + suffix
 
     // BsonRecordField and BsonRecordListField with nested Enumeration
-    val claims = List(VenueClaimBson.createRecord.userid(1).status(ClaimStatus.approved))
-    Venue.where(_.legacyid eqs 1).modify(_.claims setTo claims)        .toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""}}]}}""" + suffix
-    Venue.where(_.legacyid eqs 1).modify(_.lastClaim setTo claims.head).toString() must_== query + """{ "$set" : { "lastClaim" : { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""}}}}""" + suffix
+    val claims = List(VenueClaimBson.createRecord.userid(1).status(ClaimStatus.approved).date(d1.toDate))
+    Venue.where(_.legacyid eqs 1).modify(_.claims setTo claims)        .toString() must_== query + """{ "$set" : { "claims" : [ { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""} , "date" : { "$date" : "2010-05-01T00:00:00.000Z"}}]}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.lastClaim setTo claims.head).toString() must_== query + """{ "$set" : { "lastClaim" : { "status" : "Approved" , "uid" : 1 , "source" : { "name" : "" , "url" : ""} , "date" : { "$date" : "2010-05-01T00:00:00.000Z"}}}}""" + suffix
 
     // Map
     val m = Map("foo" -> 1L)
@@ -260,7 +274,7 @@ class QueryTest extends SpecsMatchers {
     Tip.where(_.legacyid eqs 1).modify(_.counts at "foo" setTo 3).toString() must_== query3 + """{ "$set" : { "counts.foo" : 3}}""" + suffix
     Tip.where(_.legacyid eqs 1).modify(_.counts at "foo" inc 5)  .toString() must_== query3 + """{ "$inc" : { "counts.foo" : 5}}""" + suffix
     Tip.where(_.legacyid eqs 1).modify(_.counts at "foo" unset)  .toString() must_== query3 + """{ "$unset" : { "counts.foo" : 1}}""" + suffix
-    Tip.where(_.legacyid eqs 1).modify(_.counts setTo Map("foo" -> 3, "bar" -> 5)).toString() must_== query3 + """{ "$set" : { "counts" : { "foo" : 3 , "bar" : 5}}}""" + suffix
+    Tip.where(_.legacyid eqs 1).modify(_.counts setTo Map("foo" -> 3L, "bar" -> 5L)).toString() must_== query3 + """{ "$set" : { "counts" : { "foo" : 3 , "bar" : 5}}}""" + suffix
 
     // Multiple updates
     Venue.where(_.legacyid eqs 1).modify(_.venuename setTo "fshq").and(_.mayor_count setTo 3).toString() must_== query + """{ "$set" : { "mayor_count" : 3 , "venuename" : "fshq"}}""" + suffix
@@ -375,6 +389,9 @@ class QueryTest extends SpecsMatchers {
 
     // Scan should be the same as and/where
     Venue.where(_.mayor eqs 1).scan(_.tags contains "karaoke").signature() must_== """db.venues.find({ "mayor" : 0 , "tags" : 0})"""
+
+    // or queries
+    Venue.where(_.mayor eqs 1).or(_.where(_._id eqs oid)).signature() must_== """db.venues.find({ "mayor" : 0 , "$or" : [ { "_id" : 0}]})"""
   }
 
   @Test
@@ -553,9 +570,9 @@ class QueryTest extends SpecsMatchers {
     type Q = Query[Venue, Venue, _]
 
     Venue.where(_.mayor eqs 2).asInstanceOf[Q].readPreference must_== None
-    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.SECONDARY)
-    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.PRIMARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.PRIMARY)
-    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.SECONDARY).setReadPreference(ReadPreference.PRIMARY).asInstanceOf[Q].readPreference must_== Some(ReadPreference.PRIMARY)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.secondary).asInstanceOf[Q].readPreference must_== Some(ReadPreference.secondary)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.primary).asInstanceOf[Q].readPreference must_== Some(ReadPreference.primary)
+    Venue.where(_.mayor eqs 2).setReadPreference(ReadPreference.secondary).setReadPreference(ReadPreference.primary).asInstanceOf[Q].readPreference must_== Some(ReadPreference.primary)
   }
 
   @Test
@@ -579,8 +596,8 @@ class QueryTest extends SpecsMatchers {
     val compiler = new Compiler
     def check(code: String, expectedErrorREOpt: Option[String] = Some("")): Unit = {
       (expectedErrorREOpt, compiler.typeCheck(code)) aka "'%s' compiles!".format(code) must beLike {
-        case (Some(expectedErrorRE), Some(actualError)) => expectedErrorRE.r.findFirstIn(actualError.replaceAll("\n", "")).isDefined
-        case (None, None) => true
+        case (Some(expectedErrorRE), Some(actualError)) => expectedErrorRE.r.findFirstIn(actualError.replaceAll("\n", "")) must beSome
+        case (None, None) => true must_== true
       }
     }
 

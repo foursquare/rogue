@@ -2,11 +2,11 @@
 package com.foursquare.rogue
 
 import org.junit._
-import org.specs.SpecsMatchers
+import org.specs2.matcher.JUnitMustMatchers
 import com.foursquare.rogue.MongoHelpers.AndCondition
 import net.liftweb.mongodb.record.{MongoId, MongoRecord, MongoMetaRecord}
 
-class LegacyQueryExecutorTest extends SpecsMatchers {
+class LegacyQueryExecutorTest extends JUnitMustMatchers {
 
   class Dummy extends MongoRecord[Dummy] with MongoId[Dummy] {
     def meta = Dummy

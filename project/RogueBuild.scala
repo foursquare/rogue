@@ -4,19 +4,20 @@ import Keys._
 
 object RogueBuild extends Build {
   override lazy val projects =
-    Seq(all, field, core, lift)
+    Seq(all, field, index, core, lift)
 
   lazy val all: Project = Project("all", file(".")) aggregate(
-    field, core, lift)
+    field, index, core, lift)
 
   lazy val field = Project("rogue-field", file("rogue-field/")) dependsOn()
-  lazy val core = Project("rogue-core", file("rogue-core/")) dependsOn(field % "compile;test->test;runtime->runtime")
+  lazy val index = Project("rogue-index", file("rogue-index/")) dependsOn(field % "compile;test->test;runtime->runtime")
+  lazy val core = Project("rogue-core", file("rogue-core/")) dependsOn(field % "compile;test->test;runtime->runtime") dependsOn(index % "compile;test->test;runtime->runtime")
   lazy val lift = Project("rogue-lift", file("rogue-lift/")) dependsOn(core % "compile;test->test;runtime->runtime")
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
-    version := "2.0.0-beta17-SNAPSHOT",
+    version := "2.0.0",
     organization := "com.foursquare",
-    crossScalaVersions := Seq("2.9.1", "2.9.0-1", "2.9.0"),
+    crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0", "2.9.0-1", "2.9.0"),
     publishMavenStyle := true,
     publishArtifact in Test := false,
     pomIncludeRepository := { _ => false },
@@ -47,15 +48,18 @@ object RogueBuild extends Build {
           <url>http://github.com/jliszka</url>
         </developer>
       </developers>),
-    resolvers += "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/",
-    resolvers <++= (version) { v =>
-      if (v.endsWith("-SNAPSHOT"))
-        Seq(ScalaToolsSnapshots)
-      else
-        Seq()
-    },
+    resolvers ++= Seq(
+        "Bryan J Swift Repository" at "http://repos.bryanjswift.com/maven2/",
+        "Releases" at "http://oss.sonatype.org/content/repositories/releases",
+        "Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"),
     retrieveManaged := true,
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
+    scalacOptions <++= scalaVersion map { scalaVersion =>
+        scalaVersion.split('.') match {
+            case Array(major, minor, _*) if major.toInt >= 2 && minor.toInt >= 10 => Seq("-feature", "-language:_")
+            case _ => Seq()
+        }
+    },
 
     // Hack to work around SBT bug generating scaladoc for projects with no dependencies.
     // https://github.com/harrah/xsbt/issues/85

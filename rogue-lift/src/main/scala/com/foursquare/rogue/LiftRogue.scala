@@ -6,9 +6,9 @@ import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
-import com.foursquare.rogue.index.IndexBuilder
+import com.foursquare.index.IndexBuilder
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
-import java.util.Calendar
+import java.util.Date
 import net.liftweb.json.JsonAST.{JArray, JInt}
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
 import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField, Record}
@@ -83,7 +83,7 @@ trait LiftRogue extends Rogue {
     liftQuery
   }
 
-  implicit def fieldToQueryField[M <: BsonRecord[M], F](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
+  implicit def fieldToQueryField[M <: BsonRecord[M], F: BSONType](f: Field[F, M]): QueryField[F, M] = new QueryField(f)
 
   implicit def bsonRecordFieldToBsonRecordQueryField[
       M <: BsonRecord[M],
@@ -127,9 +127,9 @@ trait LiftRogue extends Rogue {
     new BsonRecordListQueryField[M, B](f, rec, _.asDBObject)
   }
 
-  implicit def calendarFieldToCalendarQueryField[M <: BsonRecord[M]]
-      (f: Field[java.util.Calendar, M]): CalendarQueryField[M] =
-    new CalendarQueryField(f)
+  implicit def dateFieldToDateQueryField[M <: BsonRecord[M]]
+      (f: Field[java.util.Date, M]): DateQueryField[M] =
+    new DateQueryField(f)
 
   implicit def ccFieldToQueryField[M <: BsonRecord[M], F](f: MongoCaseClassField[M, F]): CaseClassQueryField[F, M] =
     new CaseClassQueryField[F, M](f)
@@ -165,10 +165,13 @@ trait LiftRogue extends Rogue {
   implicit def latLongFieldToGeoQueryField[M <: BsonRecord[M]](f: Field[LatLong, M]): GeoQueryField[M] =
     new GeoQueryField(f)
 
-  implicit def listFieldToListQueryField[M <: BsonRecord[M], F](f: Field[List[F], M]): ListQueryField[F, M] =
+  implicit def listFieldToListQueryField[M <: BsonRecord[M], F: BSONType](f: Field[List[F], M]): ListQueryField[F, M] =
     new ListQueryField[F, M](f)
 
-  implicit def longFieldtoNumericQueryField[M <: BsonRecord[M]](f: Field[Long, M]): NumericQueryField[Long, M] =
+  implicit def stringsListFieldToStringsListQueryField[M <: BsonRecord[M]](f: Field[List[String], M]): StringsListQueryField[M] =
+    new StringsListQueryField[M](f)
+
+  implicit def longFieldtoNumericQueryField[M <: BsonRecord[M], F <: Long](f: Field[F, M]): NumericQueryField[F, M] =
     new NumericQueryField(f)
 
   implicit def objectIdFieldToObjectIdQueryField[M <: BsonRecord[M], F <: ObjectId](f: Field[F, M]): ObjectIdQueryField[F, M] =
@@ -177,11 +180,12 @@ trait LiftRogue extends Rogue {
   implicit def mapFieldToMapQueryField[M <: BsonRecord[M], F](f: Field[Map[String, F], M]): MapQueryField[F, M] =
     new MapQueryField[F, M](f)
 
-  implicit def stringFieldToStringQueryField[M <: BsonRecord[M]](f: Field[String, M]): StringQueryField[M] =
+  implicit def stringFieldToStringQueryField[F <: String, M <: BsonRecord[M]](f: Field[F, M]): StringQueryField[F, M] =
     new StringQueryField(f)
 
   // ModifyField implicits
-  implicit def fieldToModifyField[M <: BsonRecord[M], F](f: Field[F, M]): ModifyField[F, M] = new ModifyField(f)
+  implicit def fieldToModifyField[M <: BsonRecord[M], F: BSONType](f: Field[F, M]): ModifyField[F, M] = new ModifyField(f)
+  implicit def fieldToSafeModifyField[M <: BsonRecord[M], F](f: Field[F, M]): SafeModifyField[F, M] = new SafeModifyField(f)
 
   implicit def bsonRecordFieldToBsonRecordModifyField[M <: BsonRecord[M], B <: BsonRecord[B]]
       (f: BsonRecordField[M, B]): BsonRecordModifyField[M, B] =
@@ -199,8 +203,8 @@ trait LiftRogue extends Rogue {
     new BsonRecordListModifyField[M, B](f, rec, _.asDBObject)(mf)
   }
 
-  implicit def calendarFieldToCalendarModifyField[M <: BsonRecord[M]](f: Field[Calendar, M]): CalendarModifyField[M] =
-    new CalendarModifyField(f)
+  implicit def dateFieldToDateModifyField[M <: BsonRecord[M]](f: Field[Date, M]): DateModifyField[M] =
+    new DateModifyField(f)
 
   implicit def ccListFieldToListModifyField[M <: BsonRecord[M], V]
       (f: MongoCaseClassListField[M, V]): CaseClassListModifyField[V, M] =
@@ -225,7 +229,7 @@ trait LiftRogue extends Rogue {
   implicit def latLongFieldToGeoQueryModifyField[M <: BsonRecord[M]](f: Field[LatLong, M]): GeoModifyField[M] =
     new GeoModifyField(f)
 
-  implicit def listFieldToListModifyField[M <: BsonRecord[M], F](f: Field[List[F], M]): ListModifyField[F, M] =
+  implicit def listFieldToListModifyField[M <: BsonRecord[M], F: BSONType](f: Field[List[F], M]): ListModifyField[F, M] =
     new ListModifyField[F, M](f)
 
   implicit def longFieldToNumericModifyField[M <: BsonRecord[M]](f: Field[Long, M]): NumericModifyField[Long, M] =
@@ -258,6 +262,14 @@ trait LiftRogue extends Rogue {
     override def name = f.name
     override def owner = f.owner
   }
+
+  class BsonRecordIsBSONType[T <: BsonRecord[T]] extends BSONType[T] {
+    override def asBSONObject(v: T): AnyRef = v.asDBObject
+  }
+
+  object _BsonRecordIsBSONType extends BsonRecordIsBSONType[Nothing]
+
+  implicit def BsonRecordIsBSONType[T <: BsonRecord[T]]: BSONType[T] = _BsonRecordIsBSONType.asInstanceOf[BSONType[T]]
 }
 
 object LiftRogue extends LiftRogue

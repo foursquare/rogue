@@ -1,9 +1,8 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue
 
+import com.foursquare.index.{Asc, Desc, IndexedRecord, IndexModifier, TwoD}
 import com.foursquare.rogue.LiftRogue._
-import com.foursquare.rogue.index.{Asc, Desc, IndexedRecord, IndexModifier, TwoD}
-
 import com.mongodb.{Mongo, ServerAddress}
 import net.liftweb.mongodb.{MongoDB, MongoIdentifier}
 import net.liftweb.mongodb.record._
@@ -51,7 +50,7 @@ class Venue extends MongoRecord[Venue] with MongoId[Venue] with IndexedRecord[Ve
   object popularity extends MongoListField[Venue, Long](this)
   object categories extends MongoListField[Venue, ObjectId](this)
   object geolatlng extends MongoCaseClassField[Venue, LatLong](this) { override def name = "latlng" }
-  object last_updated extends DateTimeField(this)
+  object last_updated extends DateField(this)
   object status extends EnumNameField(this, VenueStatus) { override def name = "status" }
   object claims extends BsonRecordListField(this, VenueClaimBson)
   object lastClaim extends BsonRecordField(this, VenueClaimBson)
@@ -93,6 +92,7 @@ class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] with V
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
   object reason extends EnumField(this, RejectReason)
+  object date extends DateField(this)
 }
 object VenueClaim extends VenueClaim with MongoMetaRecord[VenueClaim] {
   override def fieldOrder = List(status, _id, userid, venueid, reason)
@@ -105,9 +105,10 @@ class VenueClaimBson extends BsonRecord[VenueClaimBson] {
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
   object source extends BsonRecordField(this, SourceBson)
+  object date extends DateField(this)
 }
 object VenueClaimBson extends VenueClaimBson with BsonMetaRecord[VenueClaimBson] {
-  override def fieldOrder = List(status, userid, source)
+  override def fieldOrder = List(status, userid, source, date)
 }
 
 class SourceBson extends BsonRecord[SourceBson] {
@@ -173,3 +174,22 @@ case class V3(legacyid: Long, userid: Long, mayor: Long)
 case class V4(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long)
 case class V5(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long, closed: Boolean)
 case class V6(legacyid: Long, userid: Long, mayor: Long, mayor_count: Long, closed: Boolean, tags: List[String])
+
+class CalendarFld private() extends MongoRecord[CalendarFld] with ObjectIdPk[CalendarFld] {
+  def meta = CalendarFld
+
+  object inner extends BsonRecordField(this, CalendarInner)
+}
+
+object CalendarFld extends CalendarFld with MongoMetaRecord[CalendarFld] {
+  override def mongoIdentifier = RogueTestMongo
+}
+
+class CalendarInner private() extends BsonRecord[CalendarInner] {
+  def meta = CalendarInner
+
+  object date extends DateTimeField(this) //actually calendar field, not joda DateTime
+}
+
+object CalendarInner extends CalendarInner with BsonMetaRecord[CalendarInner]
+

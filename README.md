@@ -37,17 +37,28 @@ Because Rogue is designed to work with several versions of lift-mongodb-record (
 you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    val rogueField      = "com.foursquare" %% "rogue-field"         % "2.0.0-beta14" intransitive()
-    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.0.0-beta14" intransitive()
-    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.0.0-beta14" intransitive()
+    val rogueField      = "com.foursquare" %% "rogue-field"         % "2.0.0" intransitive()
+    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.0.0" intransitive()
+    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.0.0" intransitive()
+    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.0.0" intransitive()
     val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M5"
 
 You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
-production against Lift 2.2 and 2.4-M2. If you encounter problems using Rogue with other versions
+production against Lift 2.2 and 2.4-M5. If you encounter problems using Rogue with other versions
 of Lift, please let us know.
 
 Join the [rogue-users google group](http://groups.google.com/group/rogue-users) for help, bug reports,
 feature requests, and general discussion on Rogue.
+
+## Setup
+
+Define your record classes in Lift like you would normally (see [TestModels.scala](https://github.com/foursquare/rogue/blob/v2/rogue-lift/src/test/scala/com/foursquare/rogue/TestModels.scala) for examples).
+
+Then anywhere you want to use rogue queries against these records, import the following:
+
+    import com.foursquare.rogue.LiftRogue._
+
+See [EndToEndTest.scala](https://github.com/foursquare/rogue/blob/v2/rogue-lift/src/test/scala/com/foursquare/rogue/EndToEndTest.scala) for a complete working example.
 
 ## More Examples
 
@@ -88,74 +99,12 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 2.0.0-beta14. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 2.0.0. See the [changelog](https://github.com/foursquare/rogue/blob/v2/CHANGELOG.md) for more details.
 
-New since 1.1.0:
+Major changes in 2.0.0:
 
-- iteratee support
-- default WriteConcern is configurable
-- renamed blockingBulkDelete_!! to bulkDelete_!! (takes a WriteConcern)
-- moved gt, lt into base QueryField (nsanch)
-- fixed the way nested subfield queries work if both fields are ListFields
-- fixed handling of subfields of list fields
-- allow nested subfields for BsonRecordFields
-- removed EmptyQuery, fixed handling of upserts on empty queries
-- BaseQuery.asDBObject, BaseModifyQuery.asDBObject
-- fix for subselecting when the top-level field doesn't exist
-- fixed bug where findAndModify upsert with returnNew=false was returning Some
-- fixed bug where $regex query on a field would not allow other queries on that field
-- bumped mongo java driver version to 2.7.3
-- publishing to sonatype instead of scala-tools
-- allow $or queries in modify commands
-- select/selectCase up to 10 fields (davidtaylor)
-- only validate lists on $all and $in queries (jliszka)
-- pass query object to logging hook (jliszka)
-
-New in 1.1.0:
-
-- Compile-time index checking! (nsanch)
-- QueryLogger.logIndexHit hook (jliszka)
-- use distinct values in $in and $all queries (jliszka)
-- slaveOk query modifier (nsanch)
-
-Lots of new features since 1.0.18!:
-
-- end-to-end tests (nsanch)
-- subfield select on embedded list (nsanch)
-- regex match operator for string fields (jliszka)
-- support for the $ positional operator
-- pullWhere - $pull by query instead of exact match
-- Mongo index checking (see [here](https://github.com/foursquare/rogue/blob/master/docs/Indexing.md) for documentation)
-- $rename support
-- ability to supply a WriteConcern to updateOne, updateMulti and upsertOne
-- select and selectCase can handle 7 and 8 parameters
-- $bit support
-- improved support for subfield queries on BsonRecordField
-- added "matches" operator (for regexes) on StringFields with explicit index behavior expectations
-- sbt 0.10.0
-- raw access do BasicDBObjectBuilder in the query builder
-- whereOpt support: Venue.whereOpt(uidOpt)(_.userid eqs _)
-- findAndModify support
-- $or query support
-- efficient .exists query method (thanks Jorge!)
-- support for BsonRecordField and BsonRecordListField (thanks Marc!)
-- type-safe foreign key condtions, e.g., Tip.where(_.venueid eqs venueObj) (thanks dtaylor!)
-
-Please see [QueryTest.scala](https://github.com/foursquare/rogue/blob/master/rogue-lift/src/test/scala/com/foursquare/rogue/QueryTest.scala) for examples of these new features.
-
-Other recent notable changes:
-
-- .toString produces runnable javascript commands for mongodb console
-- added tests for constructions that should not compile
-- selectCase() builder method for select()ing via case class
-- added blockingBulkDelete_!! method which takes a WriteConcern
-- index hinting support
-- support for selecting subfields
-- support for $maxScan and $comment addSpecial parameters on find() queries
-- explain() method on BaseQuery (thanks tjulien!)
-- query signatures: string version of a query with all values blanked out
-- support for indicating when a query clause is intended to hit an index (for runtime index checking, if you wish to implement it)
-
+- separated the query execution logic from the query builder
+- removed dependency on Lift for ORM, although Lift is still the default
 
 ## Dependencies
 

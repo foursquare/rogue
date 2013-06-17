@@ -2,8 +2,8 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.index.{Asc, IndexedRecord, MongoIndexChecker, TwoD}
 import com.foursquare.rogue.LiftRogue._
-import com.foursquare.rogue.index.{Asc, IndexedRecord, MongoIndexChecker, TwoD}
 import net.liftweb.mongodb.record._
 import net.liftweb.mongodb.record.field._
 import net.liftweb.record._
@@ -13,7 +13,7 @@ import scala.collection.immutable.ListMap
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import org.junit._
-import org.specs.SpecsMatchers
+import org.specs2.matcher.JUnitMustMatchers
 
 
 class TestModel extends MongoRecord[TestModel] with MongoId[TestModel] {
@@ -25,6 +25,7 @@ class TestModel extends MongoRecord[TestModel] with MongoId[TestModel] {
   object m extends MongoMapField[TestModel, Int](this)
   object n extends MongoMapField[TestModel, Int](this)
   object ll extends MongoCaseClassField[TestModel, LatLong](this)
+  object l extends MongoListField[TestModel, Int](this)
 }
 
 object TestModel extends TestModel with MongoMetaRecord[TestModel] with IndexedRecord[TestModel] {
@@ -34,10 +35,11 @@ object TestModel extends TestModel with MongoMetaRecord[TestModel] with IndexedR
     TestModel.index(_._id, Asc),
     TestModel.index(_.a, Asc, _.b, Asc, _.c, Asc),
     TestModel.index(_.m, Asc, _.a, Asc),
+    TestModel.index(_.l, Asc),
     TestModel.index(_.ll, TwoD, _.b, Asc))
 }
 
-class MongoIndexCheckerTest extends SpecsMatchers {
+class MongoIndexCheckerTest extends JUnitMustMatchers {
 
   @Test
   def testIndexExpectations {
@@ -60,17 +62,21 @@ class MongoIndexCheckerTest extends SpecsMatchers {
     yes(TestModel iscan (_.a > 1))
     yes(TestModel scan  (_.a > 1))
 
-    no(TestModel where (_.a neqs 1))
+    no(TestModel where  (_.a neqs 1))
     yes(TestModel iscan (_.a neqs 1))
     yes(TestModel scan  (_.a neqs 1))
 
-    no(TestModel where (_.a exists true))
-    no(TestModel iscan (_.a exists true))
+    no(TestModel where  (_.a exists true))
+    yes(TestModel iscan (_.a exists true))
     yes(TestModel scan  (_.a exists true))
 
-    no(TestModel where (_.ll near (1.0, 2.0, Degrees(1.0))))
+    no(TestModel where (_.l size 1))
+    no(TestModel iscan (_.l size 1))
+    yes(TestModel scan (_.l size 1))
+
+    no(TestModel where  (_.ll near (1.0, 2.0, Degrees(1.0))))
     yes(TestModel iscan (_.ll near (1.0, 2.0, Degrees(1.0))))
-    yes(TestModel scan (_.ll near (1.0, 2.0, Degrees(1.0))))
+    yes(TestModel scan  (_.ll near (1.0, 2.0, Degrees(1.0))))
 
     // $or queries
     yes(TestModel where (_.a eqs 1) or (_.where(_.b eqs 2), _.where(_.b eqs 2)))
@@ -78,8 +84,11 @@ class MongoIndexCheckerTest extends SpecsMatchers {
     yes(TestModel where (_.a eqs 1) or (_.iscan(_.b > 2), _.iscan(_.b < 2)))
     yes(TestModel where (_.a eqs 1) or (_.scan(_.b > 2), _.scan(_.b < 2)))
     no(TestModel where (_.a eqs 1) or (_.where(_.b exists true), _.where(_.b eqs 0)))
-    no(TestModel where (_.a eqs 1) or (_.iscan(_.b exists true), _.where(_.b eqs 0)))
+    yes(TestModel where (_.a eqs 1) or (_.iscan(_.b exists true), _.where(_.b eqs 0)))
     yes(TestModel where (_.a eqs 1) or (_.scan(_.b exists true), _.where(_.b eqs 0)))
+    no(TestModel where (_.a eqs 1) or (_.where(_.l size 1), _.where(_.b eqs 0)))
+    no(TestModel where (_.a eqs 1) or (_.iscan(_.l size 1), _.where(_.b eqs 0)))
+    yes(TestModel where (_.a eqs 1) or (_.scan(_.l size 1), _.where(_.b eqs 0)))
   }
 
   @Test
@@ -134,13 +143,18 @@ class MongoIndexCheckerTest extends SpecsMatchers {
     yes(TestModel where (_.a eqs 1) iscan (_.b > 2) iscan (_.c > 3))
     no(TestModel where (_.a eqs 1) and (_.b > 2) iscan (_.c > 3))
 
-    // Unindexable
+    // Index scan only
     yes(TestModel scan (_.a exists true))
     no(TestModel where (_.a exists true))
-    no(TestModel iscan (_.a exists true))
+    yes(TestModel iscan (_.a exists true))
 
     yes(TestModel scan (_.a exists true) scan (_.b eqs 3))
     no(TestModel scan (_.a exists true) iscan (_.b eqs 3))
+
+    // Unindexable
+    yes(TestModel scan (_.l size 1))
+    no(TestModel where (_.l size 1))
+    no(TestModel iscan (_.l size 1))
 
     // Not in index
     yes(TestModel where (_.a eqs 1) scan (_.d eqs 4))

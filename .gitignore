@@ -4,10 +4,12 @@
 lib_managed
 project/boot/*
 project/build/target/*
+project/sbt-launch-*.jar
 sbtlib
 target
 out
 *~
+*.sw[opn]
 mongo-testdb
 dependencies
 mongo.log

@@ -1,5 +1,56 @@
 ## Release Notes
 
+# 2.0.0
+
+- StringQueryField support for subtypes of String
+
+# 2.0.0-RC4
+
+- split off index code into rogue-index
+
+# 2.0.0-RC3
+
+- long subtypes are BSONTypes
+
+# 2.0.0-RC2
+
+- add BSONType type class to eliminate runtime serialization errors
+
+# 2.0.0-RC1
+
+- support for type-safe ID fields
+
+# 2.0.0-beta22
+
+- support for scala 2.9.2 and 2.10.0 (mattpap)
+- support for Model.distinct(_.field) (mattpap)
+- sbt 0.12.0 (mattpap)
+
+# 2.0.0-beta21
+
+- fix signatures for $or queries
+
+# 2.0.0-beta20
+
+- hook up readPreference, remove notion of defaultReadPreference
+
+# 2.0.0-beta19
+
+- fixed bug in $or clause serialization
+- support for DateTime fields
+- defaultReadPreference should be 'secondary'
+
+# 2.0.0-beta18
+
+- setTo overload takes an Option (setTo None == unset)
+- fixed some implicit conversions
+
+# 2.0.0-beta17
+
+- $slice support
+- list neqs
+- updated Indexing.md
+
 # 2.0.0-beta15
 
 - allow Date and List fields to act like any other field (eqs, etc)

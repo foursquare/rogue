@@ -4,10 +4,13 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.MongoHelpers.MongoSelect
 import net.liftweb.common.{Box, Full}
-import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
+import net.liftweb.mongodb.record.{BsonRecord, BsonMetaRecord, MongoRecord, MongoMetaRecord}
 import org.bson.types.BasicBSONList
 import net.liftweb.mongodb.MongoDB
-import com.mongodb.{DBCollection, DBObject, ReadPreference}
+import com.mongodb.{DBCollection, DBObject}
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
+import net.liftweb.mongodb.record.field.BsonRecordField
+import net.liftweb.record.Record
 
 object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]] {
   override def getDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
@@ -32,11 +35,11 @@ object LiftAdapter extends LiftAdapter(LiftDBCollectionFactory)
 
 class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_]]) extends QueryExecutor[MongoRecord[_] with MongoMetaRecord[_]] {
   override def defaultWriteConcern = QueryHelpers.config.defaultWriteConcern
-  override def defaultReadPreference = ReadPreference.PRIMARY
+  override lazy val optimizer = new QueryOptimizer
 
   override protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       meta: M,
-      select: Option[MongoSelect[R]]
+      select: Option[MongoSelect[M, R]]
   ): RogueSerializer[R] = {
     new RogueSerializer[R] {
       override def fromDBObject(dbo: DBObject): R = select match {
@@ -67,24 +70,59 @@ class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord
 object LiftQueryExecutor extends LiftQueryExecutor(LiftAdapter)
 
 object LiftQueryExecutorHelpers {
-  def setInstanceFieldFromDbo(instance: MongoRecord[_], dbo: DBObject, fieldName: String): Option[_] = {
-    instance.fieldByName(fieldName) match {
-      case Full(field) => field.setFromAny(dbo.get(fieldName)).toOption
-      case _ => {
-        val splitName = fieldName.split('.').toList
-        Box.!!(splitName.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
-          obj match {
-            case dbl: BasicBSONList =>
-              (for {
-                index <- 0 to dbl.size - 1
-                val item: DBObject = dbl.get(index).asInstanceOf[DBObject]
-              } yield item.get(fieldName)).toList
-            case dbo: DBObject =>
-              dbo.get(fieldName)
-            case null => null
-          }
-        })).toOption
+  import net.liftweb.record.{Field => LField}
+
+  def setInstanceFieldFromDboList(instance: BsonRecord[_], dbo: DBObject, fieldNames: List[String]): Option[_] = {
+    fieldNames match {
+      case last :: Nil =>
+        val fld: Box[LField[_, _]] = instance.fieldByName(last)
+        fld.flatMap(setLastFieldFromDbo(_, dbo, last))
+      case name :: rest =>
+        val fld: Box[LField[_, _]] = instance.fieldByName(name)
+        dbo.get(name) match {
+          case obj: DBObject => fld.flatMap(setFieldFromDbo(_, obj, rest))
+          case list: BasicBSONList => fallbackValueFromDbObject(dbo, fieldNames)
+          case null => None
       }
+      case Nil => throw new UnsupportedOperationException("was called with empty list, shouldn't possibly happen")
     }
+  }
+
+  def setFieldFromDbo(field: LField[_, _], dbo: DBObject, fieldNames: List[String]): Option[_] = {
+    if (field.isInstanceOf[BsonRecordField[_, _]]) {
+      val brf = field.asInstanceOf[BsonRecordField[_, _]]
+      val inner = brf.value.asInstanceOf[BsonRecord[_]]
+      setInstanceFieldFromDboList(inner, dbo, fieldNames)
+    } else {
+      fallbackValueFromDbObject(dbo, fieldNames)
+    }
+  }
+
+  def setLastFieldFromDbo(field: LField[_, _], dbo: DBObject, fieldName: String): Option[_] = {
+    field.setFromAny(dbo.get(fieldName)).toOption
+  }
+
+  def setInstanceFieldFromDbo(instance: MongoRecord[_], dbo: DBObject, fieldName: String): Option[_] = {
+    fieldName.contains(".") match {
+      case true =>
+        val names = fieldName.split("\\.").toList
+        setInstanceFieldFromDboList(instance, dbo, names)
+      case false =>
+        val fld: Box[LField[_, _]] = instance.fieldByName(fieldName)
+        fld.flatMap (setLastFieldFromDbo(_, dbo, fieldName))
+    }
+  }
+
+  def fallbackValueFromDbObject(dbo: DBObject, fieldNames: List[String]): Option[_] = {
+    import scala.collection.JavaConversions._
+    Box.!!(fieldNames.foldLeft(dbo: Object)((obj: Object, fieldName: String) => {
+      obj match {
+        case dbl: BasicBSONList =>
+          dbl.map(_.asInstanceOf[DBObject]).map(_.get(fieldName)).toList
+        case dbo: DBObject =>
+          dbo.get(fieldName)
+        case null => null
+      }
+    })).toOption
   }
 }

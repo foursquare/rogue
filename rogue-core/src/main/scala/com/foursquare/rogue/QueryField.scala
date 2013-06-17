@@ -4,7 +4,7 @@ package com.foursquare.rogue
 
 import com.foursquare.field.{Field, OptionalField, RequiredField}
 import com.mongodb.DBObject
-import java.util.{Calendar, Date}
+import java.util.Date
 import java.util.regex.Pattern
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -82,12 +82,21 @@ abstract class AbstractQueryField[F, V, DB, M](val field: Field[F, M]) {
   def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
-class QueryField[V, M](field: Field[V, M])
-    extends AbstractQueryField[V, V, V, M](field) {
-  override def valueToDB(v: V) = v
+class QueryField[V: BSONType, M](field: Field[V, M])
+    extends AbstractQueryField[V, V, AnyRef, M](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
-class CalendarQueryField[M](field: Field[Calendar, M]) extends AbstractQueryField[Calendar, DateTime, Date, M](field) {
+class DateQueryField[M](field: Field[Date, M]) extends AbstractQueryField[Date, DateTime, Date, M](field) {
+  override def valueToDB(d: DateTime) = d.toDate
+
+  def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
+  def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
+  def onOrBefore(d: DateTime) = new LtEqQueryClause(field.name, d.toDate)
+  def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
+}
+
+class DateTimeQueryField[M](field: Field[DateTime, M]) extends AbstractQueryField[DateTime, DateTime, Date, M](field) {
   override def valueToDB(d: DateTime) = d.toDate
 
   def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
@@ -175,10 +184,7 @@ class ForeignObjectIdQueryField[F <: ObjectId, M, T](
     new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(getId)))
 }
 
-class StringQueryField[M](override val field: Field[String, M])
-    extends AbstractQueryField[String, String, String, M](field) {
-
-  override def valueToDB(v: String): String = v
+trait StringRegexOps[V, M] { self: AbstractQueryField[V, _ <: String, _ <: String, M] =>
 
   def startsWith(s: String): RegexQueryClause[PartialIndexScan] =
     new RegexQueryClause[PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
@@ -191,6 +197,13 @@ class StringQueryField[M](override val field: Field[String, M])
 
   def regexWarningNotIndexed(p: Pattern) =
     matches(p)
+}
+
+class StringQueryField[F <: String, M](override val field: Field[F, M])
+    extends AbstractQueryField[F, F, F, M](field)
+    with StringRegexOps[F, M] {
+
+  override def valueToDB(v: F): F = v
 }
 
 class CaseClassQueryField[V, M](val field: Field[V, M]) {
@@ -234,6 +247,9 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
   def all(vs: Traversable[V]) =
     QueryHelpers.allListClause(field.name, valuesToDB(vs))
 
+  def neqs(vs: Traversable[V]) =
+    new NeQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
+
   def size(s: Int) =
     new SizeQueryClause(field.name, s)
 
@@ -249,25 +265,22 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
   def idx(i: Int): DummyField[V, M] = at(i)
 }
 
-class ListQueryField[V, M](field: Field[List[V], M])
-    extends AbstractListQueryField[V, V, V, M, List](field) {
-  override def valueToDB(v: V) = v
+class ListQueryField[V: BSONType, M](field: Field[List[V], M])
+    extends AbstractListQueryField[V, V, AnyRef, M, List](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
-class SeqQueryField[V, M](field: Field[Seq[V], M])
-    extends AbstractListQueryField[V, V, V, M, Seq](field) {
-  override def valueToDB(v: V) = v
+class StringsListQueryField[M](override val field: Field[List[String], M])
+    extends AbstractListQueryField[String, String, String, M, List](field)
+    with StringRegexOps[List[String], M] {
+
+  override def valueToDB(v: String) = v
 }
 
-class CalendarListQueryField[M](field: Field[List[Calendar], M]) extends AbstractListQueryField[Calendar, DateTime, Date, M, List](field) {
-  override def valueToDB(d: DateTime) = d.toDate
-
-  def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
-  def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
-  def onOrBefore(d: DateTime) = new LtEqQueryClause(field.name, d.toDate)
-  def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
+class SeqQueryField[V: BSONType, M](field: Field[Seq[V], M])
+    extends AbstractListQueryField[V, V, AnyRef, M, Seq](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
-
 
 class CaseClassListQueryField[V, M](field: Field[List[V], M])
     extends AbstractListQueryField[V, V, DBObject, M, List](field) {
@@ -309,24 +322,35 @@ class EnumerationListQueryField[V <: Enumeration#Value, M](field: Field[List[V],
 // *** Modify fields
 // ********************************************************************************
 
-
-abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
-  def valueToDB(v: V): DB
-  def setTo(v: V) = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
+class SafeModifyField[V, M](val field: Field[V, M]) {
   def unset = new ModifyClause(ModOps.Unset, field.name -> 1)
   def rename(newName: String) = new ModifyClause(ModOps.Rename, field.name -> newName)
 }
 
-class ModifyField[V, M](field: Field[V, M])
-    extends AbstractModifyField[V, V, M](field) {
-  def valueToDB(v: V) = v
+abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
+  def valueToDB(v: V): DB
+  def setTo(v: V): ModifyClause = new ModifyClause(ModOps.Set, field.name -> valueToDB(v))
+  def setTo(vOpt: Option[V]): ModifyClause = vOpt match {
+    case Some(v) => setTo(v)
+    case none => new SafeModifyField(field).unset
+  }
 }
 
-class CalendarModifyField[M](field: Field[Calendar, M])
-    extends AbstractModifyField[Calendar, java.util.Date, M](field) {
-  override def valueToDB(c: Calendar) = c.getTime
+class ModifyField[V: BSONType, M](field: Field[V, M])
+    extends AbstractModifyField[V, AnyRef, M](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
+}
+
+class DateModifyField[M](field: Field[Date, M])
+    extends AbstractModifyField[Date, Date, M](field) {
+  override def valueToDB(d: Date) = d
 
   def setTo(d: DateTime) = new ModifyClause(ModOps.Set, field.name -> d.toDate)
+}
+
+class DateTimeModifyField[M](field: Field[DateTime, M])
+    extends AbstractModifyField[DateTime, Date, M](field) {
+  override def valueToDB(d: DateTime) = d.toDate
 }
 
 class EnumerationModifyField[M, E <: Enumeration#Value](field: Field[E, M])
@@ -344,12 +368,16 @@ class GeoModifyField[M](field: Field[LatLong, M])
                      field.name -> QueryHelpers.list(List(lat, long)))
 }
 
-class NumericModifyField[V, M](override val field: Field[V, M]) extends ModifyField[V, M](field) {
-  def inc(v: V) = new ModifyClause(ModOps.Inc, field.name -> v)
+class NumericModifyField[V, M](override val field: Field[V, M]) extends AbstractModifyField[V, V, M](field) {
+  override def valueToDB(v: V): V = v
 
-  def bitAnd(v: V) = new ModifyBitAndClause(field.name, v)
+  def inc(v: Int) = new ModifyClause(ModOps.Inc, field.name -> v)
 
-  def bitOr(v: V) = new ModifyBitOrClause(field.name, v)
+  def inc(v: Long) = new ModifyClause(ModOps.Inc, field.name -> v)
+
+  def bitAnd(v: Int) = new ModifyBitAndClause(field.name, v)
+
+  def bitOr(v: Int) = new ModifyBitOrClause(field.name, v)
 }
 
 class BsonRecordModifyField[M, B](field: Field[B, M], asDBObject: B => DBObject)
@@ -407,14 +435,14 @@ abstract class AbstractListModifyField[V, DB, M, CC[X] <: Seq[X]](val field: Fie
                                       clauseFuncs.map(cf => cf(new DummyField[V, M](field.name, field.owner))): _*)
 }
 
-class SeqModifyField[V, M](field: Field[Seq[V], M])
-    extends AbstractListModifyField[V, V, M, Seq](field) {
-  override def valueToDB(v: V) = v
+class SeqModifyField[V: BSONType, M](field: Field[Seq[V], M])
+    extends AbstractListModifyField[V, AnyRef, M, Seq](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
-class ListModifyField[V, M](field: Field[List[V], M])
-    extends AbstractListModifyField[V, V, M, List](field) {
-  override def valueToDB(v: V) = v
+class ListModifyField[V: BSONType, M](field: Field[List[V], M])
+    extends AbstractListModifyField[V, AnyRef, M, List](field) {
+  override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
 class CaseClassListModifyField[V, M](field: Field[List[V], M])
@@ -459,19 +487,35 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
  * This class is sealed because only RequiredFields and OptionalFields should
  * be selectable. Be careful when adding subclasses of this class.
  */
-sealed abstract class SelectField[V, M](val field: Field[_, M]) {
+sealed abstract class SelectField[V, M](val field: Field[_, M], val slc: Option[(Int, Option[Int])] = None) {
   // Input will be a Box of the value, and output will either be a Box of the value or the value itself
   def valueOrDefault(v: Option[_]): Any
+  def slice(s: Int): SelectField[V, M]
+  def slice(s: Int, e: Int): SelectField[V, M]
 }
 
-final class MandatorySelectField[V, M](override val field: RequiredField[V, M])
-    extends SelectField[V, M](field) {
+final class MandatorySelectField[V, M](override val field: RequiredField[V, M],
+                                       override val slc: Option[(Int, Option[Int])] = None)
+    extends SelectField[V, M](field, slc) {
   override def valueOrDefault(v: Option[_]): Any = v.getOrElse(field.defaultValue)
+  override def slice(s: Int): MandatorySelectField[V, M] = {
+    new MandatorySelectField(field, Some((s, None)))
+  }
+  override def slice(s: Int, e: Int): MandatorySelectField[V, M] = {
+    new MandatorySelectField(field, Some((s, Some(e))))
+  }
 }
 
-final class OptionalSelectField[V, M](override val field: OptionalField[V, M])
-    extends SelectField[Option[V], M](field) {
+final class OptionalSelectField[V, M](override val field: OptionalField[V, M],
+                                      override val slc: Option[(Int, Option[Int])] = None)
+    extends SelectField[Option[V], M](field, slc) {
   override def valueOrDefault(v: Option[_]): Any = v
+  override def slice(s: Int): OptionalSelectField[V, M] = {
+    new OptionalSelectField(field, Some((s, None)))
+  }
+  override def slice(s: Int, e: Int): OptionalSelectField[V, M] = {
+    new OptionalSelectField(field, Some((s, Some(e))))
+  }
 }
 
 // ********************************************************************************

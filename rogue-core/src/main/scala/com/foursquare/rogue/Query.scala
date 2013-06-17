@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.rogue.index.MongoIndex
+import com.foursquare.index.MongoIndex
 import com.foursquare.rogue.MongoHelpers.{
     AndCondition, MongoBuilder, MongoModify, MongoOrder, MongoSelect}
 import com.mongodb.{BasicDBObjectBuilder, DBObject, ReadPreference, WriteConcern}
@@ -37,9 +37,9 @@ import scala.collection.immutable.ListMap
  * parameters. The inference system will find an implicit parameter that is type compatible with
  * what's used in the rest of the expression.
  *
- * @param M the record type being queried.
- * @param R
- * @param State a phantom type which defines the state of the builder.
+ * @tparam M the record type being queried.
+ * @tparam R
+ * @tparam State a phantom type which defines the state of the builder.
  */
 case class Query[M, R, +State](
     meta: M,
@@ -51,7 +51,7 @@ case class Query[M, R, +State](
     hint: Option[ListMap[String, Any]],
     condition: AndCondition,
     order: Option[MongoOrder],
-    select: Option[MongoSelect[R]],
+    select: Option[MongoSelect[M, R]],
     readPreference: Option[ReadPreference]
 ) {
 
@@ -445,24 +445,24 @@ case class ModifyQuery[M, +State](
     mod: MongoModify
 ) {
 
-  private def addClause[F](clause: M => ModifyClause[F]) = {
+  private def addClause(clause: M => ModifyClause) = {
     this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
 
-  def modify[F](clause: M => ModifyClause[F]) = addClause(clause)
-  def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def modify(clause: M => ModifyClause) = addClause(clause)
+  def and(clause: M => ModifyClause) = addClause(clause)
 
-  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
+  private def addClauseOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) = {
     opt match {
       case Some(v) => addClause(clause(_, v))
       case None => this
     }
   }
 
-  def modifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def modifyOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
-  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def andOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
   override def toString: String = MongoBuilder.buildModifyString(query.collectionName, this)
@@ -479,25 +479,25 @@ case class FindAndModifyQuery[M, R](
     mod: MongoModify
 ) {
 
-  private def addClause[F](clause: M => ModifyClause[F]) = {
+  private def addClause(clause: M => ModifyClause) = {
     this.copy(mod = MongoModify(clause(query.meta) :: mod.clauses))
   }
 
-  def findAndModify[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def findAndModify[F](clause: M => ModifyClause) = addClause(clause)
 
-  def and[F](clause: M => ModifyClause[F]) = addClause(clause)
+  def and[F](clause: M => ModifyClause) = addClause(clause)
 
-  private def addClauseOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) = {
+  private def addClauseOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) = {
     opt match {
       case Some(v) => addClause(clause(_, v))
       case None => this
     }
   }
 
-  def findAndModifyOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def findAndModifyOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
-  def andOpt[V, F](opt: Option[V])(clause: (M, V) => ModifyClause[F]) =
+  def andOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) =
       addClauseOpt(opt)(clause)
 
   override def toString: String = MongoBuilder.buildFindAndModifyString(query.collectionName, this, false, false, false)

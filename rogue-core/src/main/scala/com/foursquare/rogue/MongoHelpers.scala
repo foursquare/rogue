@@ -14,9 +14,9 @@ object MongoHelpers extends Rogue {
 
   sealed case class MongoOrder(terms: List[(String, Boolean)])
 
-  sealed case class MongoModify(clauses: List[ModifyClause[_]])
+  sealed case class MongoModify(clauses: List[ModifyClause])
 
-  sealed case class MongoSelect[R](fields: List[SelectField[_, _]], transformer: List[_] => R)
+  sealed case class MongoSelect[M, R](fields: List[SelectField[_, M]], transformer: List[Any] => R)
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
@@ -51,8 +51,12 @@ object MongoHelpers extends Rogue {
       rawClauses.foreach(_.extend(builder, signature))
 
       // Optional $or clause (only one per "and" chain)
-      cond.orCondition.foreach(or =>
-        builder.add("$or", QueryHelpers.list(or.conditions.map(buildCondition(_, signature = false)))))
+      cond.orCondition.foreach(or => {
+        val subclauses = or.conditions
+            .map(buildCondition(_, signature))
+            .filterNot(_.keySet.isEmpty)
+        builder.add("$or", QueryHelpers.list(subclauses))
+      })
       builder.get
     }
 
@@ -72,17 +76,22 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
-    def buildSelect[R](s: MongoSelect[R]): DBObject = {
-      buildSelectFromNames(s.fields.view.map(_.field.name))
-    }
-
-    def buildSelectFromNames(_names: Iterable[String]): DBObject = {
-      // If _names is empty, then a MongoSelect clause exists, but has an empty
+    def buildSelect[M, R](select: MongoSelect[M, R]): DBObject = {
+      val builder = BasicDBObjectBuilder.start
+      // If select.fields is empty, then a MongoSelect clause exists, but has an empty
       // list of fields. In this case (used for .exists()), we select just the
       // _id field.
-      val names = if (_names.isEmpty) List("_id") else _names
-      val builder = BasicDBObjectBuilder.start
-      names.foreach(n => builder.add(n, 1))
+      if (select.fields.isEmpty) {
+        builder.add("_id", 1)
+      } else {
+        select.fields.foreach(f => {
+          f.slc match {
+            case None => builder.add(f.field.name, 1)
+            case Some((s, None)) => builder.push(f.field.name).add("$slice", s).pop()
+            case Some((s, Some(e))) => builder.push(f.field.name).add("$slice", QueryHelpers.makeJavaList(List(s, e))).pop()
+          }
+        })
+      }
       builder.get
     }
 

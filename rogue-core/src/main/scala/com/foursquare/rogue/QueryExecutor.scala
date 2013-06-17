@@ -13,14 +13,13 @@ trait RogueSerializer[R] {
 
 trait QueryExecutor[MB] extends Rogue {
   def adapter: MongoJavaDriverAdapter[MB]
-  def optimizer: QueryOptimizer = new QueryOptimizer
+  def optimizer: QueryOptimizer
 
-  def defaultReadPreference: ReadPreference
   def defaultWriteConcern: WriteConcern
 
   protected def serializer[M <: MB, R](
       meta: M,
-      select: Option[MongoSelect[R]]
+      select: Option[MongoSelect[M, R]]
   ): RogueSerializer[R]
 
   def count[M <: MB, State](query: Query[M, _, State])
@@ -42,34 +41,44 @@ trait QueryExecutor[MB] extends Rogue {
     }
   }
 
+  def distinct[M <: MB, V, State](query: Query[M, _, State])
+                                 (field: M => Field[V, M])
+                                 (implicit ev: ShardingOk[M, State]): List[V] = {
+    if (optimizer.isEmptyQuery(query)) {
+      Nil
+    } else {
+      adapter.distinct(query, field(query.meta).name)
+    }
+  }
+
   def fetch[M <: MB, R, State](query: Query[M, R, State],
-                               readPreference: ReadPreference = defaultReadPreference)
+                               readPreference: Option[ReadPreference] = None)
                               (implicit ev: ShardingOk[M, State]): List[R] = {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
       val s = serializer[M, R](query.meta, query.select)
       val rv = new ListBuffer[R]
-      adapter.query(query, None)(dbo => rv += s.fromDBObject(dbo))
+      adapter.query(query, None, readPreference)(dbo => rv += s.fromDBObject(dbo))
       rv.toList
     }
   }
 
   def fetchOne[M <: MB, R, State, S2](query: Query[M, R, State],
-                                  readPreference: ReadPreference = defaultReadPreference)
+                                      readPreference: Option[ReadPreference] = None)
                                  (implicit ev1: AddLimit[State, S2], ev2: ShardingOk[M, S2]): Option[R] = {
     fetch(query.limit(1), readPreference).headOption
   }
 
   def foreach[M <: MB, R, State](query: Query[M, R, State],
-                                 readPreference: ReadPreference = defaultReadPreference)
+                                 readPreference: Option[ReadPreference] = None)
                                 (f: R => Unit)
                                 (implicit ev: ShardingOk[M, State]): Unit = {
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
       val s = serializer[M, R](query.meta, query.select)
-      adapter.query(query, None)(dbo => f(s.fromDBObject(dbo)))
+      adapter.query(query, None, readPreference)(dbo => f(s.fromDBObject(dbo)))
     }
   }
 
@@ -88,7 +97,7 @@ trait QueryExecutor[MB] extends Rogue {
 
   def fetchBatch[M <: MB, R, T, State](query: Query[M, R, State],
                                        batchSize: Int,
-                                       readPreference: ReadPreference = defaultReadPreference)
+                                       readPreference: Option[ReadPreference] = None)
                                       (f: List[R] => List[T])
                                       (implicit ev: ShardingOk[M, State]): List[T] = {
     if (optimizer.isEmptyQuery(query)) {
@@ -98,7 +107,7 @@ trait QueryExecutor[MB] extends Rogue {
       val rv = new ListBuffer[T]
       val buf = new ListBuffer[R]
 
-      adapter.query(query, Some(batchSize)) { dbo =>
+      adapter.query(query, Some(batchSize), readPreference) { dbo =>
         buf += s.fromDBObject(dbo)
         drainBuffer(buf, rv, f, batchSize)
       }
@@ -196,27 +205,29 @@ trait QueryExecutor[MB] extends Rogue {
   }
 
   def iterate[S, M <: MB, R, State](query: Query[M, R, State],
-                                    state: S)
+                                    state: S,
+                                    readPreference: Option[ReadPreference] = None)
                                    (handler: (S, Iter.Event[R]) => Iter.Command[S])
                                    (implicit ev: ShardingOk[M, State]): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Iter.EOF).state
     } else {
       val s = serializer[M, R](query.meta, query.select)
-      adapter.iterate(query, state, s.fromDBObject _)(handler)
+      adapter.iterate(query, state, s.fromDBObject _, readPreference)(handler)
     }
   }
 
   def iterateBatch[S, M <: MB, R, State](query: Query[M, R, State],
                                          batchSize: Int,
-                                         state: S)
+                                         state: S,
+                                         readPreference: Option[ReadPreference] = None)
                                         (handler: (S, Iter.Event[List[R]]) => Iter.Command[S])
                                         (implicit ev: ShardingOk[M, State]): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Iter.EOF).state
     } else {
       val s = serializer[M, R](query.meta, query.select)
-      adapter.iterateBatch(query, batchSize, state, s.fromDBObject _)(handler)
+      adapter.iterateBatch(query, batchSize, state, s.fromDBObject _, readPreference)(handler)
     }
   }
 }

@@ -4,16 +4,16 @@ package com.foursquare.rogue
 import com.foursquare.rogue.LiftRogue._
 import com.foursquare.rogue.Iter._
 import com.mongodb.ReadPreference
-
+import java.util.Calendar
 import java.util.regex.Pattern
 import org.bson.types.ObjectId
 import org.junit.{Before, After, Ignore, Test}
-import org.specs.SpecsMatchers
+import org.specs2.matcher.JUnitMustMatchers
 
 /**
  * Contains tests that test the interaction of Rogue with a real mongo.
  */
-class EndToEndTest extends SpecsMatchers {
+class EndToEndTest extends JUnitMustMatchers {
   def baseTestVenue(): Venue = {
     Venue.createRecord
          .legacyid(123)
@@ -29,6 +29,7 @@ class EndToEndTest extends SpecsMatchers {
          .claims(List(VenueClaimBson.createRecord.userid(1234).status(ClaimStatus.pending),
                       VenueClaimBson.createRecord.userid(5678).status(ClaimStatus.approved)))
          .lastClaim(VenueClaimBson.createRecord.userid(5678).status(ClaimStatus.approved))
+         .tags(List("test tag1", "some tag"))
   }
 
   def baseTestVenueClaim(vid: ObjectId): VenueClaim = {
@@ -192,8 +193,8 @@ class EndToEndTest extends SpecsMatchers {
 
     // eqs
     Venue.where(_._id eqs v.id).fetch().map(_.id)                         must_== List(v.id)
-    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.SECONDARY).fetch().map(_.id)        must_== List(v.id)
-    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.PRIMARY).fetch().map(_.id)       must_== List(v.id)
+    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.secondary).fetch().map(_.id)        must_== List(v.id)
+    Venue.where(_._id eqs v.id).setReadPreference(ReadPreference.primary).fetch().map(_.id)       must_== List(v.id)
   }
 
   @Test
@@ -228,6 +229,7 @@ class EndToEndTest extends SpecsMatchers {
     Venue.where(_._id eqs v.id).and(_.venuename matches Pattern.compile("Tes. v", Pattern.CASE_INSENSITIVE)).count must_== 1
     Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid in List(v.legacyid.value)).count must_== 1
     Venue.where(_._id eqs v.id).and(_.venuename matches "test .*".r).and(_.legacyid nin List(v.legacyid.value)).count must_== 0
+    Venue.where(_.tags matches """some\s.*""".r).count must_== 1
   }
 
   @Test
@@ -292,6 +294,26 @@ class EndToEndTest extends SpecsMatchers {
   }
 
   @Test
+  def testDeserializationWithIteratee() {
+    val inner = CalendarInner.createRecord.date(Calendar.getInstance())
+    CalendarFld.createRecord.inner(inner).save
+
+    val q = CalendarFld select(_.inner.subfield(_.date))
+    val cnt = q.count()
+    val list = q.iterate(List[Calendar]()) {
+      case (list, Iter.Item(cal)) =>
+        val c: Calendar = cal.get //class cast exception was here
+        c.set(Calendar.HOUR_OF_DAY, 0)
+        Iter.Continue(c :: list)
+      case (list, Iter.Error(e)) => e.printStackTrace(); Iter.Continue(list)
+      case (list, _) => Iter.Return(list)
+    }
+    list.length must_== (cnt)
+
+    CalendarFld.bulkDelete_!!!()
+  }
+
+  @Test
   def testSharding {
     val l1 = Like.createRecord.userid(1).checkin(111).save
     val l2 = Like.createRecord.userid(2).checkin(111).save
@@ -342,5 +364,22 @@ class EndToEndTest extends SpecsMatchers {
     q.skip(12).count() must_== 0
     q.skip(3).limit(5).count() must_== 5
     q.skip(8).limit(4).count() must_== 2
+  }
+
+  @Test
+  def testDistinct {
+    (1 to 5).foreach(_ => baseTestVenue().userid(1).save)
+    (1 to 5).foreach(_ => baseTestVenue().userid(2).save)
+    (1 to 5).foreach(_ => baseTestVenue().userid(3).save)
+    Venue.where(_.mayor eqs 789).distinct(_.userid).length must_== 3
+    Venue.where(_.mayor eqs 789).countDistinct(_.userid) must_== 3
+  }
+
+  @Test
+  def testSlice {
+    baseTestVenue().tags(List("1", "2", "3", "4")).save
+    Venue.select(_.tags.slice(2)).get() must_== Some(List("1", "2"))
+    Venue.select(_.tags.slice(-2)).get() must_== Some(List("3", "4"))
+    Venue.select(_.tags.slice(1, 2)).get() must_== Some(List("2", "3"))
   }
 }

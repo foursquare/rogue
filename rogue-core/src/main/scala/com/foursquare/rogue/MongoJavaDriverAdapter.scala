@@ -4,8 +4,8 @@ package com.foursquare.rogue
 
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.Iter._
-import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, Bytes, CommandResult, DBCollection,
-  DBCursor, DBObject, WriteConcern}
+import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, CommandResult, DBCollection,
+  DBCursor, DBObject, ReadPreference, WriteConcern}
 import scala.collection.mutable.ListBuffer
 
 trait DBCollectionFactory[MB] {
@@ -51,10 +51,10 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       val cmd = new BasicDBObject()
       cmd.put("count", query.collectionName)
       cmd.put("query", condition)
-      
+
       queryClause.lim.filter(_ > 0).foreach( cmd.put("limit", _) )
       queryClause.sk.filter(_ > 0).foreach( cmd.put("skip", _) )
-      
+
       // 4sq dynamically throttles ReadPreference via an override of
       // DBCursor creation.  We don't want to override for the whole
       // DBCollection because those are cached for the life of the DB
@@ -63,7 +63,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
         result.getErrorMessage match {
           // pretend count is zero craziness from the mongo-java-driver
           case "ns does not exist" | "ns missing" => 0L
-          case _ => 
+          case _ =>
             result.throwOnError()
             0L
         }
@@ -85,6 +85,24 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     runCommand(description, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
       coll.distinct(key, cnd).size()
+    }
+  }
+
+  def distinct[M <: MB, R](query: Query[M, _, _],
+                           key: String): List[R] = {
+    val queryClause = transformer.transformQuery(query)
+    validator.validateQuery(queryClause)
+    val cnd = buildCondition(queryClause.condition)
+
+    // TODO: fix this so it looks like the correct mongo shell command
+    val description = buildConditionString("distinct", query.collectionName, queryClause)
+
+    runCommand(description, queryClause) {
+      val coll = dbCollectionFactory.getDBCollection(query)
+      val rv = new ListBuffer[R]
+      val rj = coll.distinct(key, cnd)
+      for (i <- 0 until rj.size) rv += rj.get(i).asInstanceOf[R]
+      rv.toList
     }
   }
 
@@ -145,9 +163,10 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   }
 
   def query[M <: MB](query: Query[M, _, _],
-                     batchSize: Option[Int])
+                     batchSize: Option[Int],
+                     readPreference: Option[ReadPreference])
                     (f: DBObject => Unit): Unit = {
-    doQuery("find", query, batchSize){cursor =>
+    doQuery("find", query, batchSize, readPreference){cursor =>
       while (cursor.hasNext)
         f(cursor.next)
     }
@@ -155,7 +174,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
 
   def iterate[M <: MB, R, S](query: Query[M, R, _],
                              initialState: S,
-                             f: DBObject => R)
+                             f: DBObject => R,
+                             readPreference: Option[ReadPreference] = None)
                             (handler: (S, Event[R]) => Command[S]): S = {
     def getObject(cursor: DBCursor): Either[Exception, R] = {
       try {
@@ -180,7 +200,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       }
     }
 
-    doQuery("find", query, None)(cursor =>
+    doQuery("find", query, None, readPreference)(cursor =>
       iter(cursor, initialState)
     )
   }
@@ -188,7 +208,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   def iterateBatch[M <: MB, R, S](query: Query[M, R, _],
                                   batchSize: Int,
                                   initialState: S,
-                                  f: DBObject => R)
+                                  f: DBObject => R,
+                                  readPreference: Option[ReadPreference] = None)
                                  (handler: (S, Event[List[R]]) => Command[S]): S = {
     val buf = new ListBuffer[R]
 
@@ -221,14 +242,14 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       }
     }
 
-    doQuery("find", query, Some(batchSize))(cursor => {
+    doQuery("find", query, Some(batchSize), readPreference)(cursor => {
       iter(cursor, initialState)
     })
   }
 
 
   def explain[M <: MB](query: Query[M, _, _]): String = {
-    doQuery("find", query, None){cursor =>
+    doQuery("find", query, None, None){cursor =>
       cursor.explain.toString
     }
   }
@@ -236,7 +257,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   private def doQuery[M <: MB, T](
       operation: String,
       query: Query[M, _, _],
-      batchSize: Option[Int]
+      batchSize: Option[Int],
+      readPreference: Option[ReadPreference]
   )(
       f: DBCursor => T
   ): T = {
@@ -262,7 +284,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
         queryClause.lim.foreach(cursor.limit _)
         queryClause.sk.foreach(cursor.skip _)
         ord.foreach(cursor.sort _)
-        queryClause.readPreference.foreach(cursor.setReadPreference _)
+        readPreference.orElse(queryClause.readPreference).foreach(cursor.setReadPreference _)
         queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
         queryClause.comment.foreach(cursor addSpecial("$comment", _))
         hnt.foreach(cursor hint _)
