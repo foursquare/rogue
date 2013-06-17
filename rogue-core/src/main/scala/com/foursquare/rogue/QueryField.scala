@@ -422,7 +422,7 @@ abstract class AbstractListModifyField[V, DB, M, CC[X] <: Seq[X]](val field: Fie
     new ModifyClause(ModOps.PullAll,
                      field.name -> QueryHelpers.list(valuesToDB(vs)))
 
-  def $: Field[V, M] = new DummyField[V, M](field.name + ".$", field.owner)
+  def $ = new SelectableDummyField[V, M](field.name + ".$", field.owner)
 
   def pullWhere(clauseFuncs: (Field[V, M] => QueryClause[_])*) =
     new ModifyPullWithPredicateClause(
