@@ -4,6 +4,7 @@ package com.foursquare.rogue
 
 import com.mongodb.DBObject
 import java.util.Date
+import java.util.regex.Pattern
 import org.bson.types.ObjectId
 
 trait BSONType[T] {
@@ -36,6 +37,9 @@ object BSONType {
   }
   implicit object DateIsBSONType extends BSONType[Date] {
     override def asBSONObject(v: Date): AnyRef = v
+  }
+  implicit object PatternIsBSONType extends BSONType[Pattern] {
+    override def asBSONObject(v: Pattern): AnyRef = v
   }
   implicit object DBObjectIsBSONType extends BSONType[DBObject] {
     override def asBSONObject(v: DBObject): AnyRef = v
