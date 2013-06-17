@@ -193,6 +193,11 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.legacyid eqs 1).select(_.tags.slice(4)).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : { "$slice" : 4}})"""
     Venue.where(_.legacyid eqs 1).select(_.tags.slice(4, 7)).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : { "$slice" : [ 4 , 7]}})"""
 
+    Venue.where(_.legacyid eqs 1)
+         .and(_.claims elemMatch (_.status eqs ClaimStatus.approved,
+                                  _.userid gt 2097)).toString() must_== """db.venues.find({ "legid" : 1 , "claims" : { "$elemMatch" : { "uid" : { "$gt" : 2097} , "status" : "Approved"}}})"""
+
+
     // TODO: case class list fields
     // Comment.select(_.comments.unsafeField[Long]("userid")).toString() must_== """db.venues.find({ }, { "comments.userid" : 1})"""
 

@@ -144,7 +144,8 @@ case class EqClause[V, Ind <: MaybeIndexed](override val fieldName: String, valu
   override def withExpectedIndexBehavior(b: MaybeIndexed): EqClause[V, Ind] = this.copy(expectedIndexBehavior = b)
 }
 
-case class WithinCircleClause[V](override val fieldName: String, lat: Double, lng: Double, radius: Double, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
+case class WithinCircleClause[V](override val fieldName: String, lat: Double, lng: Double, radius: Double, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     val value = if (signature) 0 else QueryHelpers.list(List(QueryHelpers.list(List(lat, lng)), radius))
     q.push("$within").add("$center", value).pop
@@ -152,7 +153,8 @@ case class WithinCircleClause[V](override val fieldName: String, lat: Double, ln
   override def withExpectedIndexBehavior(b: MaybeIndexed): WithinCircleClause[V] = this.copy(expectedIndexBehavior = b)
 }
 
-case class WithinBoxClause[V](override val fieldName: String, lat1: Double, lng1: Double, lat2: Double, lng2: Double, override val expectedIndexBehavior: MaybeIndexed = Index) extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
+case class WithinBoxClause[V](override val fieldName: String, lat1: Double, lng1: Double, lat2: Double, lng2: Double, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
   override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
     val value = if (signature) 0 else {
       QueryHelpers.list(List(QueryHelpers.list(lat1, lng1), QueryHelpers.list(lat2, lng2)))
@@ -160,6 +162,17 @@ case class WithinBoxClause[V](override val fieldName: String, lat1: Double, lng1
     q.push("$within").add("$box", value).pop
   }
   override def withExpectedIndexBehavior(b: MaybeIndexed): WithinBoxClause[V] = this.copy(expectedIndexBehavior = b)
+}
+
+case class ElemMatchWithPredicateClause[V](override val fieldName: String, clauses: Seq[QueryClause[_]], override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, DocumentScan](fieldName, DocumentScan) {
+  override def extend(q: BasicDBObjectBuilder, signature: Boolean): Unit = {
+    import com.foursquare.rogue.MongoHelpers.AndCondition
+    val nested = q.push("$elemMatch")
+    MongoHelpers.MongoBuilder.buildCondition(AndCondition(clauses.toList, None), nested, signature)
+    nested.pop
+  }
+  override def withExpectedIndexBehavior(b: MaybeIndexed): ElemMatchWithPredicateClause[V] = this.copy(expectedIndexBehavior = b)
 }
 
 class ModifyClause(val operator: ModOps.Value, fields: (String, _)*) {

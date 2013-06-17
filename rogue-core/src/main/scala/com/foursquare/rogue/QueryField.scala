@@ -305,6 +305,13 @@ class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObjec
   def unsafeField[V](name: String): DummyField[V, M] = {
     new DummyField[V, M](field.name + "." + name, field.owner)
   }
+
+  def elemMatch[V](clauseFuncs: (B => QueryClause[_])*) = {
+    new ElemMatchWithPredicateClause(
+      field.name,
+      clauseFuncs.map(cf => cf(rec))
+    )
+  }
 }
 
 class MapQueryField[V, M](val field: Field[Map[String, V], M]) {
