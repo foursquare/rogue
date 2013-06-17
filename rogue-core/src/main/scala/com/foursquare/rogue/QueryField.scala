@@ -12,9 +12,9 @@ import scala.util.matching.Regex
 
 object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte",
                                    "$in", "$nin", "$near", "$all", "$size",
-                                   "$exists", "$type", "$mod") {
+                                   "$exists", "$type", "$mod", "$nearSphere", "$maxDistance") {
   type Op = Value
-  val Ne, Lt, Gt, LtEq, GtEq, In, Nin, Near, All, Size, Exists, Type, Mod = Value
+  val Ne, Lt, Gt, LtEq, GtEq, In, Nin, Near, All, Size, Exists, Type, Mod, NearSphere, MaxDistance = Value
 }
 
 object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAll",
@@ -128,6 +128,9 @@ class GeoQueryField[M](field: Field[LatLong, M])
 
   def near(lat: Double, lng: Double, radius: Degrees) =
     new NearQueryClause(field.name, QueryHelpers.list(List(lat, lng, QueryHelpers.radius(radius))))
+
+  def nearSphere(lat: Double, lng: Double, radians: Radians) =
+    new NearSphereQueryClause(field.name, lat, lng, radians)
 
   def withinCircle(lat: Double, lng: Double, radius: Degrees) =
     new WithinCircleClause(field.name, lat, lng, QueryHelpers.radius(radius))

@@ -69,6 +69,15 @@ case class NearQueryClause[V](override val fieldName: String, v: V, override val
   override def withExpectedIndexBehavior(b: MaybeIndexed): NearQueryClause[V] = this.copy(expectedIndexBehavior = b)
 }
 
+case class NearSphereQueryClause[V](override val fieldName: String, lat: Double, lng: Double, radians: Radians, override val expectedIndexBehavior: MaybeIndexed = Index)
+    extends IndexableQueryClause[V, PartialIndexScan](fieldName, PartialIndexScan) {
+  override def extend(q: BasicDBObjectBuilder, signature: Boolean) {
+    q.add(CondOps.NearSphere.toString, if (signature) 0 else QueryHelpers.list(List(lat, lng)))
+    q.add(CondOps.MaxDistance.toString, if (signature) 0 else radians.value)
+  }
+  override def withExpectedIndexBehavior(b: MaybeIndexed): NearSphereQueryClause[V] = this.copy(expectedIndexBehavior = b)
+}
+
 case class ModQueryClause[V](override val fieldName: String, v: java.util.List[V], override val expectedIndexBehavior: MaybeIndexed = Index)
     extends IndexableQueryClause[java.util.List[V], IndexScan](fieldName, IndexScan, CondOps.Mod -> v) {
   override def withExpectedIndexBehavior(b: MaybeIndexed): ModQueryClause[V] = this.copy(expectedIndexBehavior = b)

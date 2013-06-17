@@ -9,6 +9,7 @@ import net.liftweb.json.JsonAST.{JObject, JValue}
 import net.liftweb.mongodb.{JObjectParser, ObjectIdSerializer}
 
 case class Degrees(value: Double)
+case class Radians(value: Double)
 case class LatLong(lat: Double, long: Double)
 
 object QueryHelpers {

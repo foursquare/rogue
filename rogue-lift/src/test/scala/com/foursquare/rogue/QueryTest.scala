@@ -115,6 +115,7 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.geolatlng neqs (31.0, 23.0))                   .toString() must_== """db.venues.find({ "latlng" : { "$ne" : [ 31.0 , 23.0]}})"""
     Venue.where(_.geolatlng eqs LatLong(45.0, 50.0))             .toString() must_== """db.venues.find({ "latlng" : [ 45.0 , 50.0]})"""
     Venue.where(_.geolatlng neqs LatLong(31.0, 23.0))            .toString() must_== """db.venues.find({ "latlng" : { "$ne" : [ 31.0 , 23.0]}})"""
+    Venue.where(_.geolatlng nearSphere (39.0, -74.0, Radians(1.0))).toString() must_== """db.venues.find({ "latlng" : { "$nearSphere" : [ 39.0 , -74.0] , "$maxDistance" : 1.0}})"""
 
     // ObjectId before, after, between
     Venue.where(_._id before d2)       .toString() must_== """db.venues.find({ "_id" : { "$lt" : { "$oid" : "%s"}}})""".format(oid2.toString)
@@ -358,6 +359,7 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.geolatlng withinCircle(1.0, 2.0, Degrees(0.3))).signature() must_== """db.venues.find({ "latlng" : { "$within" : { "$center" : 0}}})"""
     Venue.where(_.geolatlng withinBox(1.0, 2.0, 3.0, 4.0))       .signature() must_== """db.venues.find({ "latlng" : { "$within" : { "$box" : 0}}})"""
     Venue.where(_.geolatlng eqs (45.0, 50.0)).signature() must_== """db.venues.find({ "latlng" : 0})"""
+    Venue.where(_.geolatlng nearSphere (39.0, -74.0, Radians(1.0)))    .signature() must_== """db.venues.find({ "latlng" : { "$nearSphere" : 0 , "$maxDistance" : 0}})"""
 
     // id, date range
     Venue.where(_._id before d2).signature()          must_== """db.venues.find({ "_id" : { "$lt" : 0}})"""
