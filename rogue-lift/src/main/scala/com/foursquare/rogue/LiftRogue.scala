@@ -10,10 +10,11 @@ import com.foursquare.index.IndexBuilder
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Date
 import net.liftweb.json.JsonAST.{JArray, JInt}
-import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
+import net.liftweb.mongodb.record.{BsonRecord, MongoRecord, MongoMetaRecord}
 import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField, Record}
 import net.liftweb.mongodb.record.field.{
-    BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
+    BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField,
+    ObjectIdPk}
 import org.bson.types.ObjectId
 import net.liftweb.record.field.EnumField
 
@@ -155,9 +156,9 @@ trait LiftRogue extends Rogue {
     new EnumerationListQueryField[F, M](f)
 
   implicit def foreignObjectIdFieldToForeignObjectIdQueryField[M <: BsonRecord[M],
-                                                               T <: MongoRecord[T] with MongoId[T]]
+                                                               T <: MongoRecord[T] with ObjectIdPk[T]]
       (f: Field[ObjectId, M] with HasMongoForeignObjectId[T]): ForeignObjectIdQueryField[ObjectId, M, T] =
-    new ForeignObjectIdQueryField[ObjectId, M, T](f, _.id)
+    new ForeignObjectIdQueryField[ObjectId, M, T](f, _.id.value)
 
   implicit def intFieldtoNumericQueryField[M <: BsonRecord[M], F](f: Field[Int, M]): NumericQueryField[Int, M] =
     new NumericQueryField(f)

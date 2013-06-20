@@ -16,7 +16,7 @@ import org.junit._
 import org.specs2.matcher.JUnitMustMatchers
 
 
-class TestModel extends MongoRecord[TestModel] with MongoId[TestModel] {
+class TestModel extends MongoRecord[TestModel] with ObjectIdPk[TestModel] {
   def meta = TestModel
   object a extends IntField(this)
   object b extends IntField(this)
@@ -32,7 +32,7 @@ object TestModel extends TestModel with MongoMetaRecord[TestModel] with IndexedR
   override def collectionName = "model"
 
   override val mongoIndexList = List(
-    TestModel.index(_._id, Asc),
+    TestModel.index(_.id, Asc),
     TestModel.index(_.a, Asc, _.b, Asc, _.c, Asc),
     TestModel.index(_.m, Asc, _.a, Asc),
     TestModel.index(_.l, Asc),
@@ -172,11 +172,11 @@ class MongoIndexCheckerTest extends JUnitMustMatchers {
     // Overspecifed queries
     val id = new ObjectId
     val d = new DateTime
-    yes(TestModel where (_._id eqs id) and (_.d eqs 4))
-    yes(TestModel where (_._id in List(id)) and (_.d eqs 4))
-    no(TestModel where (_._id after d) scan (_.d eqs 4))
-    no(TestModel iscan (_._id after d) iscan (_.d eqs 4))
-    yes(TestModel iscan (_._id after d) scan (_.d eqs 4))
+    yes(TestModel where (_.id eqs id) and (_.d eqs 4))
+    yes(TestModel where (_.id in List(id)) and (_.d eqs 4))
+    no(TestModel where (_.id after d) scan (_.d eqs 4))
+    no(TestModel iscan (_.id after d) iscan (_.d eqs 4))
+    yes(TestModel iscan (_.id after d) scan (_.d eqs 4))
 
     // Multikeys
     yes(TestModel scan (_.m at "foo" eqs 2))
