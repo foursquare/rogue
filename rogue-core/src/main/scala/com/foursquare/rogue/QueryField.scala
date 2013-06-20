@@ -52,9 +52,17 @@ object MongoType extends Enumeration {
 // The types of fields that can be queried, and the particular query operations that each supports
 // are defined below.
 
+/**
+ * Trait representing a field and all the operations on it.
+ *
+ * @tparam F the underlying type of the field
+ * @tparam V the type of values allowed to be compared to the field
+ * @tparam DB the type V is converted into in the BSON representation of the field
+ * @tparam M the type of the owner of the field
+ */
 abstract class AbstractQueryField[F, V, DB, M](val field: Field[F, M]) {
   def valueToDB(v: V): DB
-  def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB _)
+  def valuesToDB(vs: Traversable[V]) = vs.map(valueToDB)
 
   def eqs(v: V) = EqClause(field.name, valueToDB(v))
   def neqs(v: V) = new NeQueryClause(field.name, valueToDB(v))
@@ -78,7 +86,6 @@ abstract class AbstractQueryField[F, V, DB, M](val field: Field[F, M]) {
     new BetweenQueryClause(field.name, valueToDB(range._1), valueToDB(range._2))
 
   def exists(b: Boolean) = new ExistsQueryClause(field.name, b)
-
   def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 }
 
@@ -87,8 +94,20 @@ class QueryField[V: BSONType, M](field: Field[V, M])
   override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
 }
 
-class DateQueryField[M](field: Field[Date, M]) extends AbstractQueryField[Date, DateTime, Date, M](field) {
+class DateQueryField[M](field: Field[Date, M])
+    extends AbstractQueryField[Date, DateTime, Date, M](field) {
   override def valueToDB(d: DateTime) = d.toDate
+
+  def eqs(d: Date) = EqClause(field.name, d)
+  def neqs(d: Date) = new NeQueryClause(field.name, d)
+
+  def between(d1: Date, d2: Date) =
+    new BetweenQueryClause(field.name, d1, d2)
+
+  def before(d: Date) = new LtQueryClause(field.name, d)
+  def after(d: Date) = new GtQueryClause(field.name, d)
+  def onOrBefore(d: Date) = new LtEqQueryClause(field.name, d)
+  def onOrAfter(d: Date) = new GtEqQueryClause(field.name, d)
 
   def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
   def after(d: DateTime) = new GtQueryClause(field.name, d.toDate)
@@ -96,7 +115,8 @@ class DateQueryField[M](field: Field[Date, M]) extends AbstractQueryField[Date, 
   def onOrAfter(d: DateTime) = new GtEqQueryClause(field.name, d.toDate)
 }
 
-class DateTimeQueryField[M](field: Field[DateTime, M]) extends AbstractQueryField[DateTime, DateTime, Date, M](field) {
+class DateTimeQueryField[M](field: Field[DateTime, M])
+    extends AbstractQueryField[DateTime, DateTime, Date, M](field) {
   override def valueToDB(d: DateTime) = d.toDate
 
   def before(d: DateTime) = new LtQueryClause(field.name, d.toDate)
@@ -187,7 +207,8 @@ class ForeignObjectIdQueryField[F <: ObjectId, M, T](
     new NinQueryClause(field.name, QueryHelpers.validatedList(objs.map(getId)))
 }
 
-trait StringRegexOps[V, M] { self: AbstractQueryField[V, _ <: String, _ <: String, M] =>
+trait StringRegexOps[V, M] {
+  self: AbstractQueryField[V, _ <: String, _ <: String, M] =>
 
   def startsWith(s: String): RegexQueryClause[PartialIndexScan] =
     new RegexQueryClause[PartialIndexScan](field.name, PartialIndexScan, Pattern.compile("^" + Pattern.quote(s)))
@@ -210,8 +231,9 @@ class StringQueryField[F <: String, M](override val field: Field[F, M])
 }
 
 class CaseClassQueryField[V, M](val field: Field[V, M]) {
-  def unsafeField[F](name: String): SelectableDummyField[F, M] =
+  def unsafeField[F](name: String): SelectableDummyField[F, M] = {
     new SelectableDummyField[F, M](field.name + "." + name, field.owner)
+  }
 }
 
 class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, defaultValue: B)
@@ -229,7 +251,8 @@ class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, 
   def subselect[V](f: B => Field[V, B]): SelectableDummyField[V, M] = subfield(f)
 }
 
-abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field[CC[F], M]) extends AbstractQueryField[CC[F], V, DB, M](field) {
+abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field[CC[F], M])
+    extends AbstractQueryField[CC[F], V, DB, M](field) {
 
   def all(vs: Traversable[V]) =
     QueryHelpers.allListClause(field.name, valuesToDB(vs))
@@ -302,8 +325,9 @@ class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObjec
 }
 
 class MapQueryField[V, M](val field: Field[Map[String, V], M]) {
-  def at(key: String): SelectableDummyField[V, M] =
+  def at(key: String): SelectableDummyField[V, M] = {
     new SelectableDummyField(field.name + "." + key, field.owner)
+  }
 }
 
 class EnumerationListQueryField[V <: Enumeration#Value, M](field: Field[List[V], M])

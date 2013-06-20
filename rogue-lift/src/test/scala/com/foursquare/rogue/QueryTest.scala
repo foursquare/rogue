@@ -129,6 +129,8 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.last_updated between (d1, d2)).toString() must_== """db.venues.find({ "last_updated" : { "$gte" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lte" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
     Venue.where(_.last_updated between Tuple2(d1, d2)).toString() must_== """db.venues.find({ "last_updated" : { "$gte" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lte" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
     Venue.where(_.last_updated eqs d1)          .toString() must_== """db.venues.find({ "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}})"""
+    Venue.where(_.last_updated eqs d1.toDate)    .toString() must_== """db.venues.find({ "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}})"""
+    Venue.where(_.last_updated after d1.toDate)  .toString() must_== """db.venues.find({ "last_updated" : { "$gt" : { "$date" : "2010-05-01T00:00:00.000Z"}}})"""
 
     // Case class list field
     Comment.where(_.comments.unsafeField[Int]("z") contains 123).toString() must_== """db.comments.find({ "comments.z" : 123})"""
@@ -164,6 +166,7 @@ class QueryTest extends JUnitMustMatchers {
     // ordered queries
     Venue.where(_.mayor eqs 1).orderAsc(_.legacyid).toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "legid" : 1})"""
     Venue.where(_.mayor eqs 1).orderDesc(_.legacyid).andAsc(_.userid).toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "legid" : -1 , "userid" : 1})"""
+    Venue.where(_.mayor eqs 1).orderDesc(_.lastClaim.subfield(_.date)).toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "lastClaim.date" : -1})"""
     Venue.where(_.mayor eqs 1).orderNaturalAsc.toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "$natural" : 1})"""
     Venue.where(_.mayor eqs 1).orderNaturalDesc.toString() must_== """db.venues.find({ "mayor" : 1}).sort({ "$natural" : -1})"""
 

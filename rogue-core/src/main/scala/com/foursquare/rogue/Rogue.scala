@@ -34,7 +34,6 @@ trait Rogue {
 
   implicit def rstringFieldToStringQueryField[F <: String, M](f: RField[F, M]): StringQueryField[F, M] = new StringQueryField(f)
   implicit def robjectIdFieldToObjectIdQueryField[F <: ObjectId, M](f: RField[F, M]): ObjectIdQueryField[F, M] = new ObjectIdQueryField[F, M](f)
-  implicit def rdateFieldToQueryField[M](f: RField[Date, M]): QueryField[Date, M] = new QueryField(f)
   implicit def rdateFieldToDateQueryField[M](f: RField[Date, M]): DateQueryField[M] = new DateQueryField(f)
   implicit def rdatetimeFieldToDateQueryField[M](f: RField[DateTime, M]): DateTimeQueryField[M] = new DateTimeQueryField(f)
   implicit def rdbobjectFieldToQueryField[M](f: RField[DBObject, M]): QueryField[DBObject, M] = new QueryField(f)

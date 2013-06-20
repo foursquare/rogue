@@ -12,8 +12,8 @@ import java.util.Date
 import net.liftweb.json.JsonAST.{JArray, JInt}
 import net.liftweb.mongodb.record.{BsonRecord, MongoId, MongoRecord, MongoMetaRecord}
 import net.liftweb.record.{Field, MandatoryTypedField, OptionalTypedField, Record}
-import net.liftweb.mongodb.record.field.{
-    BsonRecordField, BsonRecordListField, MongoCaseClassField, MongoCaseClassListField}
+import net.liftweb.mongodb.record.field.{ BsonRecordField, BsonRecordListField, MongoCaseClassField,
+  MongoCaseClassListField}
 import org.bson.types.ObjectId
 import net.liftweb.record.field.EnumField
 
