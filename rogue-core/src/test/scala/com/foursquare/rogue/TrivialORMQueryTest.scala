@@ -68,12 +68,6 @@ object TrivialORM {
       Query[M, R, InitialState](
         meta, meta.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
     }
-
-    implicit def meta2modifyQuery[M <: Meta[R], R]
-        (meta: M with Meta[R])
-        (implicit ev: ShardingOk[M, ShardKeyNotSpecified]): ModifyQuery[M, ShardKeyNotSpecified] = {
-      ModifyQuery[M, ShardKeyNotSpecified](meta2Query(meta), MongoModify(Nil))
-    }
   }
 }
 

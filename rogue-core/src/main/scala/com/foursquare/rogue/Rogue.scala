@@ -20,23 +20,6 @@ import org.joda.time.DateTime
  */
 trait Rogue {
 
-  /* A couple of implicit conversions that take a query builder, and convert it to a modify. This allows
-   * users to write "RecordType.where(...).modify(...)".
-   */
-
-  implicit def queryBuilderToModifyQuery[M, R, State <: Unordered with Unselected with Unlimited with Unskipped]
-    (query: Query[M, R, State])
-    (implicit ev: ShardingOk[M, State]): ModifyQuery[M, State] = {
-    new ModifyQuery[M, State](query, MongoModify(Nil))
-  }
-
-  implicit def queryBuilderToFindAndModifyQuery[M, R, State <: Unlimited with Unskipped]
-    (query: Query[M, R, State])
-    (implicit ev: RequireShardKey[M, State]): FindAndModifyQuery[M, R] = {
-    FindAndModifyQuery[M, R](query, MongoModify(Nil))
-  }
-
-
   // QueryField implicits
   implicit def rbooleanFieldtoQueryField[M](f: RField[Boolean, M]): QueryField[Boolean, M] = new QueryField(f)
   implicit def rcharFieldtoQueryField[M](f: RField[Char, M]): QueryField[Char, M] = new QueryField(f)

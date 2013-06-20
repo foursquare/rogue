@@ -218,8 +218,32 @@ case class Query[M, R, +State](
 
   def noop()
           (implicit ev1: Required[State, Unselected with Unlimited with Unskipped],
-           ev2: ShardingOk[M, State]): ModifyQuery[M, State] =
-      ModifyQuery(this, MongoModify(Nil))
+           ev2: ShardingOk[M, State]): ModifyQuery[M, State] = {
+    ModifyQuery(this, MongoModify(Nil))
+  }
+
+  def modify(clause: M => ModifyClause)
+            (implicit ev1: Required[State, Unselected with Unlimited with Unskipped],
+             ev2: ShardingOk[M, State]): ModifyQuery[M, State] = {
+    ModifyQuery(this, MongoModify(Nil)).modify(clause)
+  }
+  def modifyOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause)
+                  (implicit ev1: Required[State, Unselected with Unlimited with Unskipped],
+                   ev2: ShardingOk[M, State]): ModifyQuery[M, State] = {
+    ModifyQuery(this, MongoModify(Nil)).modifyOpt(opt)(clause)
+  }
+
+  def findAndModify[F](clause: M => ModifyClause)
+                      (implicit ev1: Required[State, Unlimited with Unskipped],
+                      ev2: RequireShardKey[M, State]): FindAndModifyQuery[M, R] = {
+    FindAndModifyQuery[M, R](this, MongoModify(Nil)).findAndModify(clause)
+  }
+
+  def findAndModifyOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause)
+                      (implicit ev1: Required[State, Unlimited with Unskipped],
+                       ev2: RequireShardKey[M, State]): FindAndModifyQuery[M, R] = {
+    FindAndModifyQuery[M, R](this, MongoModify(Nil)).findAndModifyOpt(opt)(clause)
+  }
 
   override def toString: String =
     MongoBuilder.buildQueryString("find", collectionName, this)
@@ -484,7 +508,6 @@ case class FindAndModifyQuery[M, R](
   }
 
   def findAndModify[F](clause: M => ModifyClause) = addClause(clause)
-
   def and[F](clause: M => ModifyClause) = addClause(clause)
 
   private def addClauseOpt[V](opt: Option[V])(clause: (M, V) => ModifyClause) = {

@@ -40,11 +40,6 @@ trait LiftRogue extends Rogue {
     Query[M, M, InitialState](
       rec, rec.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
 
-  implicit def metaRecordToModifyQuery[M <: MongoRecord[M]]
-    (rec: M with MongoMetaRecord[M])
-    (implicit ev: ShardingOk[M, ShardKeyNotSpecified]): ModifyQuery[M, ShardKeyNotSpecified] =
-      ModifyQuery[M, ShardKeyNotSpecified](metaRecordToQueryBuilder[M](rec), MongoModify(Nil))
-
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
       IndexBuilder(rec)
 

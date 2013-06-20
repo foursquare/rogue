@@ -674,6 +674,8 @@ class QueryTest extends JUnitMustMatchers {
     check("""Venue.limit(1).modify(_.legacyid setTo 1)""")
     check("""Venue.skip(3).modify(_.legacyid setTo 1)""")
     check("""Venue.select(_.legacyid).modify(_.legacyid setTo 1)""")
+    check("""Venue.where(_.legacyid eqs 1).upsertOne()""")
+    check("""LiftQueryExecutor.upsertOne(Venue.where(_.legacyid eqs 1))""")
 
     // Noop
     check("""Venue.limit(1).noop()""")
