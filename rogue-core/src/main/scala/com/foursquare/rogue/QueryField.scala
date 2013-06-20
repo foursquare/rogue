@@ -273,6 +273,10 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
     new DummyField[V, M](field.name + "." + i.toString, field.owner)
 
   def idx(i: Int): DummyField[V, M] = at(i)
+
+  def $: SelectableDummyField[V, M] = {
+    new SelectableDummyField[V, M](field.name + ".$", field.owner)
+  }
 }
 
 class ListQueryField[V: BSONType, M](field: Field[List[V], M])
@@ -445,8 +449,6 @@ abstract class AbstractListModifyField[V, DB, M, CC[X] <: Seq[X]](val field: Fie
   def pullAll(vs: Traversable[V]) =
     new ModifyClause(ModOps.PullAll,
                      field.name -> QueryHelpers.list(valuesToDB(vs)))
-
-  def $ = new SelectableDummyField[V, M](field.name + ".$", field.owner)
 
   def pullWhere(clauseFuncs: (Field[V, M] => QueryClause[_])*) =
     new ModifyPullWithPredicateClause(

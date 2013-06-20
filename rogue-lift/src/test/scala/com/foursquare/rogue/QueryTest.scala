@@ -495,6 +495,11 @@ class QueryTest extends JUnitMustMatchers {
          .and(_.tags contains "sometag")
          .modify(_.tags.$ setTo "othertag")
          .toString() must_== """db.venues.update({ "legid" : 1 , "tags" : "sometag"}, { "$set" : { "tags.$" : "othertag"}}, false, false)"""
+
+    Venue.where(_.legacyid eqs 1)
+         .and(_.tags contains "sometag")
+         .select(_.tags.$)
+         .toString() must_== """db.venues.find({ "legid" : 1 , "tags" : "sometag"}, { "tags.$" : 1})"""
   }
 
   @Test
