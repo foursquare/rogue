@@ -1,5 +1,15 @@
 ## Release Notes
 
+# 2.1.0
+
+- fixed edge case rendering $or queries (thanks Konrad!)
+- support for user defined setFromAny in fields with BsonRecordField and iteratees (thanks Arseny!)
+- $elemMatch support
+- simplified pullObjectWhere notation
+- $nearSphere support
+- support for $ in .select() statements
+- better support for comparing DateFields against Dates and DateTimes
+
 # 2.0.0
 
 - StringQueryField support for subtypes of String

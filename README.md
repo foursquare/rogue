@@ -37,14 +37,14 @@ Because Rogue is designed to work with several versions of lift-mongodb-record (
 you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    val rogueField      = "com.foursquare" %% "rogue-field"         % "2.0.0" intransitive()
-    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.0.0" intransitive()
-    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.0.0" intransitive()
-    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.0.0" intransitive()
+    val rogueField      = "com.foursquare" %% "rogue-field"         % "2.1.0" intransitive()
+    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.1.0" intransitive()
+    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.1.0" intransitive()
+    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.1.0" intransitive()
     val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4-M5"
 
 You can substitute "2.4-M2" for whatever version of Lift you are using. Rogue has been used in
-production against Lift 2.2 and 2.4-M5. If you encounter problems using Rogue with other versions
+production against Lift 2.2, 2.4-M5 and 2.5. If you encounter problems using Rogue with other versions
 of Lift, please let us know.
 
 Join the [rogue-users google group](http://groups.google.com/group/rogue-users) for help, bug reports,
@@ -52,13 +52,13 @@ feature requests, and general discussion on Rogue.
 
 ## Setup
 
-Define your record classes in Lift like you would normally (see [TestModels.scala](https://github.com/foursquare/rogue/blob/v2/rogue-lift/src/test/scala/com/foursquare/rogue/TestModels.scala) for examples).
+Define your record classes in Lift like you would normally (see [TestModels.scala](https://github.com/foursquare/rogue/blob/master/rogue-lift/src/test/scala/com/foursquare/rogue/TestModels.scala) for examples).
 
 Then anywhere you want to use rogue queries against these records, import the following:
 
     import com.foursquare.rogue.LiftRogue._
 
-See [EndToEndTest.scala](https://github.com/foursquare/rogue/blob/v2/rogue-lift/src/test/scala/com/foursquare/rogue/EndToEndTest.scala) for a complete working example.
+See [EndToEndTest.scala](https://github.com/foursquare/rogue/blob/master/rogue-lift/src/test/scala/com/foursquare/rogue/EndToEndTest.scala) for a complete working example.
 
 ## More Examples
 
@@ -77,12 +77,16 @@ For "find" query objects
     query.countDistinct(_.mayor)
     query.fetch()
     query.fetch(n)
-    query.get() // equivalent to query.fetch(1).headOption
+    query.get()     // equivalent to query.fetch(1).headOption
+    query.exists()  // equivalent to query.fetch(1).size > 0
     query.foreach{v: Venue => ... }
     query.paginate(pageSize)
     query.fetchBatch(pageSize){vs: List[Venue] => ...}
     query.bulkDelete_!!(WriteConcern.SAFE)
     query.findAndDeleteOne()
+    query.explain()
+    query.iterate(handler)
+    query.iterateBatch(batchSize, handler)
 
 For "modify" query objects
 
@@ -99,7 +103,7 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 2.0.0. See the [changelog](https://github.com/foursquare/rogue/blob/v2/CHANGELOG.md) for more details.
+The latest release is 2.1.0. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
 Major changes in 2.0.0:
 
