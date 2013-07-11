@@ -188,7 +188,7 @@ class QueryTest extends JUnitMustMatchers {
 
     // select subfields
     Tip.where(_.legacyid eqs 1).select(_.counts at "foo").toString() must_== """db.tips.find({ "legid" : 1}, { "counts.foo" : 1})"""
-    Venue.where(_.legacyid eqs 1).select(_.geolatlng.unsafeField[String]("lat")).toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
+    Venue.where(_.legacyid eqs 1).select(_.geolatlng.unsafeField[Double]("lat")).toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
     Venue.where(_.legacyid eqs 1).select(_.lastClaim.subselect(_.status)).toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
     Venue.where(_.legacyid eqs 1).select(_.claims.subselect(_.userid)).toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
 
