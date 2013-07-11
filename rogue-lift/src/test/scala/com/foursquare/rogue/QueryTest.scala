@@ -188,7 +188,7 @@ class QueryTest extends JUnitMustMatchers {
 
     // select subfields
     Tip.where(_.legacyid eqs 1).select(_.counts at "foo").toString() must_== """db.tips.find({ "legid" : 1}, { "counts.foo" : 1})"""
-    Venue.where(_.legacyid eqs 1).select(_.geolatlng.unsafeField[Double]("lat")).toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
+    Venue.where(_.legacyid eqs 1).select(_.geolatlng.unsafeField[String]("lat")).toString() must_== """db.venues.find({ "legid" : 1}, { "latlng.lat" : 1})"""
     Venue.where(_.legacyid eqs 1).select(_.lastClaim.subselect(_.status)).toString() must_== """db.venues.find({ "legid" : 1}, { "lastClaim.status" : 1})"""
     Venue.where(_.legacyid eqs 1).select(_.claims.subselect(_.userid)).toString() must_== """db.venues.find({ "legid" : 1}, { "claims.uid" : 1})"""
 
@@ -244,6 +244,7 @@ class QueryTest extends JUnitMustMatchers {
 
     // Numeric
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count inc 3).toString() must_== query + """{ "$inc" : { "mayor_count" : 3}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.geolatlng.unsafeField[Double]("lat") inc 0.5).toString() must_== query + """{ "$inc" : { "latlng.lat" : 0.5}}""" + suffix
 
     // Enumeration
     val query2 = """db.venueclaims.update({ "uid" : 1}, """
