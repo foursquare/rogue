@@ -1,5 +1,10 @@
 ## Release Notes
 
+# 2.2.0
+
+- ObjectIdKey trait to replace deprecated ObjectId
+- overload inc method to take a Double (djonmez)
+
 # 2.1.0
 
 - fixed edge case rendering $or queries (thanks Konrad!)
