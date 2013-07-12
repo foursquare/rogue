@@ -16,7 +16,7 @@ import org.junit._
 import org.specs2.matcher.JUnitMustMatchers
 
 
-class TestModel extends MongoRecord[TestModel] with MongoId[TestModel] {
+class TestModel extends MongoRecord[TestModel] with ObjectIdKey[TestModel] {
   def meta = TestModel
   object a extends IntField(this)
   object b extends IntField(this)
