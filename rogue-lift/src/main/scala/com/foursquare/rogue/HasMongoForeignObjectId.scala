@@ -2,6 +2,6 @@
 
 package com.foursquare.rogue
 
-import net.liftweb.mongodb.record.{MongoId, MongoRecord}
+import net.liftweb.mongodb.record.MongoRecord
 
-trait HasMongoForeignObjectId[RefType <: MongoRecord[RefType] with MongoId[RefType]]
+trait HasMongoForeignObjectId[RefType <: MongoRecord[RefType] with ObjectIdKey[RefType]]
