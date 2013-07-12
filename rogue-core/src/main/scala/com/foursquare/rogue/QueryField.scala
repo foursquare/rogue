@@ -10,18 +10,38 @@ import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import scala.util.matching.Regex
 
-object CondOps extends Enumeration(0, "$ne", "$lt", "$gt", "$lte", "$gte",
-                                   "$in", "$nin", "$near", "$all", "$size",
-                                   "$exists", "$type", "$mod", "$nearSphere", "$maxDistance") {
+object CondOps extends Enumeration {
   type Op = Value
-  val Ne, Lt, Gt, LtEq, GtEq, In, Nin, Near, All, Size, Exists, Type, Mod, NearSphere, MaxDistance = Value
+  val Ne = Value("$ne")
+  val Lt = Value("$lt")
+  val Gt = Value("$gt")
+  val LtEq = Value("$lte")
+  val GtEq = Value("$gte")
+  val In = Value("$in")
+  val Nin = Value("$nin")
+  val Near = Value("$near")
+  val All = Value("$all")
+  val Size = Value("$size")
+  val Exists = Value("$exists")
+  val Type = Value("$type")
+  val Mod = Value("$mod")
+  val NearSphere = Value("$nearSphere")
+  val MaxDistance = Value("$maxDistance")
 }
 
-object ModOps extends Enumeration(0, "$inc", "$set", "$unset", "$push", "$pushAll",
-                                  "$addToSet", "$pop", "$pull", "$pullAll", "$bit",
-                                  "$rename") {
+object ModOps extends Enumeration {
   type Op = Value
-  val Inc, Set, Unset, Push, PushAll, AddToSet, Pop, Pull, PullAll, Bit, Rename = Value
+  val Inc = Value("$inc")
+  val Set = Value("$set")
+  val Unset = Value("$unset")
+  val Push = Value("$push")
+  val PushAll = Value("$pushAll")
+  val AddToSet = Value("$addToSet")
+  val Pop = Value("$pop")
+  val Pull = Value("$pull")
+  val PullAll = Value("$pullAll")
+  val Bit = Value("$bit")
+  val Rename = Value("$rename")
 }
 
 object MongoType extends Enumeration {
