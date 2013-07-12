@@ -244,6 +244,7 @@ class QueryTest extends JUnitMustMatchers {
 
     // Numeric
     Venue.where(_.legacyid eqs 1).modify(_.mayor_count inc 3).toString() must_== query + """{ "$inc" : { "mayor_count" : 3}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.geolatlng.unsafeField[Double]("lat") inc 0.5).toString() must_== query + """{ "$inc" : { "latlng.lat" : 0.5}}""" + suffix
 
     // Enumeration
     val query2 = """db.venueclaims.update({ "uid" : 1}, """
