@@ -38,7 +38,7 @@ object VenueStatus extends Enumeration {
   val closed = Value("Closed")
 }
 
-class Venue extends MongoRecord[Venue] with MongoId[Venue] with IndexedRecord[Venue] {
+class Venue extends MongoRecord[Venue] with ObjectIdKey[Venue] with IndexedRecord[Venue] {
   def meta = Venue
   object legacyid extends LongField(this) { override def name = "legid" }
   object userid extends LongField(this)
@@ -87,7 +87,7 @@ object RejectReason extends Enumeration {
   val wrongCode = Value("wrong code")
 }
 
-class VenueClaim extends MongoRecord[VenueClaim] with MongoId[VenueClaim] with Venue.FK[VenueClaim] {
+class VenueClaim extends MongoRecord[VenueClaim] with ObjectIdKey[VenueClaim] with Venue.FK[VenueClaim] {
   def meta = VenueClaim
   object userid extends LongField(this) { override def name = "uid" }
   object status extends EnumNameField(this, ClaimStatus)
@@ -121,7 +121,7 @@ object SourceBson extends SourceBson with BsonMetaRecord[SourceBson] {
 }
 
 case class OneComment(timestamp: String, userid: Long, comment: String)
-class Comment extends MongoRecord[Comment] with MongoId[Comment] {
+class Comment extends MongoRecord[Comment] with ObjectIdKey[Comment] {
   def meta = Comment
   object comments extends MongoCaseClassListField[Comment, OneComment](this)
 }
@@ -132,7 +132,7 @@ object Comment extends Comment with MongoMetaRecord[Comment] {
   val idx1 = Comment.index(_._id, Asc)
 }
 
-class Tip extends MongoRecord[Tip] with MongoId[Tip] {
+class Tip extends MongoRecord[Tip] with ObjectIdKey[Tip] {
   def meta = Tip
   object legacyid extends LongField(this) { override def name = "legid" }
   object counts extends MongoMapField[Tip, Long](this)
@@ -143,7 +143,7 @@ object Tip extends Tip with MongoMetaRecord[Tip] {
   override def mongoIdentifier = RogueTestMongo
 }
 
-class Like extends MongoRecord[Like] with MongoId[Like] with Sharded {
+class Like extends MongoRecord[Like] with ObjectIdKey[Like] with Sharded {
   def meta = Like
   object userid extends LongField(this) with ShardKey[Long]
   object checkin extends LongField(this)
@@ -158,7 +158,7 @@ object ConsumerPrivilege extends Enumeration {
   val awardBadges = Value("Award badges")
 }
 
-class OAuthConsumer extends MongoRecord[OAuthConsumer] with MongoId[OAuthConsumer] {
+class OAuthConsumer extends MongoRecord[OAuthConsumer] with ObjectIdKey[OAuthConsumer] {
   def meta = OAuthConsumer
   object privileges extends MongoListField[OAuthConsumer, ConsumerPrivilege.Value](this)
 }
