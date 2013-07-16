@@ -3,7 +3,7 @@
 # 2.2.0
 
 - ObjectIdKey trait to replace deprecated ObjectId
-- overload inc method to take a Double (djonmez)
+- overload inc method to take a Double (jdonmez)
 
 # 2.1.0
 
