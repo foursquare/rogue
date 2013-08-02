@@ -17,7 +17,7 @@ object TrivialORM {
   }
 
   val mongo = {
-    val MongoPort = 37648
+    val MongoPort = Option(System.getenv("MONGO_PORT")).map(_.toInt).getOrElse(37648)
     new Mongo(new ServerAddress("localhost", MongoPort))
   }
 

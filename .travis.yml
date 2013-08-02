@@ -1,4 +1,11 @@
 language: scala
+
 scala:
  - 2.9.2
  - 2.10.2
+
+services:
+ - mongodb
+
+env:
+ - MONGO_PORT=27017

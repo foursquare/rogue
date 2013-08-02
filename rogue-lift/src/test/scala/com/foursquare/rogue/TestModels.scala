@@ -16,12 +16,13 @@ import org.bson.types.ObjectId
 /////////////////////////////////////////////////
 
 object RogueTestMongo extends MongoIdentifier {
+
   override def jndiName = "rogue_mongo"
 
   private var mongo: Option[Mongo] = None
 
   def connectToMongo = {
-    val MongoPort = 37648
+    val MongoPort = Option(System.getenv("MONGO_PORT")).map(_.toInt).getOrElse(37648)
     mongo = Some(new Mongo(new ServerAddress("localhost", MongoPort)))
     MongoDB.defineDb(RogueTestMongo, mongo.get, "rogue-test")
   }
