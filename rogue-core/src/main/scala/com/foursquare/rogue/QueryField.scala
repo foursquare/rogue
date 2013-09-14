@@ -33,6 +33,7 @@ object ModOps extends Enumeration {
   type Op = Value
   val Inc = Value("$inc")
   val Set = Value("$set")
+  val SetOnInsert = Value("$setOnInsert")
   val Unset = Value("$unset")
   val Push = Value("$push")
   val PushAll = Value("$pushAll")
@@ -375,6 +376,12 @@ abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
   def setTo(vOpt: Option[V]): ModifyClause = vOpt match {
     case Some(v) => setTo(v)
     case none => new SafeModifyField(field).unset
+  }
+
+  def setOnInsertTo(v: V): ModifyClause = new ModifyClause(ModOps.SetOnInsert, field.name -> valueToDB(v))
+  def setOnInsertTo(vOpt: Option[V]): ModifyClause = vOpt match {
+    case Some(v) => setOnInsertTo(v)
+    case none => new SafeModifyField(field).unset // todo check this -- ktoso
   }
 }
 
