@@ -308,8 +308,7 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.legacyid eqs 1).modify(_.venuename rename "vn").toString() must_== query + """{ "$rename" : { "venuename" : "vn"}}""" + suffix
 
     // $setOnInsert
-    Venue.where(_.legacyid eqs 1).modify(_.venuename setOnInsertTo "fshq").and(_.mayor_count setTo 3).toString() must_== query + """{ "$set" : { "mayor_count" : 3} , "$setOnInsert" : { "venuename" : "fshq"}}""" + suffix
-    Venue.where(_.legacyid eqs 1).modify(_.venuename setOnInsertTo "fshq").and(_.mayor_count setOnInsertTo 3).toString() must_== query + """{ "$setOnInsert" : { "mayor_count" : 3 , "venuename" : "fshq"}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.venuename setOnInsertTo "fshq").toString() must_== query + """{ "$setOnInsert" : { "venuename" : "fshq"}}""" + suffix
 
 
     // pullWhere
