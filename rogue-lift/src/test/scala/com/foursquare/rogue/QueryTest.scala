@@ -307,6 +307,10 @@ class QueryTest extends JUnitMustMatchers {
     // $rename
     Venue.where(_.legacyid eqs 1).modify(_.venuename rename "vn").toString() must_== query + """{ "$rename" : { "venuename" : "vn"}}""" + suffix
 
+    // $setOnInsert
+    Venue.where(_.legacyid eqs 1).modify(_.venuename setOnInsertTo "fshq").toString() must_== query + """{ "$setOnInsert" : { "venuename" : "fshq"}}""" + suffix
+
+
     // pullWhere
     /*
     object tags extends MongoListField[Venue, String](this)
