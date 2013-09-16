@@ -33,6 +33,7 @@ object ModOps extends Enumeration {
   type Op = Value
   val Inc = Value("$inc")
   val Set = Value("$set")
+  val SetOnInsert = Value("$setOnInsert")
   val Unset = Value("$unset")
   val Push = Value("$push")
   val PushAll = Value("$pushAll")
@@ -376,6 +377,8 @@ abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
     case Some(v) => setTo(v)
     case none => new SafeModifyField(field).unset
   }
+
+  def setOnInsertTo(v: V): ModifyClause = new ModifyClause(ModOps.SetOnInsert, field.name -> valueToDB(v))
 }
 
 class ModifyField[V: BSONType, M](field: Field[V, M])

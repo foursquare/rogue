@@ -62,7 +62,7 @@ object QueryHelpers {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
     override def validateQuery[M](query: Query[M, _, _]) {}
-    override def validateModify[M](modify: ModifyQuery[M, _]) {}
+    override def validateModify[M](modify: ModifyQuery[M, _]) {} // todo possibly validate for update without upsert, yet setOnInsert present -- ktoso
     override def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R]) {}
   }
 
