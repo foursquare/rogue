@@ -278,6 +278,9 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
   def all(vs: Traversable[V]) =
     QueryHelpers.allListClause(field.name, valuesToDB(vs))
 
+  def eqs(vs: Traversable[V]) =
+    EqClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
+
   def neqs(vs: Traversable[V]) =
     new NeQueryClause(field.name, QueryHelpers.validatedList(valuesToDB(vs)))
 
@@ -512,7 +515,7 @@ class BsonRecordListModifyField[M, B](field: Field[List[B], M], rec: B, asDBObje
   //   }
   // }
 
-  def pullObjectWhere[V](clauseFuncs: (B => QueryClause[_])*) = {
+  def pullObjectWhere(clauseFuncs: (B => QueryClause[_])*) = {
     new ModifyPullObjWithPredicateClause(
       field.name,
       clauseFuncs.map(cf => cf(rec))
