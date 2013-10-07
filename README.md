@@ -112,7 +112,7 @@ Major changes in 2.0.0:
 
 ## Dependencies
 
-lift-mongodb-record (2.2, 2.3, 2.4), mongodb, joda-time, junit. These dependencies are managed by the build system.
+[rogue-field](https://github.com/foursquare/rogue-field), lift-mongodb-record (2.2, 2.3, 2.4), mongodb, joda-time, junit. These dependencies are managed by the build system.
 
 ## Maintainers
 
