@@ -15,6 +15,7 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
       case v => v
   })
   Seq(
+    "com.foursquare"           % sv("rogue-field")     % "2.2.1"      % "compile",
     "net.liftweb"              % sv("lift-mongodb")    % liftVersion  % "compile" intransitive(),
     "net.liftweb"              % sv("lift-common")     % liftVersion  % "compile",
     "net.liftweb"              % sv("lift-json")       % liftVersion  % "compile",
