@@ -2,15 +2,16 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.index.{MongoIndex, IndexedRecord}
 import com.foursquare.rogue.MongoHelpers.MongoSelect
+import com.mongodb.{DBCollection, DBObject}
 import net.liftweb.common.{Box, Full}
 import net.liftweb.mongodb.record.{BsonRecord, BsonMetaRecord, MongoRecord, MongoMetaRecord}
-import org.bson.types.BasicBSONList
 import net.liftweb.mongodb.MongoDB
-import com.mongodb.{DBCollection, DBObject}
-import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import net.liftweb.mongodb.record.field.BsonRecordField
 import net.liftweb.record.Record
+import org.bson.types.BasicBSONList
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]] {
   override def getDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
@@ -25,6 +26,21 @@ object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with M
   }
   override def getInstanceName[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): String = {
     query.meta.mongoIdentifier.toString
+  }
+
+  /**
+   * Retrieves the list of indexes declared for the record type associated with a
+   * query. If the record type doesn't declare any indexes, then returns None.
+   * @param query the query
+   * @return the list of indexes, or an empty list.
+   */
+  override def getIndexes[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): Option[List[MongoIndex[_]]] = {
+    val queryMetaRecord = query.meta
+    if (queryMetaRecord.isInstanceOf[IndexedRecord[_]]) {
+      Some(queryMetaRecord.asInstanceOf[IndexedRecord[_]].mongoIndexList)
+    } else {
+      None
+    }
   }
 }
 

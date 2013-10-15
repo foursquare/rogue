@@ -2,6 +2,7 @@
 
 package com.foursquare.rogue
 
+import com.foursquare.index.MongoIndex
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.Iter._
 import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, CommandResult, DBCollection,
@@ -12,6 +13,8 @@ trait DBCollectionFactory[MB] {
   def getDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
   def getPrimaryDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
   def getInstanceName[M <: MB](query: Query[M, _, _]): String
+  // A set of of indexes, which are ordered lists of field names
+  def getIndexes[M <: MB](query: Query[M, _, _]): Option[List[MongoIndex[_]]]
 }
 
 class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
@@ -39,7 +42,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
 
   def count[M <: MB](query: Query[M, _, _]): Long = {
     val queryClause = transformer.transformQuery(query)
-    validator.validateQuery(queryClause)
+    validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val condition: DBObject = buildCondition(queryClause.condition)
     val description: String = buildConditionString("count", query.collectionName, queryClause)
 
@@ -76,7 +79,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   def countDistinct[M <: MB](query: Query[M, _, _],
                              key: String): Long = {
     val queryClause = transformer.transformQuery(query)
-    validator.validateQuery(queryClause)
+    validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val cnd = buildCondition(queryClause.condition)
 
     // TODO: fix this so it looks like the correct mongo shell command
@@ -91,7 +94,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   def distinct[M <: MB, R](query: Query[M, _, _],
                            key: String): List[R] = {
     val queryClause = transformer.transformQuery(query)
-    validator.validateQuery(queryClause)
+    validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val cnd = buildCondition(queryClause.condition)
 
     // TODO: fix this so it looks like the correct mongo shell command
@@ -109,7 +112,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   def delete[M <: MB](query: Query[M, _, _],
                       writeConcern: WriteConcern): Unit = {
     val queryClause = transformer.transformQuery(query)
-    validator.validateQuery(queryClause)
+    validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val cnd = buildCondition(queryClause.condition)
     val description = buildConditionString("remove", query.collectionName, queryClause)
 
@@ -124,7 +127,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
                       multi: Boolean,
                       writeConcern: WriteConcern): Unit = {
     val modClause = transformer.transformModify(mod)
-    validator.validateModify(modClause)
+    validator.validateModify(modClause, dbCollectionFactory.getIndexes(modClause.query))
     if (!modClause.mod.clauses.isEmpty) {
       val q = buildCondition(modClause.query.condition)
       val m = buildModify(modClause.mod)
@@ -143,7 +146,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
                                 remove: Boolean)
                                (f: DBObject => R): Option[R] = {
     val modClause = transformer.transformFindAndModify(mod)
-    validator.validateFindAndModify(modClause)
+    validator.validateFindAndModify(modClause, dbCollectionFactory.getIndexes(modClause.query))
     if (!modClause.mod.clauses.isEmpty || remove) {
       val query = modClause.query
       val cnd = buildCondition(query.condition)
@@ -263,7 +266,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       f: DBCursor => T
   ): T = {
     val queryClause = transformer.transformQuery(query)
-    validator.validateQuery(queryClause)
+    validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val cnd = buildCondition(queryClause.condition)
     val ord = queryClause.order.map(buildOrder)
     val sel = queryClause.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)

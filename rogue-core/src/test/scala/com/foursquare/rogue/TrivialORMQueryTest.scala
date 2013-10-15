@@ -1,5 +1,6 @@
 package com.foursquare.rogue
 
+import com.foursquare.index.MongoIndex
 import com.foursquare.field.{Field, OptionalField}
 import com.mongodb.{DB, DBCollection, DBObject, Mongo, ServerAddress, WriteConcern}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify, MongoSelect}
@@ -35,6 +36,9 @@ object TrivialORM {
     }
     override def getInstanceName[M <: MB](query: Query[M, _, _]): String = {
       db.getName
+    }
+    override def getIndexes[M <: MB](query: Query[M, _, _]): Option[List[MongoIndex[_]]] = {
+      None
     }
   }
 
