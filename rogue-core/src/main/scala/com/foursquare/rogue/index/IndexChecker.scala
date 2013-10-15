@@ -3,13 +3,35 @@ package com.foursquare.index
 
 import com.foursquare.rogue.{DocumentScan, Index, IndexScan, PartialIndexScan, MongoHelpers, Query, QueryClause, QueryHelpers}
 
+trait IndexChecker {
+  /**
+   * Verifies that the indexes expected for a query actually exist in the mongo database.
+   * Logs an error via {@link QueryLogger#logIndexMismatch} if there is no matching index.
+   * This version of validaateIndexExpectations is intended for use in cases where
+   * the indexes are not explicitly declared in the class, but the caller knows what set
+   * of indexes are actually available.
+   * @param query the query being validated.
+   * @param indexes a list of the indexes
+   * @return true if the required indexes are found, false otherwise.
+   */
+  def validateIndexExpectations(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean
+
+  /**
+   * Verifies that the index expected by a query both exists, and will be used by MongoDB
+   * to execute that query. (Due to vagaries of the MongoDB implementation, sometimes a
+   * conceptually usable index won't be found.)
+   * @param query the query
+   * @param indexes the list of indexes that exist in the database
+   */
+  def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean
+}
 
 /**
  * A utility object which provides the capability to verify if the set of indexes that
  * actually exist for a MongoDB collection match the indexes that are expected by
  * a query.
  */
-object MongoIndexChecker {
+object MongoIndexChecker extends IndexChecker {
 
   /**
    * Flattens an arbitrary query into DNF - that is, into a list of query alternatives
@@ -31,37 +53,8 @@ object MongoIndexChecker {
   }
 
   /**
-   * Retrieves the list of indexes declared for the record type associated with a
-   * query. If the record type doesn't declare any indexes, then returns None.
-   * @param query the query
-   * @return the list of indexes, or an empty list.
-   */
-  def getIndexes(query: Query[_, _, _]): Option[List[MongoIndex[_]]] = {
-    val queryMetaRecord = query.meta
-    if (queryMetaRecord.isInstanceOf[IndexedRecord[_]]) {
-      Some(queryMetaRecord.asInstanceOf[IndexedRecord[_]].mongoIndexList)
-    } else {
-      None
-    }
-  }
-
-  /**
    * Verifies that the indexes expected for a query actually exist in the mongo database.
-   * Logs an error via {@link QueryLogger#logIndexMismatch} if there is no
-   * matching index. Clients may choose to signal errors by overriding
-   * logIndexMismatch.
-   * @param query the query being validated.
-   * @return true if the required indexes are found, false otherwise.
-   */
-  def validateIndexExpectations(query: Query[_, _, _]): Boolean = {
-    getIndexes(query).forall(indexes =>
-      validateIndexExpectations(query, indexes)
-    )
-  }
-
-  /**
-   * Verifies that the indexes expected for a query actually exist in the mongo database.
-   * Signals an error if the indexes don't fulfull the expectations. ({@see #throwErrors})
+   * Logs an error via {@link QueryLogger#logIndexMismatch} if there is no matching index.
    * This version of validaateIndexExpectations is intended for use in cases where
    * the indexes are not explicitly declared in the class, but the caller knows what set
    * of indexes are actually available.
@@ -69,7 +62,7 @@ object MongoIndexChecker {
    * @param indexes a list of the indexes
    * @return true if the required indexes are found, false otherwise.
    */
-  def validateIndexExpectations(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean = {
+  override def validateIndexExpectations(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean = {
     val baseConditions = normalizeCondition(query.condition);
     val conditions = baseConditions.map(_.filter(_.expectedIndexBehavior != DocumentScan))
 
@@ -98,21 +91,9 @@ object MongoIndexChecker {
    * to execute that query. (Due to vagaries of the MongoDB implementation, sometimes a
    * conceptually usable index won't be found.)
    * @param query the query
-   */
-  def validateQueryMatchesSomeIndex(query: Query[_, _, _]): Boolean = {
-    getIndexes(query).forall(indexes =>
-      validateQueryMatchesSomeIndex(query, indexes)
-    )
-  }
-
-  /**
-   * Verifies that the index expected by a query both exists, and will be used by MongoDB
-   * to execute that query. (Due to vagaries of the MongoDB implementation, sometimes a
-   * conceptually usable index won't be found.)
-   * @param query the query
    * @param indexes the list of indexes that exist in the database
    */
-  def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[MongoIndex[_]]) = {
+  override def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[MongoIndex[_]]) = {
     val conditions = normalizeCondition(query.condition)
     lazy val indexString = indexes.map(idx => "{%s}".format(idx.toString())).mkString(", ")
     conditions.forall(clauses => {
