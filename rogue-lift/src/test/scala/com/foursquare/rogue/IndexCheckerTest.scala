@@ -45,7 +45,8 @@ class MongoIndexCheckerTest extends JUnitMustMatchers {
   def testIndexExpectations {
     def test(query: Query[_, _, _]) = {
       val q = query.asInstanceOf[Query[_, _, _]]
-      MongoIndexChecker.validateIndexExpectations(q)
+      val indexes = q.meta.asInstanceOf[IndexedRecord[_]].mongoIndexList
+      MongoIndexChecker.validateIndexExpectations(q, indexes)
     }
 
     def yes(query: Query[_, _, _]) =
@@ -95,8 +96,9 @@ class MongoIndexCheckerTest extends JUnitMustMatchers {
   def testMatchesIndex {
     def test(query: Query[_, _, _]) = {
       val q = query.asInstanceOf[Query[_, _, _]]
-      MongoIndexChecker.validateIndexExpectations(q) &&
-        MongoIndexChecker.validateQueryMatchesSomeIndex(q)
+      val indexes = q.meta.asInstanceOf[IndexedRecord[_]].mongoIndexList
+      MongoIndexChecker.validateIndexExpectations(q, indexes) &&
+        MongoIndexChecker.validateQueryMatchesSomeIndex(q, indexes)
     }
 
     def yes(query: Query[_, _, _]) =

@@ -53,17 +53,17 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
-    def validateQuery[M](query: Query[M, _, _]): Unit
-    def validateModify[M](modify: ModifyQuery[M, _]): Unit
-    def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R]): Unit
+    def validateQuery[M](query: Query[M, _, _], indexes: Option[List[MongoIndex[_]]]): Unit
+    def validateModify[M](modify: ModifyQuery[M, _], indexes: Option[List[MongoIndex[_]]]): Unit
+    def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R], indexes: Option[List[MongoIndex[_]]]): Unit
   }
 
   class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
-    override def validateQuery[M](query: Query[M, _, _]) {}
-    override def validateModify[M](modify: ModifyQuery[M, _]) {} // todo possibly validate for update without upsert, yet setOnInsert present -- ktoso
-    override def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R]) {}
+    override def validateQuery[M](query: Query[M, _, _], indexes: Option[List[MongoIndex[_]]]) {}
+    override def validateModify[M](modify: ModifyQuery[M, _], indexes: Option[List[MongoIndex[_]]]) {} // todo possibly validate for update without upsert, yet setOnInsert present -- ktoso
+    override def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R], indexes: Option[List[MongoIndex[_]]]) {}
   }
 
   object NoopQueryValidator extends DefaultQueryValidator
