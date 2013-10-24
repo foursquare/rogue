@@ -5,12 +5,14 @@ package com.foursquare.index
 import com.foursquare.field.Field
 import scala.collection.immutable.ListMap
 
-trait MongoIndex[R] {
+trait UntypedMongoIndex {
   def asListMap: ListMap[String, Any]
 
   override def toString() =
     asListMap.map(fld => "%s:%s".format(fld._1, fld._2)).mkString(", ")
 }
+
+trait MongoIndex[R] extends UntypedMongoIndex
 
 case class MongoIndex1[R](
     f1: Field[_, R],
