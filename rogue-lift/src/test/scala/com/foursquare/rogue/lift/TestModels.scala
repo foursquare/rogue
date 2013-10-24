@@ -1,8 +1,9 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
-package com.foursquare.rogue
+package com.foursquare.rogue.lift
 
 import com.foursquare.index.{Asc, Desc, IndexedRecord, IndexModifier, TwoD}
-import com.foursquare.rogue.LiftRogue._
+import com.foursquare.rogue.{LatLong, Sharded, ShardKey}
+import com.foursquare.rogue.lift.LiftRogue._
 import com.mongodb.{Mongo, ServerAddress}
 import net.liftweb.mongodb.{MongoDB, MongoIdentifier}
 import net.liftweb.mongodb.record._

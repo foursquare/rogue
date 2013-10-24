@@ -1,10 +1,11 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
-package com.foursquare.rogue
+package com.foursquare.rogue.lift
 
-import org.junit._
-import org.specs2.matcher.JUnitMustMatchers
+import com.foursquare.rogue.{InitialState, Query, RogueException}
 import com.foursquare.rogue.MongoHelpers.AndCondition
 import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
+import org.junit._
+import org.specs2.matcher.JUnitMustMatchers
 
 class LegacyQueryExecutorTest extends JUnitMustMatchers {
 

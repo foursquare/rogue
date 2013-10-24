@@ -1,7 +1,8 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
-package com.foursquare.rogue
+package com.foursquare.rogue.lift
 
-import com.foursquare.rogue.LiftRogue._
+import com.foursquare.rogue.{BSONType, Degrees, LatLong, MongoType, Query, QueryOptimizer, Radians}
+import com.foursquare.rogue.lift.LiftRogue._
 import com.mongodb.ReadPreference
 
 import java.util.regex.Pattern
@@ -791,7 +792,8 @@ class QueryTest extends JUnitMustMatchers {
         new PrintWriter(stringWriter))
 
     interpreter.interpret("""import com.foursquare.rogue._""")
-    interpreter.interpret("""import com.foursquare.rogue.LiftRogue._""")
+    interpreter.interpret("""import com.foursquare.rogue.lift._""")
+    interpreter.interpret("""import com.foursquare.rogue.lift.LiftRogue._""")
     interpreter.interpret("""import org.bson.types.ObjectId""")
     interpreter.interpret("""import org.joda.time.DateTime""")
 

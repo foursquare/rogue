@@ -1,8 +1,10 @@
 // Copyright 2012 Foursquare Labs Inc. All Rights Reserved.
 
-package com.foursquare.rogue
+package com.foursquare.rogue.lift
 
 import com.foursquare.index.{IndexedRecord, UntypedMongoIndex}
+import com.foursquare.rogue.{DBCollectionFactory, MongoJavaDriverAdapter, Query, QueryExecutor, QueryHelpers,
+    QueryOptimizer, RogueSerializer}
 import com.foursquare.rogue.MongoHelpers.MongoSelect
 import com.mongodb.{DBCollection, DBObject}
 import net.liftweb.common.{Box, Full}

@@ -1,8 +1,9 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
-package com.foursquare.rogue
+package com.foursquare.rogue.lift
 
-import com.foursquare.rogue.LiftRogue._
+import com.foursquare.rogue.{Iter, LatLong}
 import com.foursquare.rogue.Iter._
+import com.foursquare.rogue.lift.LiftRogue._
 import com.mongodb.ReadPreference
 import java.util.Calendar
 import java.util.regex.Pattern

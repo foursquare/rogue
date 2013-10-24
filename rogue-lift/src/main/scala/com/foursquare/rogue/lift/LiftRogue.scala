@@ -1,12 +1,20 @@
 // Copyright 2012 Foursquare Labs Inc. All Rights Reserved.
 
-package com.foursquare.rogue
+package com.foursquare.rogue.lift
 
 import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
 import com.foursquare.index.IndexBuilder
+import com.foursquare.rogue.{BSONType, BsonRecordListModifyField, BsonRecordListQueryField, BsonRecordModifyField,
+    BsonRecordQueryField, CaseClassListModifyField, CaseClassListQueryField, CaseClassQueryField, DateModifyField,
+    DateQueryField, EnumerationListModifyField, EnumerationListQueryField, EnumerationModifyField, EnumIdQueryField,
+    EnumNameQueryField, FindAndModifyQuery, ForeignObjectIdQueryField, GeoModifyField, GeoQueryField, HasOrClause,
+    InitialState, LatLong, ListModifyField, ListQueryField, MandatorySelectField, MapModifyField, MapQueryField,
+    ModifyField, ModifyQuery, NumericModifyField, NumericQueryField, ObjectIdQueryField, OptionalSelectField, Query,
+    QueryField, QueryHelpers, Rogue, RogueException, SafeModifyField, SelectField, ShardingOk, StringsListQueryField,
+    StringQueryField, Unlimited, Unordered, Unselected, Unskipped}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Date
 import net.liftweb.json.JsonAST.{JArray, JInt}
