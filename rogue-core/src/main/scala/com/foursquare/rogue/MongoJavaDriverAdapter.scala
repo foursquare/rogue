@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.index.MongoIndex
+import com.foursquare.index.UntypedMongoIndex
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.Iter._
 import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, CommandResult, DBCollection,
@@ -14,7 +14,7 @@ trait DBCollectionFactory[MB] {
   def getPrimaryDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
   def getInstanceName[M <: MB](query: Query[M, _, _]): String
   // A set of of indexes, which are ordered lists of field names
-  def getIndexes[M <: MB](query: Query[M, _, _]): Option[List[MongoIndex[_]]]
+  def getIndexes[M <: MB](query: Query[M, _, _]): Option[List[UntypedMongoIndex]]
 }
 
 class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {

@@ -2,7 +2,7 @@
 
 package com.foursquare.rogue
 
-import com.foursquare.index.MongoIndex
+import com.foursquare.index.UntypedMongoIndex
 import com.mongodb.{DBObject, WriteConcern}
 import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
 import net.liftweb.json.JsonAST.{JObject, JValue}
@@ -34,7 +34,7 @@ object QueryHelpers {
     def log(query: Query[_, _, _], instanceName: String, msg: => String, timeMillis: Long): Unit
     def onExecuteQuery[T](query: Query[_, _, _], instanceName: String, msg: => String, func: => T): T
     def logIndexMismatch(query: Query[_, _, _], msg: => String)
-    def logIndexHit(query: Query[_, _, _], index: MongoIndex[_])
+    def logIndexHit(query: Query[_, _, _], index: UntypedMongoIndex)
     def warn(query: Query[_, _, _], msg: => String): Unit
   }
 
@@ -42,7 +42,7 @@ object QueryHelpers {
     override def log(query: Query[_, _, _], instanceName: String, msg: => String, timeMillis: Long) {}
     override def onExecuteQuery[T](query: Query[_, _, _], instanceName: String, msg: => String, func: => T): T = func
     override def logIndexMismatch(query: Query[_, _, _], msg: => String) {}
-    override def logIndexHit(query: Query[_, _, _], index: MongoIndex[_]) {}
+    override def logIndexHit(query: Query[_, _, _], index: UntypedMongoIndex) {}
     override def warn(query: Query[_, _, _], msg: => String) {}
   }
 
@@ -53,17 +53,17 @@ object QueryHelpers {
   trait QueryValidator {
     def validateList[T](xs: Traversable[T]): Unit
     def validateRadius(d: Degrees): Degrees
-    def validateQuery[M](query: Query[M, _, _], indexes: Option[List[MongoIndex[_]]]): Unit
-    def validateModify[M](modify: ModifyQuery[M, _], indexes: Option[List[MongoIndex[_]]]): Unit
-    def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R], indexes: Option[List[MongoIndex[_]]]): Unit
+    def validateQuery[M](query: Query[M, _, _], indexes: Option[List[UntypedMongoIndex]]): Unit
+    def validateModify[M](modify: ModifyQuery[M, _], indexes: Option[List[UntypedMongoIndex]]): Unit
+    def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R], indexes: Option[List[UntypedMongoIndex]]): Unit
   }
 
   class DefaultQueryValidator extends QueryValidator {
     override def validateList[T](xs: Traversable[T]) {}
     override def validateRadius(d: Degrees) = d
-    override def validateQuery[M](query: Query[M, _, _], indexes: Option[List[MongoIndex[_]]]) {}
-    override def validateModify[M](modify: ModifyQuery[M, _], indexes: Option[List[MongoIndex[_]]]) {} // todo possibly validate for update without upsert, yet setOnInsert present -- ktoso
-    override def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R], indexes: Option[List[MongoIndex[_]]]) {}
+    override def validateQuery[M](query: Query[M, _, _], indexes: Option[List[UntypedMongoIndex]]) {}
+    override def validateModify[M](modify: ModifyQuery[M, _], indexes: Option[List[UntypedMongoIndex]]) {} // todo possibly validate for update without upsert, yet setOnInsert present -- ktoso
+    override def validateFindAndModify[M, R](modify: FindAndModifyQuery[M, R], indexes: Option[List[UntypedMongoIndex]]) {}
   }
 
   object NoopQueryValidator extends DefaultQueryValidator
