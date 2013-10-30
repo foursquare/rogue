@@ -4,12 +4,12 @@ package com.foursquare.rogue.spindle
 
 import com.foursquare.common.thrift.bson.TBSONObjectProtocol
 import com.foursquare.rogue.MongoHelpers.MongoSelect
-import com.foursquare.rogue.RogueSerializer
+import com.foursquare.rogue.{RogueReadSerializer, RogueWriteSerializer}
 import com.foursquare.spindle.{UntypedFieldDescriptor, UntypedMetaRecord, UntypedRecord}
 import com.mongodb.DBObject
 
-class SpindleRogueSerializer[M <: UntypedMetaRecord, R](meta: M, select: Option[MongoSelect[M, R]])
-    extends RogueSerializer[R] {
+class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Option[MongoSelect[M, R]])
+    extends RogueReadSerializer[R] {
 
   private def getValueFromRecord(metaRecord: UntypedMetaRecord, record: Any, fieldName: String): Option[Any] = {
     val fieldList: List[UntypedFieldDescriptor] = metaRecord.fields.toList
@@ -65,8 +65,10 @@ class SpindleRogueSerializer[M <: UntypedMetaRecord, R](meta: M, select: Option[
       record.asInstanceOf[R]
     }
   }
+}
 
-  def toDBObject(record: R with UntypedRecord): DBObject = {
+class SpindleRogueWriteSerializer extends RogueWriteSerializer[UntypedRecord] {
+  def toDBObject(record: UntypedRecord): DBObject = {
     val protocolFactory = new TBSONObjectProtocol.WriterFactoryForDBObject
     val protocol = protocolFactory.getProtocol
     record.write(protocol)

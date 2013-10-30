@@ -4,7 +4,7 @@ package com.foursquare.rogue.lift
 
 import com.foursquare.index.{IndexedRecord, UntypedMongoIndex}
 import com.foursquare.rogue.{DBCollectionFactory, MongoJavaDriverAdapter, Query, QueryExecutor, QueryHelpers,
-    QueryOptimizer, RogueSerializer}
+    QueryOptimizer, RogueReadSerializer, RogueWriteSerializer}
 import com.foursquare.rogue.MongoHelpers.MongoSelect
 import com.mongodb.{DBCollection, DBObject}
 import net.liftweb.common.{Box, Full}
@@ -15,16 +15,22 @@ import net.liftweb.record.Record
 import org.bson.types.BasicBSONList
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
-object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]] {
+object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_], MongoRecord[_]] {
   override def getDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
     MongoDB.useSession(query.meta.mongoIdentifier){ db =>
       db.getCollection(query.collectionName)
     }
   }
+  protected def getPrimaryDBCollection(meta: MongoMetaRecord[_], collectionName: String): DBCollection = {
+    MongoDB.useSession(meta/* TODO: .master*/.mongoIdentifier){ db =>
+      db.getCollection(collectionName)
+    }    
+  }
   override def getPrimaryDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
-    MongoDB.useSession(query.meta/* TODO: .master*/.mongoIdentifier){ db =>
-      db.getCollection(query.collectionName)
-    }
+    getPrimaryDBCollection(query.meta, query.collectionName)
+  }
+  override def getPrimaryDBCollection(record: MongoRecord[_]): DBCollection = {
+    getPrimaryDBCollection(record.meta, record.meta.collectionName)
   }
   override def getInstanceName[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): String = {
     query.meta.mongoIdentifier.toString
@@ -46,20 +52,22 @@ object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with M
   }
 }
 
-class LiftAdapter(dbCollectionFactory: DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]])
+class LiftAdapter(dbCollectionFactory: DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_], MongoRecord[_]])
   extends MongoJavaDriverAdapter(dbCollectionFactory)
 
 object LiftAdapter extends LiftAdapter(LiftDBCollectionFactory)
 
-class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_]]) extends QueryExecutor[MongoRecord[_] with MongoMetaRecord[_]] {
+class LiftQueryExecutor(
+    override val adapter: MongoJavaDriverAdapter[MongoRecord[_] with MongoMetaRecord[_], MongoRecord[_]]
+) extends QueryExecutor[MongoRecord[_] with MongoMetaRecord[_], MongoRecord[_]] {
   override def defaultWriteConcern = QueryHelpers.config.defaultWriteConcern
   override lazy val optimizer = new QueryOptimizer
 
-  override protected def serializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
+  override protected def readSerializer[M <: MongoRecord[_] with MongoMetaRecord[_], R](
       meta: M,
       select: Option[MongoSelect[M, R]]
-  ): RogueSerializer[R] = {
-    new RogueSerializer[R] {
+  ): RogueReadSerializer[R] = {
+    new RogueReadSerializer[R] {
       override def fromDBObject(dbo: DBObject): R = select match {
         case Some(MongoSelect(Nil, transformer)) =>
           // A MongoSelect clause exists, but has empty fields. Return null.
@@ -80,6 +88,14 @@ class LiftQueryExecutor(override val adapter: MongoJavaDriverAdapter[MongoRecord
           transformer(values)
         case None =>
           meta.fromDBObject(dbo).asInstanceOf[R]
+      }
+    }
+  }
+
+  override protected def writeSerializer(record: MongoRecord[_]): RogueWriteSerializer[MongoRecord[_]] = {
+    new RogueWriteSerializer[MongoRecord[_]] {
+      override def toDBObject(record: MongoRecord[_]): DBObject = {
+        record.asDBObject
       }
     }
   }

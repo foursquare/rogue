@@ -4,12 +4,12 @@ package com.foursquare.rogue.spindle
 
 import com.foursquare.index.UntypedMongoIndex
 import com.foursquare.rogue.{DBCollectionFactory, Query => RogueQuery}
-import com.foursquare.spindle.{IndexParser, UntypedMetaRecord}
+import com.foursquare.spindle.{IndexParser, UntypedMetaRecord, UntypedRecord}
 import com.mongodb.{DB, DBCollection}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ConcurrentMap
 
-trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord] {
+trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord, UntypedRecord] {
   def getDB(meta: UntypedMetaRecord): DB = {
     getPrimaryDB(meta)
   }
@@ -21,6 +21,10 @@ trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord] 
 
   override def getPrimaryDBCollection[M <: UntypedMetaRecord](query: RogueQuery[M, _, _]): DBCollection = {
     getPrimaryDBCollection(query.meta)
+  }
+
+  override def getPrimaryDBCollection(record: UntypedRecord): DBCollection = {
+    getPrimaryDBCollection(record.meta)
   }
 
   def getPrimaryDBCollection(meta: UntypedMetaRecord): DBCollection = {

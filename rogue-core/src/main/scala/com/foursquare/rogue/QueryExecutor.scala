@@ -7,20 +7,28 @@ import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
 import com.mongodb.{DBObject, ReadPreference, WriteConcern}
 import scala.collection.mutable.ListBuffer
 
-trait RogueSerializer[R] {
+trait RogueReadSerializer[R] {
   def fromDBObject(dbo: DBObject): R
 }
 
-trait QueryExecutor[MB] extends Rogue {
-  def adapter: MongoJavaDriverAdapter[MB]
+trait RogueWriteSerializer[R] {
+  def toDBObject(record: R): DBObject
+}
+
+trait RogueSerializer[From, To] extends RogueReadSerializer[To] with RogueWriteSerializer[From]
+
+trait QueryExecutor[MB, RB] extends Rogue {
+  def adapter: MongoJavaDriverAdapter[MB, RB]
   def optimizer: QueryOptimizer
 
   def defaultWriteConcern: WriteConcern
 
-  protected def serializer[M <: MB, R](
+  protected def readSerializer[M <: MB, R](
       meta: M,
       select: Option[MongoSelect[M, R]]
-  ): RogueSerializer[R]
+  ): RogueReadSerializer[R]
+
+  protected def writeSerializer(record: RB): RogueWriteSerializer[RB]
 
   def count[M <: MB, State](query: Query[M, _, State])
                            (implicit ev: ShardingOk[M, State]): Long = {
@@ -57,7 +65,7 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
-      val s = serializer[M, R](query.meta, query.select)
+      val s = readSerializer[M, R](query.meta, query.select)
       val rv = new ListBuffer[R]
       adapter.query(query, None, readPreference)(dbo => rv += s.fromDBObject(dbo))
       rv.toList
@@ -77,7 +85,7 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       ()
     } else {
-      val s = serializer[M, R](query.meta, query.select)
+      val s = readSerializer[M, R](query.meta, query.select)
       adapter.query(query, None, readPreference)(dbo => f(s.fromDBObject(dbo)))
     }
   }
@@ -103,7 +111,7 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
-      val s = serializer[M, R](query.meta, query.select)
+      val s = readSerializer[M, R](query.meta, query.select)
       val rv = new ListBuffer[T]
       val buf = new ListBuffer[R]
 
@@ -169,7 +177,7 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       None
     } else {
-      val s = serializer[M, R](query.query.meta, query.query.select)
+      val s = readSerializer[M, R](query.query.meta, query.query.select)
       adapter.findAndModify(query, returnNew, upsert=false, remove=false)(s.fromDBObject _)
     }
   }
@@ -182,7 +190,7 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       None
     } else {
-      val s = serializer[M, R](query.query.meta, query.query.select)
+      val s = readSerializer[M, R](query.query.meta, query.query.select)
       adapter.findAndModify(query, returnNew, upsert=true, remove=false)(s.fromDBObject _)
     }
   }
@@ -194,7 +202,7 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       None
     } else {
-      val s = serializer[M, R](query.meta, query.select)
+      val s = readSerializer[M, R](query.meta, query.select)
       val mod = FindAndModifyQuery(query, MongoModify(Nil))
       adapter.findAndModify(mod, returnNew=false, upsert=false, remove=true)(s.fromDBObject _)
     }
@@ -212,7 +220,7 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Iter.EOF).state
     } else {
-      val s = serializer[M, R](query.meta, query.select)
+      val s = readSerializer[M, R](query.meta, query.select)
       adapter.iterate(query, state, s.fromDBObject _, readPreference)(handler)
     }
   }
@@ -226,8 +234,22 @@ trait QueryExecutor[MB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Iter.EOF).state
     } else {
-      val s = serializer[M, R](query.meta, query.select)
+      val s = readSerializer[M, R](query.meta, query.select)
       adapter.iterateBatch(query, batchSize, state, s.fromDBObject _, readPreference)(handler)
     }
+  }
+
+  def save[RecordType <: RB](record: RecordType, writeConcern: WriteConcern = defaultWriteConcern): RecordType = {
+    val s = writeSerializer(record)
+    val dbo = s.toDBObject(record)
+    adapter.save(record, dbo, writeConcern)
+    record
+  }
+
+  def insert[RecordType <: RB](record: RecordType, writeConcern: WriteConcern = defaultWriteConcern): RecordType = {
+    val s = writeSerializer(record)
+    val dbo = s.toDBObject(record)
+    adapter.insert(record, dbo, writeConcern)
+    record
   }
 }

@@ -54,7 +54,7 @@ trait LiftRogue extends Rogue {
 
   implicit def queryToLiftQuery[M <: MongoRecord[_], R, State]
     (query: Query[M, R, State])
-    (implicit ev: ShardingOk[M with MongoMetaRecord[_], State]): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R, State] = {
+    (implicit ev: ShardingOk[M with MongoMetaRecord[_], State]): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], MongoRecord[_], R, State] = {
     ExecutableQuery(
         query.asInstanceOf[Query[M with MongoMetaRecord[_], R, State]],
         LiftQueryExecutor
@@ -63,7 +63,7 @@ trait LiftRogue extends Rogue {
 
   implicit def modifyQueryToLiftModifyQuery[M <: MongoRecord[_], State](
       query: ModifyQuery[M, State]
-  ): ExecutableModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], State] = {
+  ): ExecutableModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], MongoRecord[_], State] = {
     ExecutableModifyQuery(
         query.asInstanceOf[ModifyQuery[M with MongoMetaRecord[_], State]],
         LiftQueryExecutor
@@ -72,7 +72,7 @@ trait LiftRogue extends Rogue {
 
   implicit def findAndModifyQueryToLiftFindAndModifyQuery[M <: MongoRecord[_], R](
       query: FindAndModifyQuery[M, R]
-  ): ExecutableFindAndModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], R] = {
+  ): ExecutableFindAndModifyQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], MongoRecord[_], R] = {
     ExecutableFindAndModifyQuery(
         query.asInstanceOf[FindAndModifyQuery[M with MongoMetaRecord[_], R]],
         LiftQueryExecutor
@@ -81,7 +81,7 @@ trait LiftRogue extends Rogue {
 
   implicit def metaRecordToLiftQuery[M <: MongoRecord[M]](
       rec: M with MongoMetaRecord[M]
-  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], M, InitialState] = {
+  ): ExecutableQuery[MongoRecord[_] with MongoMetaRecord[_], M with MongoMetaRecord[_], MongoRecord[_], M, InitialState] = {
     val queryBuilder = metaRecordToQueryBuilder(rec)
     val liftQuery = queryToLiftQuery(queryBuilder)
     liftQuery

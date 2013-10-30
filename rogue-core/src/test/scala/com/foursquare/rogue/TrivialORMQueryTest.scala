@@ -2,7 +2,7 @@ package com.foursquare.rogue
 
 import com.foursquare.index.UntypedMongoIndex
 import com.foursquare.field.{Field, OptionalField}
-import com.mongodb.{DB, DBCollection, DBObject, Mongo, ServerAddress, WriteConcern}
+import com.mongodb.{BasicDBObjectBuilder, DB, DBCollection, DBObject, Mongo, ServerAddress, WriteConcern}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify, MongoSelect}
 import org.junit.{Before, Test}
 import org.specs2.matcher.JUnitMustMatchers
@@ -12,9 +12,15 @@ import org.specs2.matcher.JUnitMustMatchers
   * Ideally this would be even smaller; as it is, I needed to copy-paste some
   * code from the Lift implementations. */
 object TrivialORM {
+  trait Record {
+    type Self >: this.type <: Record
+    def meta: Meta[Self]
+  }
+
   trait Meta[R] {
     def collectionName: String
     def fromDBObject(dbo: DBObject): R
+    def toDBObject(record: R): DBObject
   }
 
   val mongo = {
@@ -27,12 +33,15 @@ object TrivialORM {
   }
 
   type MB = Meta[_]
-  class MyDBCollectionFactory(db: DB) extends DBCollectionFactory[MB] {
+  class MyDBCollectionFactory(db: DB) extends DBCollectionFactory[MB, Record] {
     override def getDBCollection[M <: MB](query: Query[M, _, _]): DBCollection = {
       db.getCollection(query.meta.collectionName)
     }
     override def getPrimaryDBCollection[M <: MB](query: Query[M, _, _]): DBCollection = {
       db.getCollection(query.meta.collectionName)
+    }
+    override def getPrimaryDBCollection(record: Record): DBCollection = {
+      db.getCollection(record.meta.collectionName)
     }
     override def getInstanceName[M <: MB](query: Query[M, _, _]): String = {
       db.getName
@@ -42,15 +51,15 @@ object TrivialORM {
     }
   }
 
-  class MyQueryExecutor extends QueryExecutor[Meta[_]] {
-    override val adapter = new MongoJavaDriverAdapter[Meta[_]](new MyDBCollectionFactory(mongo.getDB("test")))
+  class MyQueryExecutor extends QueryExecutor[Meta[_], Record] {
+    override val adapter = new MongoJavaDriverAdapter[Meta[_], Record](new MyDBCollectionFactory(mongo.getDB("test")))
     override val optimizer = new QueryOptimizer
     override val defaultWriteConcern: WriteConcern = WriteConcern.SAFE
 
-    protected def serializer[M <: Meta[_], R](
+    protected def readSerializer[M <: Meta[_], R](
       meta: M,
       select: Option[MongoSelect[M, R]]
-    ): RogueSerializer[R] = new RogueSerializer[R] {
+    ): RogueReadSerializer[R] = new RogueReadSerializer[R] {
       override def fromDBObject(dbo: DBObject): R = select match {
         case Some(MongoSelect(Nil, transformer)) =>
           // A MongoSelect clause exists, but has empty fields. Return null.
@@ -65,6 +74,12 @@ object TrivialORM {
           meta.fromDBObject(dbo).asInstanceOf[R]
       }
     }
+    override protected def writeSerializer(record: Record): RogueWriteSerializer[Record] = new RogueWriteSerializer[Record] {
+      override def toDBObject(record: Record): DBObject = {
+        val meta = record.meta
+        record.meta.toDBObject(record)
+      }
+    }
   }
 
   object Implicits extends Rogue {
@@ -75,7 +90,10 @@ object TrivialORM {
   }
 }
 
-case class SimpleRecord(a: Int, b: String)
+case class SimpleRecord(a: Int, b: String) extends TrivialORM.Record {
+  override type Self = SimpleRecord
+  override def meta: SimpleRecord.type = SimpleRecord
+}
 
 object SimpleRecord extends TrivialORM.Meta[SimpleRecord] {
   val a = new OptionalField[Int, SimpleRecord.type] { override val owner = SimpleRecord; override val name = "a" }
@@ -84,6 +102,13 @@ object SimpleRecord extends TrivialORM.Meta[SimpleRecord] {
   override val collectionName = "simple_records"
   override def fromDBObject(dbo: DBObject): SimpleRecord = {
     new SimpleRecord(dbo.get(a.name).asInstanceOf[Int], dbo.get(b.name).asInstanceOf[String])
+  }
+  override def toDBObject(record: SimpleRecord): DBObject = {
+    (BasicDBObjectBuilder
+      .start
+      .add(a.name, record.a)
+      .add(b.name, record.b)
+      .get)
   }
 }
 

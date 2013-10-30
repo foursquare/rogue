@@ -9,15 +9,16 @@ import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, CommandResult, DBCollec
   DBCursor, DBObject, ReadPreference, WriteConcern}
 import scala.collection.mutable.ListBuffer
 
-trait DBCollectionFactory[MB] {
+trait DBCollectionFactory[MB, RB] {
   def getDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
   def getPrimaryDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
+  def getPrimaryDBCollection(record: RB): DBCollection
   def getInstanceName[M <: MB](query: Query[M, _, _]): String
   // A set of of indexes, which are ordered lists of field names
   def getIndexes[M <: MB](query: Query[M, _, _]): Option[List[UntypedMongoIndex]]
 }
 
-class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
+class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB, RB]) {
 
   import QueryHelpers._
   import MongoHelpers.MongoBuilder._
@@ -120,6 +121,16 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       val coll = dbCollectionFactory.getPrimaryDBCollection(query)
       coll.remove(cnd, writeConcern)
     }
+  }
+
+  def save(record: RB, dbo: DBObject, writeConcern: WriteConcern): Unit = {
+    val collection = dbCollectionFactory.getPrimaryDBCollection(record)
+    collection.save(dbo, writeConcern)
+  }
+
+  def insert(record: RB, dbo: DBObject, writeConcern: WriteConcern): Unit = {
+    val collection = dbCollectionFactory.getPrimaryDBCollection(record)
+    collection.insert(dbo, writeConcern)
   }
 
   def modify[M <: MB](mod: ModifyQuery[M, _],

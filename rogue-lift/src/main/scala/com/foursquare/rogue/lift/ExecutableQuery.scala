@@ -9,9 +9,9 @@ import com.foursquare.rogue.MongoHelpers.MongoSelect
 import com.foursquare.rogue.Rogue._
 import com.mongodb.WriteConcern
 
-case class ExecutableQuery[MB, M <: MB, R, State](
+case class ExecutableQuery[MB, M <: MB, RB, R, State](
     query: Query[M, R, State],
-    db: QueryExecutor[MB]
+    db: QueryExecutor[MB, RB]
 )(implicit ev: ShardingOk[M, State]) {
 
   /**
@@ -133,8 +133,8 @@ case class ExecutableQuery[MB, M <: MB, R, State](
     db.iterateBatch(query, batchSize, state)(handler)
 }
 
-case class ExecutableModifyQuery[MB, M <: MB, State](query: ModifyQuery[M, State],
-                                                     db: QueryExecutor[MB]) {
+case class ExecutableModifyQuery[MB, M <: MB, RB, State](query: ModifyQuery[M, State],
+                                                         db: QueryExecutor[MB, RB]) {
   def updateMulti(): Unit =
     db.updateMulti(query)
 
@@ -154,9 +154,9 @@ case class ExecutableModifyQuery[MB, M <: MB, State](query: ModifyQuery[M, State
     db.upsertOne(query, writeConcern)
 }
 
-case class ExecutableFindAndModifyQuery[MB, M <: MB, R](
+case class ExecutableFindAndModifyQuery[MB, M <: MB, RB, R](
     query: FindAndModifyQuery[M, R],
-    db: QueryExecutor[MB]
+    db: QueryExecutor[MB, RB]
 ) {
   def updateOne(returnNew: Boolean = false): Option[R] =
     db.findAndUpdateOne(query, returnNew)
@@ -165,9 +165,9 @@ case class ExecutableFindAndModifyQuery[MB, M <: MB, R](
     db.findAndUpsertOne(query, returnNew)
 }
 
-class PaginatedQuery[MB, M <: MB, R, +State <: Unlimited with Unskipped](
+class PaginatedQuery[MB, M <: MB, RB, R, +State <: Unlimited with Unskipped](
     q: Query[M, R, State],
-    db: QueryExecutor[MB],
+    db: QueryExecutor[MB, RB],
     val countPerPage: Int,
     val pageNum: Int = 1
 )(implicit ev: ShardingOk[M, State]) {
