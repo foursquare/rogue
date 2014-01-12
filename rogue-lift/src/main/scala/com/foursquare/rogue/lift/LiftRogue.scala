@@ -8,7 +8,7 @@ import com.foursquare.field.{
     RequiredField => RRequiredField}
 import com.foursquare.index.IndexBuilder
 import com.foursquare.rogue.{BSONType, BsonRecordListModifyField, BsonRecordListQueryField, BsonRecordModifyField,
-    BsonRecordQueryField, CaseClassListModifyField, CaseClassListQueryField, CaseClassQueryField, DateModifyField,
+    BsonRecordQueryField, DateModifyField,
     DateQueryField, EnumerationListModifyField, EnumerationListQueryField, EnumerationModifyField, EnumIdQueryField,
     EnumNameQueryField, FindAndModifyQuery, ForeignObjectIdQueryField, GeoModifyField, GeoQueryField, HasOrClause,
     InitialState, LatLong, ListModifyField, ListQueryField, MandatorySelectField, MapModifyField, MapQueryField,

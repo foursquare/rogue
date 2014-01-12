@@ -251,12 +251,6 @@ class StringQueryField[F <: String, M](override val field: Field[F, M])
   override def valueToDB(v: F): F = v
 }
 
-class CaseClassQueryField[V, M](val field: Field[V, M]) {
-  def unsafeField[F](name: String): SelectableDummyField[F, M] = {
-    new SelectableDummyField[F, M](field.name + "." + name, field.owner)
-  }
-}
-
 class BsonRecordQueryField[M, B](field: Field[B, M], asDBObject: B => DBObject, defaultValue: B)
     extends AbstractQueryField[B, B, DBObject, M](field) {
   override def valueToDB(b: B) = asDBObject(b)
@@ -318,14 +312,6 @@ class StringsListQueryField[M](override val field: Field[List[String], M])
 class SeqQueryField[V: BSONType, M](field: Field[Seq[V], M])
     extends AbstractListQueryField[V, V, AnyRef, M, Seq](field) {
   override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
-}
-
-class CaseClassListQueryField[V, M](field: Field[List[V], M])
-    extends AbstractListQueryField[V, V, DBObject, M, List](field) {
-  override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
-
-  def unsafeField[F](name: String): SelectableDummyField[List[F], M] =
-    new SelectableDummyField[List[F], M](field.name + "." + name, field.owner)
 }
 
 class BsonRecordListQueryField[M, B](field: Field[List[B], M], rec: B, asDBObject: B => DBObject)
@@ -493,11 +479,6 @@ class SeqModifyField[V: BSONType, M](field: Field[Seq[V], M])
 class ListModifyField[V: BSONType, M](field: Field[List[V], M])
     extends AbstractListModifyField[V, AnyRef, M, List](field) {
   override def valueToDB(v: V): AnyRef = BSONType[V].asBSONObject(v)
-}
-
-class CaseClassListModifyField[V, M](field: Field[List[V], M])
-    extends AbstractListModifyField[V, DBObject, M, List](field) {
-  override def valueToDB(v: V) = QueryHelpers.asDBObject(v)
 }
 
 class EnumerationListModifyField[V <: Enumeration#Value, M](field: Field[List[V], M])

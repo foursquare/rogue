@@ -4,31 +4,12 @@ package com.foursquare.rogue
 
 import com.foursquare.index.UntypedMongoIndex
 import com.mongodb.{DBObject, WriteConcern}
-import net.liftweb.json.{Extraction, Formats, Serializer, TypeInfo}
-import net.liftweb.json.JsonAST.{JObject, JValue}
-import net.liftweb.mongodb.{JObjectParser, ObjectIdSerializer}
 
 case class Degrees(value: Double)
 case class Radians(value: Double)
 case class LatLong(lat: Double, long: Double)
 
 object QueryHelpers {
-  class DBObjectSerializer extends Serializer[DBObject] {
-    val DBObjectClass = classOf[DBObject]
-
-    def deserialize(implicit formats: Formats): PartialFunction[(TypeInfo, JValue), DBObject] = {
-      case (TypeInfo(klass, _), json : JObject) if DBObjectClass.isAssignableFrom(klass) =>
-        JObjectParser.parse(json)
-    }
-
-    def serialize(implicit formats: Formats): PartialFunction[Any, JValue] = {
-      case x: DBObject =>
-        JObjectParser.serialize(x)
-    }
-  }
-
-  private implicit val formats =
-    (net.liftweb.json.DefaultFormats + new ObjectIdSerializer + new DBObjectSerializer)
 
   trait QueryLogger {
     def log(query: Query[_, _, _], instanceName: String, msg: => String, timeMillis: Long): Unit
@@ -137,10 +118,6 @@ object QueryHelpers {
       new EmptyQueryClause[java.util.List[V]](fieldName)
     else
       new AllQueryClause(fieldName, QueryHelpers.validatedList(vs.toSet))
-  }
-
-  def asDBObject[T](x: T): DBObject = {
-    JObjectParser.parse(Extraction.decompose(x).asInstanceOf[JObject])
   }
 
   def orConditionFromQueries(subqueries: List[Query[_, _, _]]) = {
