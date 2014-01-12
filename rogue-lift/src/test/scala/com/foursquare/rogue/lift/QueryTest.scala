@@ -87,6 +87,7 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.venuename matches p2).and(_.venuename nin List("a", "b")).toString() must_== """db.venues.find({ "venuename" : { "$nin" : [ "a" , "b"] , "$regex" : "Star.*" , "$options" : "im"}})"""
 
     // all, in, size, contains, at
+    Venue.where(_.tags eqs List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : [ "db" , "ka"]})"""
     Venue.where(_.tags all List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$all" : [ "db" , "ka"]}})"""
     Venue.where(_.tags in  List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$in" : [ "db" , "ka"]}})"""
     Venue.where(_.tags nin List("db", "ka"))  .toString() must_== """db.venues.find({ "tags" : { "$nin" : [ "db" , "ka"]}})"""
