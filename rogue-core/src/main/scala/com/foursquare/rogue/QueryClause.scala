@@ -197,6 +197,20 @@ class ModifyAddEachClause(fieldName: String, values: Traversable[_])
   }
 }
 
+class ModifyPushEachClause(fieldName: String, values: Traversable[_])
+    extends ModifyClause(ModOps.Push) {
+  override def extend(q: BasicDBObjectBuilder): Unit = {
+    q.push(fieldName).add("$each", QueryHelpers.list(values)).pop
+  }
+}
+
+class ModifyPushEachSliceClause(fieldName: String, slice: Int, values: Traversable[_])
+    extends ModifyClause(ModOps.Push) {
+  override def extend(q: BasicDBObjectBuilder): Unit = {
+    q.push(fieldName).add("$each", QueryHelpers.list(values)).add("$slice", slice).pop
+  }
+}
+
 class ModifyBitAndClause(fieldName: String, value: Int) extends ModifyClause(ModOps.Bit) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
     q.push(fieldName).add("and", value).pop
