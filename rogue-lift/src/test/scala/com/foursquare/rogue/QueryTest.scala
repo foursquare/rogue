@@ -265,6 +265,8 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.legacyid eqs 1).modify(_.tags pushAll List("a", "b"))   .toString() must_== query + """{ "$pushAll" : { "tags" : [ "a" , "b"]}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.tags addToSet "a")             .toString() must_== query + """{ "$addToSet" : { "tags" : "a"}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.popularity addToSet List(1L, 2L)).toString() must_== query + """{ "$addToSet" : { "popularity" : { "$each" : [ 1 , 2]}}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.popularity push List(1L, 2L)).toString() must_== query + """{ "$push" : { "popularity" : { "$each" : [ 1 , 2]}}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.popularity push (List(1L, 2L), 3)).toString() must_== query + """{ "$push" : { "popularity" : { "$each" : [ 1 , 2] , "$slice" : 3}}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.tags popFirst)                 .toString() must_== query + """{ "$pop" : { "tags" : -1}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.tags popLast)                  .toString() must_== query + """{ "$pop" : { "tags" : 1}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.tags pull "a")                 .toString() must_== query + """{ "$pull" : { "tags" : "a"}}""" + suffix
