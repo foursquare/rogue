@@ -6,6 +6,7 @@ import com.mongodb.DBObject
 import java.util.Date
 import java.util.regex.Pattern
 import org.bson.types.ObjectId
+import org.joda.time.DateTime
 
 trait BSONType[T] {
   def asBSONObject(v: T): AnyRef
@@ -37,6 +38,9 @@ object BSONType {
   }
   implicit object DateIsBSONType extends BSONType[Date] {
     override def asBSONObject(v: Date): AnyRef = v
+  }
+  implicit object DateTimeIsBSONType extends BSONType[DateTime] {
+    override def asBSONObject(v: DateTime): AnyRef = v.toDate
   }
   implicit object PatternIsBSONType extends BSONType[Pattern] {
     override def asBSONObject(v: Pattern): AnyRef = v
