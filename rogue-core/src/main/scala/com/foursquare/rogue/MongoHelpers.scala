@@ -41,7 +41,13 @@ object MongoHelpers extends Rogue {
           case Some(eqClause) => eqClause.extend(builder, signature)
           case None => {
             builder.push(name)
-            cs.foreach(_.extend(builder, signature))
+            val (negative, positive) = cs.partition(_.negated)
+            positive.foreach(_.extend(builder, signature))
+            if (negative.nonEmpty) {
+              builder.push("$not")
+              negative.foreach(_.extend(builder, signature))
+              builder.pop
+            }
             builder.pop
           }
         }
