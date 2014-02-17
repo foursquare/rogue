@@ -10,6 +10,7 @@ abstract class QueryClause[V](val fieldName: String, val actualIndexBehavior: Ma
   def extend(q: BasicDBObjectBuilder, signature: Boolean) {
     conditions foreach { case (op, v) => q.add(op.toString, if (signature) 0 else v) }
   }
+  var negated: Boolean = false
   val expectedIndexBehavior: MaybeIndexed = Index
   def withExpectedIndexBehavior(b: MaybeIndexed): QueryClause[V]
 }
