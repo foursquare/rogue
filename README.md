@@ -38,9 +38,9 @@ you'll want to declare your dependency on Rogue as `intransitive` and declare an
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
     val rogueField      = "com.foursquare" %% "rogue-field"         % "2.2.0" intransitive()
-    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.2.0" intransitive()
-    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.2.0" intransitive()
-    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.2.0" intransitive()
+    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.3.0" intransitive()
+    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.3.0" intransitive()
+    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.3.0" intransitive()
     val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4"
 
 You can substitute "2.5.1" for whatever version of Lift you are using. Rogue has been used in
@@ -103,7 +103,7 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 2.2.0. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
+The latest release is 2.3.0. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
 Major changes in 2.0.0:
 

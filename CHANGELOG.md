@@ -1,5 +1,14 @@
 ## Release Notes
 
+# 2.3.0
+
+- $setOnInsert support (thanks Konrad!)
+- support for eqs on list fields
+- support for $push: { $each: [...], $slice: }
+- joda.DateTime is a BSONType
+- string subtypes are BSONTypes
+- support for $not operator expression modifiers
+
 # 2.2.0
 
 - ObjectIdKey trait to replace deprecated ObjectId
