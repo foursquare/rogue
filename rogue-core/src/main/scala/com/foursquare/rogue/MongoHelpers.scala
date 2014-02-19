@@ -109,9 +109,15 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
+    def stringFromDBObject(dbo: DBObject): String = {
+      // DBObject.toString renders ObjectIds like { $oid: "..."" }, but we want ObjectId("...")
+      // because that's the format the Mongo REPL accepts.
+      dbo.toString.replaceAll("""\{ "\$oid" : "([0-9a-f]{24})"\}""", """ObjectId("$1")""")
+    }
+
     def buildQueryString[R, M](operation: String, collectionName: String, query: Query[M, R, _]): String = {
       val sb = new StringBuilder("db.%s.%s(".format(collectionName, operation))
-      sb.append(buildCondition(query.condition, signature = false).toString)
+      sb.append(stringFromDBObject(buildCondition(query.condition, signature = false)))
       query.select.foreach(s => sb.append(", " + buildSelect(s).toString))
       sb.append(")")
       query.order.foreach(o => sb.append(".sort(%s)" format buildOrder(o).toString))
@@ -134,8 +140,8 @@ object MongoHelpers extends Rogue {
                                 upsert: Boolean = false, multi: Boolean = false): String = {
       "db.%s.update(%s, %s, %s, %s)".format(
         collectionName,
-        buildCondition(modify.query.condition, signature = false).toString,
-        buildModify(modify.mod),
+        stringFromDBObject(buildCondition(modify.query.condition, signature = false)),
+        stringFromDBObject(buildModify(modify.mod)),
         upsert,
         multi
       )
@@ -144,10 +150,10 @@ object MongoHelpers extends Rogue {
     def buildFindAndModifyString[R, M](collectionName: String, mod: FindAndModifyQuery[M, R], returnNew: Boolean, upsert: Boolean, remove: Boolean): String = {
       val query = mod.query
       val sb = new StringBuilder("db.%s.findAndModify({ query: %s".format(
-          collectionName, buildCondition(query.condition)))
+          collectionName, stringFromDBObject(buildCondition(query.condition))))
       query.order.foreach(o => sb.append(", sort: " + buildOrder(o).toString))
       if (remove) sb.append(", remove: true")
-      sb.append(", update: " + buildModify(mod.mod).toString)
+      sb.append(", update: " + stringFromDBObject(buildModify(mod.mod)))
       sb.append(", new: " + returnNew)
       query.select.foreach(s => sb.append(", fields: " + buildSelect(s).toString))
       sb.append(", upsert: " + upsert)
