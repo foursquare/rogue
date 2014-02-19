@@ -31,12 +31,12 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.mayor eqs 1)              .toString() must_== """db.venues.find({ "mayor" : 1})"""
     Venue.where(_.venuename eqs "Starbucks").toString() must_== """db.venues.find({ "venuename" : "Starbucks"})"""
     Venue.where(_.closed eqs true)          .toString() must_== """db.venues.find({ "closed" : true})"""
-    Venue.where(_._id eqs oid)              .toString() must_== ("""db.venues.find({ "_id" : { "$oid" : "%s"}})""" format oid.toString)
+    Venue.where(_._id eqs oid)              .toString() must_== ("""db.venues.find({ "_id" : ObjectId("%s")})""" format oid.toString)
     VenueClaim.where(_.status eqs ClaimStatus.approved).toString() must_== """db.venueclaims.find({ "status" : "Approved"})"""
 
-    VenueClaim.where(_.venueid eqs oid)     .toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid.toString)
-    VenueClaim.where(_.venueid eqs ven1.id) .toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid1.toString)
-    VenueClaim.where(_.venueid eqs ven1)    .toString() must_== ("""db.venueclaims.find({ "vid" : { "$oid" : "%s"}})""" format oid1.toString)
+    VenueClaim.where(_.venueid eqs oid)     .toString() must_== ("""db.venueclaims.find({ "vid" : ObjectId("%s")})""" format oid.toString)
+    VenueClaim.where(_.venueid eqs ven1.id) .toString() must_== ("""db.venueclaims.find({ "vid" : ObjectId("%s")})""" format oid1.toString)
+    VenueClaim.where(_.venueid eqs ven1)    .toString() must_== ("""db.venueclaims.find({ "vid" : ObjectId("%s")})""" format oid1.toString)
 
     // neq,lt,gt
     Venue.where(_.mayor_count neqs 5).toString() must_== """db.venues.find({ "mayor_count" : { "$ne" : 5}})"""
@@ -67,11 +67,11 @@ class QueryTest extends JUnitMustMatchers {
     VenueClaim.where(_.status in List(ClaimStatus.approved, ClaimStatus.pending)) .toString() must_== """db.venueclaims.find({ "status" : { "$in" : [ "Approved" , "Pending approval"]}})"""
     VenueClaim.where(_.status nin List(ClaimStatus.approved, ClaimStatus.pending)).toString() must_== """db.venueclaims.find({ "status" : { "$nin" : [ "Approved" , "Pending approval"]}})"""
 
-    VenueClaim.where(_.venueid in List(ven1.id)) .toString() must_== ("""db.venueclaims.find({ "vid" : { "$in" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
-    VenueClaim.where(_.venueid in List(ven1))    .toString() must_== ("""db.venueclaims.find({ "vid" : { "$in" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
+    VenueClaim.where(_.venueid in List(ven1.id)) .toString() must_== ("""db.venueclaims.find({ "vid" : { "$in" : [ ObjectId("%s")]}})""" format oid1.toString)
+    VenueClaim.where(_.venueid in List(ven1))    .toString() must_== ("""db.venueclaims.find({ "vid" : { "$in" : [ ObjectId("%s")]}})""" format oid1.toString)
 
-    VenueClaim.where(_.venueid nin List(ven1.id))  .toString() must_== ("""db.venueclaims.find({ "vid" : { "$nin" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
-    VenueClaim.where(_.venueid nin List(ven1))     .toString() must_== ("""db.venueclaims.find({ "vid" : { "$nin" : [ { "$oid" : "%s"}]}})""" format oid1.toString)
+    VenueClaim.where(_.venueid nin List(ven1.id))  .toString() must_== ("""db.venueclaims.find({ "vid" : { "$nin" : [ ObjectId("%s")]}})""" format oid1.toString)
+    VenueClaim.where(_.venueid nin List(ven1))     .toString() must_== ("""db.venueclaims.find({ "vid" : { "$nin" : [ ObjectId("%s")]}})""" format oid1.toString)
 
 
     // exists
@@ -98,7 +98,7 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.tags notcontains "karaoke") .toString() must_== """db.venues.find({ "tags" : { "$ne" : "karaoke"}})"""
     Venue.where(_.popularity contains 3)      .toString() must_== """db.venues.find({ "popularity" : 3})"""
     Venue.where(_.popularity at 0 eqs 3)      .toString() must_== """db.venues.find({ "popularity.0" : 3})"""
-    Venue.where(_.categories at 0 eqs oid)    .toString() must_== """db.venues.find({ "categories.0" : { "$oid" : "%s"}})""".format(oid.toString)
+    Venue.where(_.categories at 0 eqs oid)    .toString() must_== """db.venues.find({ "categories.0" : ObjectId("%s")})""".format(oid.toString)
     Venue.where(_.tags at 0 startsWith "kara").toString() must_== """db.venues.find({ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
     // alternative syntax
     Venue.where(_.tags idx 0 startsWith "kara").toString() must_== """db.venues.find({ "tags.0" : { "$regex" : "^\\Qkara\\E" , "$options" : ""}})"""
@@ -120,10 +120,10 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.geolatlng nearSphere (39.0, -74.0, Radians(1.0))).toString() must_== """db.venues.find({ "latlng" : { "$nearSphere" : [ 39.0 , -74.0] , "$maxDistance" : 1.0}})"""
 
     // ObjectId before, after, between
-    Venue.where(_._id before d2)       .toString() must_== """db.venues.find({ "_id" : { "$lt" : { "$oid" : "%s"}}})""".format(oid2.toString)
-    Venue.where(_._id after d1)        .toString() must_== """db.venues.find({ "_id" : { "$gt" : { "$oid" : "%s"}}})""".format(oid1.toString)
-    Venue.where(_._id between (d1, d2)).toString() must_== """db.venues.find({ "_id" : { "$gt" : { "$oid" : "%s"} , "$lt" : { "$oid" : "%s"}}})""".format(oid1.toString, oid2.toString)
-    Venue.where(_._id between Tuple2(d1, d2)).toString() must_== """db.venues.find({ "_id" : { "$gt" : { "$oid" : "%s"} , "$lt" : { "$oid" : "%s"}}})""".format(oid1.toString, oid2.toString)
+    Venue.where(_._id before d2)       .toString() must_== """db.venues.find({ "_id" : { "$lt" : ObjectId("%s")}})""".format(oid2.toString)
+    Venue.where(_._id after d1)        .toString() must_== """db.venues.find({ "_id" : { "$gt" : ObjectId("%s")}})""".format(oid1.toString)
+    Venue.where(_._id between (d1, d2)).toString() must_== """db.venues.find({ "_id" : { "$gt" : ObjectId("%s") , "$lt" : ObjectId("%s")}})""".format(oid1.toString, oid2.toString)
+    Venue.where(_._id between Tuple2(d1, d2)).toString() must_== """db.venues.find({ "_id" : { "$gt" : ObjectId("%s") , "$lt" : ObjectId("%s")}})""".format(oid1.toString, oid2.toString)
 
     // DateTime before, after, between
     Venue.where(_.last_updated before d2)       .toString() must_== """db.venues.find({ "last_updated" : { "$lt" : { "$date" : "2010-05-02T00:00:00.000Z"}}})"""
