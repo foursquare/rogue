@@ -7,7 +7,7 @@ import com.foursquare.rogue.{DBCollectionFactory, Query => RogueQuery}
 import com.foursquare.spindle.{IndexParser, UntypedMetaRecord, UntypedRecord}
 import com.mongodb.{DB, DBCollection}
 import scala.collection.immutable.ListMap
-import scala.collection.mutable.ConcurrentMap
+import scala.collection.mutable.{Map => MutableMap}
 
 trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord, UntypedRecord] {
   def getDB(meta: UntypedMetaRecord): DB = {
@@ -47,7 +47,11 @@ trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord, 
     }
   }
 
-  protected def indexCache: Option[ConcurrentMap[UntypedMetaRecord, List[UntypedMongoIndex]]]
+  /**
+   * Implementations should use a concurrent map. Unfortunately there is no common supertype for concurrent
+   * maps that works in both 2.9.2 and 2.10.
+   */
+  protected def indexCache: Option[MutableMap[UntypedMetaRecord, List[UntypedMongoIndex]]]
 
   /**
    * Retrieves the list of indexes declared for the record type associated with a
