@@ -14,7 +14,7 @@ trait IndexChecker {
    * @param indexes a list of the indexes
    * @return true if the required indexes are found, false otherwise.
    */
-  def validateIndexExpectations(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean
+  def validateIndexExpectations(query: Query[_, _, _], indexes: List[UntypedMongoIndex]): Boolean
 
   /**
    * Verifies that the index expected by a query both exists, and will be used by MongoDB
@@ -23,7 +23,7 @@ trait IndexChecker {
    * @param query the query
    * @param indexes the list of indexes that exist in the database
    */
-  def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean
+  def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[UntypedMongoIndex]): Boolean
 }
 
 /**
@@ -62,7 +62,7 @@ object MongoIndexChecker extends IndexChecker {
    * @param indexes a list of the indexes
    * @return true if the required indexes are found, false otherwise.
    */
-  override def validateIndexExpectations(query: Query[_, _, _], indexes: List[MongoIndex[_]]): Boolean = {
+  override def validateIndexExpectations(query: Query[_, _, _], indexes: List[UntypedMongoIndex]): Boolean = {
     val baseConditions = normalizeCondition(query.condition);
     val conditions = baseConditions.map(_.filter(_.expectedIndexBehavior != DocumentScan))
 
@@ -93,7 +93,7 @@ object MongoIndexChecker extends IndexChecker {
    * @param query the query
    * @param indexes the list of indexes that exist in the database
    */
-  override def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[MongoIndex[_]]) = {
+  override def validateQueryMatchesSomeIndex(query: Query[_, _, _], indexes: List[UntypedMongoIndex]) = {
     val conditions = normalizeCondition(query.condition)
     lazy val indexString = indexes.map(idx => "{%s}".format(idx.toString())).mkString(", ")
     conditions.forall(clauses => {
@@ -173,7 +173,7 @@ object MongoIndexChecker extends IndexChecker {
     false
   }
 
-  private def logIndexHit(query: Query[_, _, _], index: MongoIndex[_]): Boolean = {
+  private def logIndexHit(query: Query[_, _, _], index: UntypedMongoIndex): Boolean = {
     QueryHelpers.logger.logIndexHit(query, index)
     true
   }
