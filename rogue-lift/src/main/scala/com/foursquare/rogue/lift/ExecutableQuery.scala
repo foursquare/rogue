@@ -90,7 +90,7 @@ case class ExecutableQuery[MB, M <: MB, RB, R, State](
    */
   def paginate(countPerPage: Int)
               (implicit ev1: Required[State, Unlimited with Unskipped],
-               ev2: ShardingOk[M, State]) = {
+               ev2: ShardingOk[M, State]): PaginatedQuery[MB, M, RB, R, Unlimited with Unskipped] = {
     new PaginatedQuery(ev1(query), db, countPerPage)
   }
 
