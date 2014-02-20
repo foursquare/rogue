@@ -64,14 +64,15 @@ trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord, 
     if (cachedIndexes.isDefined) {
       cachedIndexes
     } else {
-      val rv = 
+      val rv = {
+        val fieldNameToWireName = query.meta.fields.map(f => f.longName -> f.name).toMap
         for (indexes <- IndexParser.parse(query.meta.annotations).right.toOption) yield {
           for (index <- indexes.toList) yield {
-            val entries = index.map(entry => (entry.fieldName, entry.indexType))
+            val entries = index.map(entry => (fieldNameToWireName(entry.fieldName), entry.indexType))
             new SpindleMongoIndex(ListMap(entries: _*))
           }
         }
-
+      }
       // Update the cache
       for {
         indexes <- rv
