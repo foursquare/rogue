@@ -4,7 +4,7 @@ package com.foursquare.rogue.lift
 import com.foursquare.index.{Asc, Desc, IndexedRecord, IndexModifier, TwoD}
 import com.foursquare.rogue.{LatLong, Sharded, ShardKey}
 import com.foursquare.rogue.lift.LiftRogue._
-import com.mongodb.{Mongo, ServerAddress}
+import com.mongodb.{MongoClient, ServerAddress}
 import net.liftweb.mongodb.{MongoDB, MongoIdentifier}
 import net.liftweb.mongodb.record._
 import net.liftweb.mongodb.record.field._
@@ -20,11 +20,11 @@ object RogueTestMongo extends MongoIdentifier {
 
   override def jndiName = "rogue_mongo"
 
-  private var mongo: Option[Mongo] = None
+  private var mongo: Option[MongoClient] = None
 
   def connectToMongo = {
     val MongoPort = Option(System.getenv("MONGO_PORT")).map(_.toInt).getOrElse(37648)
-    mongo = Some(new Mongo(new ServerAddress("localhost", MongoPort)))
+    mongo = Some(new MongoClient(new ServerAddress("localhost", MongoPort)))
     MongoDB.defineDb(RogueTestMongo, mongo.get, "rogue-test")
   }
 

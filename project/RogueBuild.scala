@@ -57,6 +57,7 @@ object RogueBuild extends Build {
     scalacOptions <++= scalaVersion map { scalaVersion =>
         scalaVersion.split('.') match {
             case Array(major, minor, _*) if major.toInt >= 2 && minor.toInt >= 10 => Seq("-feature", "-language:_")
+            case Array(major, minor, _*) if major.toInt == 2 && minor.toInt == 9 => Seq("-Ydependent-method-types")
             case _ => Seq()
         }
     },

@@ -5,7 +5,7 @@ package com.foursquare.rogue.spindle
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.spindle.gen.TestStruct
 import com.foursquare.spindle.UntypedMetaRecord
-import com.mongodb.{Mongo, ServerAddress}
+import com.mongodb.{MongoClient, ServerAddress}
 import org.junit.Test
 import org.junit.Assert._
 
@@ -13,7 +13,7 @@ class TestSpindleDBService {
   @Test
   def testSimpleStruct {
     val MongoPort = Option(System.getenv("MONGO_PORT")).map(_.toInt).getOrElse(37648)
-    val mongo = new Mongo(new ServerAddress("localhost", MongoPort))
+    val mongo = new MongoClient(new ServerAddress("localhost", MongoPort))
 
     val dbService = new SpindleDatabaseService(
       new SpindleDBCollectionFactory {
