@@ -66,7 +66,7 @@ trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord, 
     } else {
       val rv = {
         val fieldNameToWireName = query.meta.fields.map(f => f.longName -> f.name).toMap
-        for (indexes <- IndexParser.parse(query.meta.annotations).right.toOption) yield {
+        for (indexes <- IndexParser.parse(query.meta.annotations).right.toOption.filter(_.nonEmpty)) yield {
           for (index <- indexes.toList) yield {
             val entries = index.map(entry => (fieldNameToWireName(entry.fieldName), entry.indexType))
             new SpindleMongoIndex(ListMap(entries: _*))
