@@ -58,10 +58,8 @@ case class Query[M, R, +State](
   private def addClause[F](clause: M => QueryClause[F],
                            expectedIndexBehavior: MaybeIndexed):
                        Query[M, R, State] = {
-    val cl = clause(meta)
-    val negated = cl.negated
-    val newClause = cl.withExpectedIndexBehavior(expectedIndexBehavior)
-    newClause.negated = negated
+    val newClause = clause(meta)
+    newClause.expectedIndexBehavior = expectedIndexBehavior
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }
 

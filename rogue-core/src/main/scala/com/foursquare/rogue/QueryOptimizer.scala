@@ -3,9 +3,9 @@ package com.foursquare.rogue
 
 class QueryOptimizer {
   def isEmptyClause(clause: QueryClause[_]): Boolean = clause match {
-    case AllQueryClause(_, vs, _) => vs.isEmpty
-    case InQueryClause(_, vs, _) => vs.isEmpty
-    case EmptyQueryClause(_, _) => true
+    case AllQueryClause(_, vs) => vs.isEmpty
+    case InQueryClause(_, vs) => vs.isEmpty
+    case EmptyQueryClause(_) => true
     case _ => false
   }
 
