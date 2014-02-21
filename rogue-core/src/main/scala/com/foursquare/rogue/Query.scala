@@ -56,10 +56,10 @@ case class Query[M, R, +State](
 ) {
 
   private def addClause[F](clause: M => QueryClause[F],
-                           expectedIndexBehavior: MaybeIndexed,
-                           negated: Boolean = false):
+                           expectedIndexBehavior: MaybeIndexed):
                        Query[M, R, State] = {
     val cl = clause(meta)
+    val negated = cl.negated
     val newClause = cl.withExpectedIndexBehavior(expectedIndexBehavior)
     newClause.negated = negated
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
@@ -76,12 +76,6 @@ case class Query[M, R, +State](
    */
   def and[F](clause: M => QueryClause[F]) =
     addClause(clause, expectedIndexBehavior = Index)
-
-  /**
-   * Adds a negated clause to the query.
-   */
-  def not[F](clause: M => QueryClause[F]) =
-    addClause(clause, expectedIndexBehavior = DocumentScan, negated = true)
 
   /**
    * Adds an iscan clause to a query.
@@ -130,6 +124,7 @@ case class Query[M, R, +State](
 
   def raw(f: BasicDBObjectBuilder => Unit): Query[M, R, State] = {
     val newClause = new RawQueryClause(f)
+    newClause.expectedIndexBehavior = DocumentScan
     this.copy(condition = condition.copy(clauses = newClause :: condition.clauses))
   }
 

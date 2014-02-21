@@ -232,9 +232,9 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.mayor eqs 1).raw(_.add("$where", "this.a > 3")).toString() must_== """db.venues.find({ "mayor" : 1 , "$where" : "this.a > 3"})"""
 
     // $not clauses
-    Venue.scan(_.mayor eqs 1).not(_.mayor_count lt 5).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$not" : { "$lt" : 5}}})"""
-    Venue.scan(_.mayor eqs 1).not(_.mayor_count lt 5).not(_.mayor_count gt 6).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$not" : { "$gt" : 6 , "$lt" : 5}}})"""
-    Venue.scan(_.mayor eqs 1).not(_.mayor_count lt 5).and(_.mayor_count gt 3).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$gt" : 3 , "$not" : { "$lt" : 5}}})"""
+    Venue.scan(_.mayor eqs 1).scan(_.mayor_count not (_ lt 5)).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$not" : { "$lt" : 5}}})"""
+    Venue.scan(_.mayor eqs 1).scan(_.mayor_count not (_ lt 5)).and(_.mayor_count not(_ gt 6)).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$not" : { "$gt" : 6 , "$lt" : 5}}})"""
+    Venue.scan(_.mayor eqs 1).scan(_.mayor_count not (_ lt 5)).and(_.mayor_count gt 3).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$gt" : 3 , "$not" : { "$lt" : 5}}})"""
   }
 
   @Test
