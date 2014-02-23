@@ -26,7 +26,7 @@ import net.liftweb.mongodb.record.field.{ BsonRecordField, BsonRecordListField, 
 import org.bson.types.ObjectId
 import net.liftweb.record.field.EnumField
 
-trait LiftRogue extends Rogue {
+trait LiftRogue {
   def OrQuery[M <: MongoRecord[M], R]
       (subqueries: Query[M, R, _]*)
       : Query[M, R, Unordered with Unselected with Unlimited with Unskipped with HasOrClause] = {
@@ -276,4 +276,4 @@ trait LiftRogue extends Rogue {
   implicit def BsonRecordIsBSONType[T <: BsonRecord[T]]: BSONType[T] = _BsonRecordIsBSONType.asInstanceOf[BSONType[T]]
 }
 
-object LiftRogue extends LiftRogue
+object LiftRogue extends Rogue with LiftRogue

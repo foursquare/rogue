@@ -6,7 +6,7 @@ import com.foursquare.field.Field
 import com.foursquare.rogue.Rogue
 import com.foursquare.spindle.{Enum, Record, MetaRecord}
 
-trait SpindleRogue extends Rogue {
+trait SpindleRogue {
   implicit def enumFieldToSpindleEnumQueryField[M <: MetaRecord[_], F <: Enum[F]](f: Field[F, M]): SpindleEnumQueryField[M, F] =
     new SpindleEnumQueryField(f)
   implicit def enumListFieldToSpindleEnumListQueryField[M <: MetaRecord[_], F <: Enum[F]](f: Field[Seq[F], M]): SpindleEnumListQueryField[M, F] =
@@ -45,4 +45,4 @@ trait SpindleRogue extends Rogue {
   ): SpindleEmbeddedRecordListModifyField[R, MM] = new SpindleEmbeddedRecordListModifyField(f)
 }
 
-object SpindleRogue extends SpindleRogue
+object SpindleRogue extends Rogue with SpindleRogue
