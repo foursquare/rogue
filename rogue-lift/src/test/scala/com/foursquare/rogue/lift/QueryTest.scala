@@ -235,6 +235,11 @@ class QueryTest extends JUnitMustMatchers {
     Venue.scan(_.mayor eqs 1).scan(_.mayor_count not (_ lt 5)).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$not" : { "$lt" : 5}}})"""
     Venue.scan(_.mayor eqs 1).scan(_.mayor_count not (_ lt 5)).and(_.mayor_count not(_ gt 6)).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$not" : { "$gt" : 6 , "$lt" : 5}}})"""
     Venue.scan(_.mayor eqs 1).scan(_.mayor_count not (_ lt 5)).and(_.mayor_count gt 3).toString() must_== """db.venues.find({ "mayor" : 1 , "mayor_count" : { "$gt" : 3 , "$not" : { "$lt" : 5}}})"""
+    Venue.scan(_._id not (_ before d1)).toString() must_== """db.venues.find({ "_id" : { "$not" : { "$lt" : ObjectId("%s")}}})""".format(oid1.toString)
+    Venue.scan(_.last_updated not (_ between (d1, d2))).toString() must_== """db.venues.find({ "last_updated" : { "$not" : { "$gte" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lte" : { "$date" : "2010-05-02T00:00:00.000Z"}}}})"""
+    Venue.scan(_.tags not (_ in List("a", "b"))).toString()  must_==  """db.venues.find({ "tags" : { "$not" : { "$in" : [ "a" , "b"]}}})"""
+    Venue.scan(_.tags not (_ size 0)).toString()  must_==  """db.venues.find({ "tags" : { "$not" : { "$size" : 0}}})"""
+    Venue.scan(_.popularity at 0 not (_ lt 0)).toString()  must_==  """db.venues.find({ "popularity.0" : { "$not" : { "$lt" : 0}}})"""
   }
 
   @Test

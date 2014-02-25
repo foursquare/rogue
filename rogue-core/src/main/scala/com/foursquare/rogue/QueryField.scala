@@ -109,7 +109,7 @@ abstract class AbstractQueryField[F, V, DB, M](val field: Field[F, M]) {
   def exists(b: Boolean) = new ExistsQueryClause(field.name, b)
   def hastype(t: MongoType.Value) = new TypeQueryClause(field.name, t)
 
-  def not(clause: Field[F, M] => QueryClause[F]) = {
+  def not[F2](clause: Field[F, M] => QueryClause[F2]): QueryClause[F2] = {
     val c = clause(field)
     c.negated = true
     c
