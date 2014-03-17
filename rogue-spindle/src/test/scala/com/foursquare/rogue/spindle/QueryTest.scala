@@ -250,7 +250,7 @@ class QueryTest extends JUnitMustMatchers {
     Q(ThriftVenue).scan(_.last_updated not (_ between (d1, d2))).toString() must_== """db.venues.find({ "last_updated" : { "$not" : { "$gte" : { "$date" : "2010-05-01T00:00:00.000Z"} , "$lte" : { "$date" : "2010-05-02T00:00:00.000Z"}}}})"""
     Q(ThriftVenue).scan(_.tags not (_ in List("a", "b"))).toString()  must_==  """db.venues.find({ "tags" : { "$not" : { "$in" : [ "a" , "b"]}}})"""
     Q(ThriftVenue).scan(_.tags not (_ size 0)).toString()  must_==  """db.venues.find({ "tags" : { "$not" : { "$size" : 0}}})"""
-    Q(ThriftVenue).scan(_.popularity at 0 not (_ lt 0)) must_==  """db.venues.find({ "popularity.0" : { "$not" : { "$lt" : 0}}})"""
+    Q(ThriftVenue).scan(_.popularity at 0 not (_ lt 0)).toString() must_==  """db.venues.find({ "popularity.0" : { "$not" : { "$lt" : 0}}})"""
   }
 
   @Test
