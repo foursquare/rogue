@@ -3,7 +3,7 @@
 package com.foursquare.rogue.spindle
 
 import com.foursquare.field.Field
-import com.foursquare.rogue.Rogue
+import com.foursquare.rogue.{BSONType, Rogue}
 import com.foursquare.spindle.{Enum, Record, MetaRecord}
 
 trait SpindleRogue {
@@ -43,6 +43,15 @@ trait SpindleRogue {
   ](
       f: Field[Seq[R], MM]
   ): SpindleEmbeddedRecordListModifyField[R, MM] = new SpindleEmbeddedRecordListModifyField(f)
+
+  class SpindleRecordIsBSONType[R <: Record[R]] extends BSONType[R] {
+    private val serializer = new SpindleRogueWriteSerializer
+    override def asBSONObject(v: R): AnyRef = serializer.toDBObject(v)
+  }
+
+  object _SpindleRecordIsBSONType extends SpindleRecordIsBSONType[Nothing]
+
+  implicit def SpindleRecordIsBSONType[R <: Record[R]]: BSONType[R] = _SpindleRecordIsBSONType.asInstanceOf[BSONType[R]]
 }
 
 object SpindleRogue extends Rogue with SpindleRogue
