@@ -1,6 +1,6 @@
 libraryDependencies <++= (scalaVersion) { scalaVersion =>
   def sv(s: String) = s + "_" + (scalaVersion match {
-      case "2.10.2" => "2.10"
+      case "2.10.3" => "2.10"
       case "2.9.2"  => "2.9.1"
       case v => v
   })

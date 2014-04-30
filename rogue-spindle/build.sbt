@@ -1,8 +1,8 @@
 libraryDependencies <++= (scalaVersion) { scalaVersion =>
-  val spindleVersion = "1.7.1"
+  val spindleVersion = "1.8.4"
   Seq(
     "com.foursquare"          %  "common-thrift-bson"   % spindleVersion,
-    "org.mongodb"             %  "mongo-java-driver"    % "2.11.3"      % "test"
+    "org.mongodb"             %  "mongo-java-driver"    % "2.12.1"      % "test"
   )
 }
 
