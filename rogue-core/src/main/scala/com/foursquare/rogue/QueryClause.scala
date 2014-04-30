@@ -189,15 +189,9 @@ class ModifyPushEachSliceClause(fieldName: String, slice: Int, values: Traversab
   }
 }
 
-class ModifyBitAndClause(fieldName: String, value: Int) extends ModifyClause(ModOps.Bit) {
+class ModifyBitClause(fieldName: String, value: Int, op: BitOps.Value) extends ModifyClause(ModOps.Bit) {
   override def extend(q: BasicDBObjectBuilder): Unit = {
-    q.push(fieldName).add("and", value).pop
-  }
-}
-
-class ModifyBitOrClause(fieldName: String, value: Int) extends ModifyClause(ModOps.Bit) {
-  override def extend(q: BasicDBObjectBuilder): Unit = {
-    q.push(fieldName).add("or", value).pop
+    q.push(fieldName).add(op.toString, value).pop
   }
 }
 

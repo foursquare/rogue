@@ -32,6 +32,7 @@ object CondOps extends Enumeration {
 object ModOps extends Enumeration {
   type Op = Value
   val Inc = Value("$inc")
+  val Mul = Value("$mul")
   val Set = Value("$set")
   val SetOnInsert = Value("$setOnInsert")
   val Unset = Value("$unset")
@@ -43,6 +44,16 @@ object ModOps extends Enumeration {
   val PullAll = Value("$pullAll")
   val Bit = Value("$bit")
   val Rename = Value("$rename")
+  val Min = Value("$min")
+  val Max = Value("$max")
+  val CurrentDate = Value("$currentDate")
+}
+
+object BitOps extends Enumeration {
+  type Op = Value
+  val And = Value("and")
+  val Or = Value("or")
+  val Xor = Value("xor")
 }
 
 object MongoType extends Enumeration {
@@ -374,6 +385,9 @@ abstract class AbstractModifyField[V, DB, M](val field: Field[V, M]) {
   }
 
   def setOnInsertTo(v: V): ModifyClause = new ModifyClause(ModOps.SetOnInsert, field.name -> valueToDB(v))
+
+  def min(v: V) = new ModifyClause(ModOps.Min, field.name -> valueToDB(v))
+  def max(v: V) = new ModifyClause(ModOps.Max, field.name -> valueToDB(v))
 }
 
 class ModifyField[V: BSONType, M](field: Field[V, M])
@@ -386,11 +400,18 @@ class DateModifyField[M](field: Field[Date, M])
   override def valueToDB(d: Date) = d
 
   def setTo(d: DateTime) = new ModifyClause(ModOps.Set, field.name -> d.toDate)
+  def setOnInsertTo(d: DateTime): ModifyClause = new ModifyClause(ModOps.SetOnInsert, field.name -> d.toDate)
+  def min(d: DateTime) = new ModifyClause(ModOps.Min, field.name -> d.toDate)
+  def max(d: DateTime) = new ModifyClause(ModOps.Max, field.name -> d.toDate)
+
+  def currentDate = new ModifyClause(ModOps.CurrentDate, field.name -> true)
 }
 
 class DateTimeModifyField[M](field: Field[DateTime, M])
     extends AbstractModifyField[DateTime, Date, M](field) {
   override def valueToDB(d: DateTime) = d.toDate
+
+  def currentDate = new ModifyClause(ModOps.CurrentDate, field.name -> true)
 }
 
 class EnumerationModifyField[M, E <: Enumeration#Value](field: Field[E, M])
@@ -412,14 +433,15 @@ class NumericModifyField[V, M](override val field: Field[V, M]) extends Abstract
   override def valueToDB(v: V): V = v
 
   def inc(v: Int) = new ModifyClause(ModOps.Inc, field.name -> v)
-
   def inc(v: Long) = new ModifyClause(ModOps.Inc, field.name -> v)
-
   def inc(v: Double) = new ModifyClause(ModOps.Inc, field.name -> v)
+  def mul(v: Int) = new ModifyClause(ModOps.Mul, field.name -> v)
+  def mul(v: Long) = new ModifyClause(ModOps.Mul, field.name -> v)
+  def mul(v: Double) = new ModifyClause(ModOps.Mul, field.name -> v)
 
-  def bitAnd(v: Int) = new ModifyBitAndClause(field.name, v)
-
-  def bitOr(v: Int) = new ModifyBitOrClause(field.name, v)
+  def bitAnd(v: Int) = new ModifyBitClause(field.name, v, BitOps.And)
+  def bitOr(v: Int) = new ModifyBitClause(field.name, v, BitOps.Or)
+  def bitXor(v: Int) = new ModifyBitClause(field.name, v, BitOps.Xor)
 }
 
 class BsonRecordModifyField[M, B](field: Field[B, M], asDBObject: B => DBObject)

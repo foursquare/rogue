@@ -267,6 +267,12 @@ class QueryTest extends JUnitMustMatchers {
 
     // Numeric
     Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.mayor_count inc 3).toString() must_== query + """{ "$inc" : { "mayor_count" : 3}}""" + suffix
+    Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.mayor_count mul 3).toString() must_== query + """{ "$mul" : { "mayor_count" : 3}}""" + suffix
+    Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.mayor_count min 3).toString() must_== query + """{ "$min" : { "mayor_count" : 3}}""" + suffix
+    Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.mayor_count max 3).toString() must_== query + """{ "$max" : { "mayor_count" : 3}}""" + suffix
+    Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.last_updated min d1).toString() must_== query + """{ "$min" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
+    Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.last_updated max d1).toString() must_== query + """{ "$max" : { "last_updated" : { "$date" : "2010-05-01T00:00:00.000Z"}}}""" + suffix
+    Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.last_updated currentDate).toString() must_== query + """{ "$currentDate" : { "last_updated" : true}}""" + suffix
 
     // Enumeration
     /* TODO(rogue-named-enums)
@@ -334,6 +340,7 @@ class QueryTest extends JUnitMustMatchers {
     // $bit
     Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.mayor_count bitAnd 3).toString() must_== query + """{ "$bit" : { "mayor_count" : { "and" : 3}}}""" + suffix
     Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.mayor_count bitOr 3).toString() must_== query + """{ "$bit" : { "mayor_count" : { "or" : 3}}}""" + suffix
+    Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.mayor_count bitXor 3).toString() must_== query + """{ "$bit" : { "mayor_count" : { "xor" : 3}}}""" + suffix
 
     // $rename
     Q(ThriftVenue).where(_.legacyid eqs 1).modify(_.venuename rename "vn").toString() must_== query + """{ "$rename" : { "venuename" : "vn"}}""" + suffix
