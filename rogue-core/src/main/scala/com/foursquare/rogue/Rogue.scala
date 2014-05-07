@@ -62,7 +62,7 @@ trait Rogue {
   implicit def floatRFieldToModifyField[M](f: RField[Float, M]): NumericModifyField[Float, M] = new NumericModifyField(f)
   implicit def doubleRFieldToModifyField[M](f: RField[Double, M]): NumericModifyField[Double, M] = new NumericModifyField(f)
 
-  implicit def stringRFieldToModifyField[M](f: RField[String, M]): ModifyField[String, M] = new ModifyField(f)
+  implicit def stringRFieldToModifyField[M, F <: String](f: RField[F, M]): ModifyField[F, M] = new ModifyField(f)
   implicit def objectidRFieldToModifyField[M, F <: ObjectId](f: RField[F, M]): ModifyField[F, M] = new ModifyField(f)
   implicit def dateRFieldToDateModifyField[M](f: RField[Date, M]): DateModifyField[M] = new DateModifyField(f)
   implicit def datetimeRFieldToDateModifyField[M](f: RField[DateTime, M]): DateTimeModifyField[M] = new DateTimeModifyField(f)
