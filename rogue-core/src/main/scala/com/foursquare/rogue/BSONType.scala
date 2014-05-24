@@ -61,6 +61,9 @@ object BSONType {
   implicit def LongSubtypesAreBSONTypes[T <: java.lang.Long]: BSONType[T] =
     LongIsBSONType.asInstanceOf[BSONType[T]]
 
+  implicit def IntSubtypesAreBSONTypes[T <: java.lang.Integer]: BSONType[T] =
+    IntIsBSONType.asInstanceOf[BSONType[T]]
+
   implicit def StringSubtypesAreBSONTypes[T <: String]: BSONType[T] =
     StringIsBSONType.asInstanceOf[BSONType[T]]
 
