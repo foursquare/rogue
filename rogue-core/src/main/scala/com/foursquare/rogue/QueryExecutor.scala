@@ -252,4 +252,20 @@ trait QueryExecutor[MB, RB] extends Rogue {
     adapter.insert(record, dbo, writeConcern)
     record
   }
+
+  def insertAll[RecordType <: RB](records: Seq[RecordType], writeConcern: WriteConcern = defaultWriteConcern): Seq[RecordType] = {
+    records.headOption.foreach(record => {
+      val s = writeSerializer(record)
+      val dbos = records.map(s.toDBObject)
+      adapter.insertAll(record, dbos, writeConcern)
+    })
+    records
+  }
+
+  def remove[RecordType <: RB](record: RecordType, writeConcern: WriteConcern = defaultWriteConcern): RecordType = {
+    val s = writeSerializer(record)
+    val dbo = s.toDBObject(record)
+    adapter.remove(record, dbo, writeConcern)
+    record
+  }
 }

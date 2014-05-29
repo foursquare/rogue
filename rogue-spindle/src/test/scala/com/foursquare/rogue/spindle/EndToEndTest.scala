@@ -73,10 +73,10 @@ class EndToEndTest extends JUnitMustMatchers {
   @Test
   def eqsTests: Unit = {
     val v = baseTestVenue()
-    db.save(v)
+    db.insert(v)
 
     val vc = baseTestVenueClaim(v.id)
-    db.save(vc)
+    db.insert(vc)
 
     db.fetch(Q(ThriftVenue).where(_.id eqs v.id)).map(_.id)                                  must_== List(v.id)
     db.fetch(Q(ThriftVenue).where(_.mayor eqs v.mayor)).map(_.id)                            must_== List(v.id)
@@ -95,8 +95,8 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def testInequalityQueries: Unit = {
-    val v = db.save(baseTestVenue())
-    val vc = db.save(baseTestVenueClaim(v.id))
+    val v = db.insert(baseTestVenue())
+    val vc = db.insert(baseTestVenueClaim(v.id))
 
     // neq,lt,gt, where the lone Venue has mayor_count=3, and the only
     // VenueClaim has status approved.
@@ -116,7 +116,7 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def selectQueries: Unit = {
-    val v = db.save(baseTestVenue())
+    val v = db.insert(baseTestVenue())
 
     val base = Q(ThriftVenue).where(_.id eqs v.id)
     db.fetch(base.select(_.legacyid)) must_== List(v.legacyidOption)
@@ -129,13 +129,13 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def selectEnum: Unit = {
-    val v = db.save(baseTestVenue())
+    val v = db.insert(baseTestVenue())
     db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.status)) must_== List(Some(ThriftVenueStatus.open))
   }
 
   @Test
   def selectCaseQueries: Unit = {
-    val v = db.save(baseTestVenue())
+    val v = db.insert(baseTestVenue())
 
     val base = Q(ThriftVenue).where(_.id eqs v.id)
     db.fetch(base.selectCase(_.legacyid, V1)) must_== List(V1(v.legacyidOption))
@@ -148,8 +148,8 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def selectSubfieldQueries: Unit = {
-    val v = db.save(baseTestVenue())
-    val t = db.save(baseTestTip())
+    val v = db.insert(baseTestVenue())
+    val t = db.insert(baseTestTip())
 
     // Sub-select on map
     db.fetch(Q(ThriftTip).where(_.id eqs t.id).select(_.counts at "foo")) must_== List(Some(1))
@@ -178,7 +178,7 @@ class EndToEndTest extends JUnitMustMatchers {
   /* TODO(rogue-named-enums) */
   @Ignore("These tests are broken because DummyField doesn't know how to convert a String to an Enum")
   def testSelectEnumSubfield: Unit = {
-    val v = db.save(baseTestVenue())
+    val v = db.insert(baseTestVenue())
 
     // This behavior is broken because we get a String back from mongo, and at
     // that point we only have a DummyField for the subfield, and that doesn't
@@ -208,7 +208,7 @@ class EndToEndTest extends JUnitMustMatchers {
     // Note: this isn't a real test of readpreference because the test mongo setup
     // doesn't have replicas. This basically just makes sure that readpreference
     // doesn't break everything.
-    val v = db.save(baseTestVenue())
+    val v = db.insert(baseTestVenue())
 
     // eqs
     db.fetch(Q(ThriftVenue).where(_.id eqs v.id)).map(_.id)                                               must_== List(v.id)
@@ -245,7 +245,7 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def testRegexQuery {
-    val v = db.save(baseTestVenue())
+    val v = db.insert(baseTestVenue())
     db.count(Q(ThriftVenue).where(_.id eqs v.id).and(_.venuename startsWith "test v")) must_== 1
     db.count(Q(ThriftVenue).where(_.id eqs v.id).and(_.venuename matches ".es. v".r)) must_== 1
     db.count(Q(ThriftVenue).where(_.id eqs v.id).and(_.venuename matches "Tes. v".r)) must_== 0
@@ -258,7 +258,7 @@ class EndToEndTest extends JUnitMustMatchers {
   def testIterates {
     // Insert some data
     val vs = for (i <- 1 to 10) yield {
-      db.save(baseTestVenue().toBuilder.legacyid(i).result())
+      db.insert(baseTestVenue().toBuilder.legacyid(i).result())
     }
     val ids = vs.map(_.id)
 
@@ -316,10 +316,10 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def testSharding {
-    val l1 = db.save(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(1).checkin(111).result())
-    val l2 = db.save(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(2).checkin(111).result())
-    val l3 = db.save(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(2).checkin(333).result())
-    val l4 = db.save(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(2).checkin(444).result())
+    val l1 = db.insert(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(1).checkin(111).result())
+    val l2 = db.insert(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(2).checkin(111).result())
+    val l3 = db.insert(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(2).checkin(333).result())
+    val l4 = db.insert(ThriftLike.newBuilder.id(LikeId(new ObjectId)).userid(2).checkin(444).result())
 
     // Find
     db.count(Q(ThriftLike).where(_.checkin eqs 111).allShards) must_== 2
@@ -346,7 +346,7 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def testLimitAndBatch {
-    (1 to 50).foreach(_ => db.save(baseTestVenue()))
+    db.insertAll(List.fill(50)(baseTestVenue()))
 
     val q = Q(ThriftVenue).select(_.id)
     db.fetch(q.limit(10)).length must_== 10
@@ -358,7 +358,7 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def testCount {
-    (1 to 10).foreach(_ => db.save(baseTestVenue()))
+    db.insertAll(List.fill(10)(baseTestVenue()))
     val q = Q(ThriftVenue).select(_.id)
     db.count(q) must_== 10
     db.count(q.limit(3)) must_== 3
@@ -371,10 +371,21 @@ class EndToEndTest extends JUnitMustMatchers {
 
   @Test
   def testSlice {
-    db.save(baseTestVenue().toBuilder.tags(List("1", "2", "3", "4")).result())
+    db.insert(baseTestVenue().toBuilder.tags(List("1", "2", "3", "4")).result())
     /* TODO(rogue-select-option-option): This should probably not return an option[option[list]] */
     db.fetchOne(Q(ThriftVenue).select(_.tags.slice(2))) must_== Some(Some(List("1", "2")))
     db.fetchOne(Q(ThriftVenue).select(_.tags.slice(-2))) must_== Some(Some(List("3", "4")))
     db.fetchOne(Q(ThriftVenue).select(_.tags.slice(1, 2))) must_== Some(Some(List("2", "3")))
+  }
+
+  @Test
+  def testSave {
+    val v = baseTestVenue()
+    db.insert(v)
+    val mutable = v.mutable
+    mutable.tags = List("a", "bbbb")
+    db.save(mutable)
+
+    db.count(Q(ThriftVenue).where(_.tags contains "bbbb")) must_== 1
   }
 }

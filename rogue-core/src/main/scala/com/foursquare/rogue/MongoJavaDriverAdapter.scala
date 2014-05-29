@@ -133,6 +133,16 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     collection.insert(dbo, writeConcern)
   }
 
+  def insertAll(record: RB, dbos: Seq[DBObject], writeConcern: WriteConcern): Unit = {
+    val collection = dbCollectionFactory.getPrimaryDBCollection(record)
+    collection.insert(QueryHelpers.list(dbos), writeConcern)
+  }
+
+  def remove(record: RB, dbo: DBObject, writeConcern: WriteConcern): Unit = {
+    val collection = dbCollectionFactory.getPrimaryDBCollection(record)
+    collection.remove(dbo, writeConcern)
+  }
+
   def modify[M <: MB](mod: ModifyQuery[M, _],
                       upsert: Boolean,
                       multi: Boolean,
