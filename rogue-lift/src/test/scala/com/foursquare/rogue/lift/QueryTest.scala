@@ -1,7 +1,7 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue.lift
 
-import com.foursquare.rogue.{BSONType, Degrees, LatLong, MongoType, Query, QueryOptimizer, Radians}
+import com.foursquare.rogue.{BSONType, Degrees, LatLong, MongoType, Query, QueryHelpers, QueryOptimizer, Radians}
 import com.foursquare.rogue.lift.LiftRogue._
 import com.mongodb.ReadPreference
 
@@ -22,8 +22,8 @@ class QueryTest extends JUnitMustMatchers {
   def testProduceACorrectJSONQueryString {
     val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC)
     val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0, DateTimeZone.UTC)
-    val oid1 = new ObjectId(d1.toDate, 0, 0)
-    val oid2 = new ObjectId(d2.toDate, 0, 0)
+    val oid1 = QueryHelpers.objectIdFromDate(d1)
+    val oid2 = QueryHelpers.objectIdFromDate(d2)
     val oid = new ObjectId
     val ven1 = Venue.createRecord._id(oid1)
 

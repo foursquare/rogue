@@ -6,7 +6,7 @@ import com.foursquare.rogue.spindle.gen.{ThriftClaimStatus, ThriftComment, Thrif
     ThriftOAuthConsumer, ThriftRejectReason, ThriftSourceBson, ThriftTip, ThriftVenue, ThriftVenueClaim,
     ThriftVenueClaimBson, ThriftVenueStatus}
 import com.foursquare.field.Field
-import com.foursquare.rogue.{BSONType, MongoType, Query, QueryField, QueryOptimizer}
+import com.foursquare.rogue.{BSONType, MongoType, Query, QueryField, QueryHelpers, QueryOptimizer}
 import com.foursquare.rogue.spindle.gen.IdsTypedefs.VenueId
 import com.foursquare.rogue.spindle.SpindleRogue._
 import com.foursquare.spindle.{MetaRecord, Record}
@@ -26,8 +26,8 @@ class QueryTest extends JUnitMustMatchers {
 
     val d1 = new DateTime(2010, 5, 1, 0, 0, 0, 0, DateTimeZone.UTC)
     val d2 = new DateTime(2010, 5, 2, 0, 0, 0, 0, DateTimeZone.UTC)
-    val oid1 = new ObjectId(d1.toDate, 0, 0)
-    val oid2 = new ObjectId(d2.toDate, 0, 0)
+    val oid1 = QueryHelpers.objectIdFromDate(d1)
+    val oid2 = QueryHelpers.objectIdFromDate(d2)
     val oid = new ObjectId
     val ven1 = ThriftVenue.newBuilder.id(VenueId(oid1)).result
 
