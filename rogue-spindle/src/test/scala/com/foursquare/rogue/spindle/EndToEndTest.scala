@@ -78,19 +78,19 @@ class EndToEndTest extends JUnitMustMatchers {
     val vc = baseTestVenueClaim(v.id)
     db.insert(vc)
 
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id)).map(_.id)                                  must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.mayor eqs v.mayor)).map(_.id)                            must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.mayor eqs v.mayor)).map(_.id)                            must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.venuename eqs v.venuenameOrThrow)).map(_.id)             must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.closed eqs false)).map(_.id)                             must_== List(v.id)
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id)).map(_.id)                                  must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor eqs v.mayor)).map(_.id)                            must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor eqs v.mayor)).map(_.id)                            must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.venuename eqs v.venuenameOrThrow)).map(_.id)             must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.closed eqs false)).map(_.id)                             must_== Vector(v.id)
 
     db.fetch(Q(ThriftVenue).where(_.mayor eqs 432432)).map(_.id)                             must_== Nil
     db.fetch(Q(ThriftVenue).where(_.closed eqs true)).map(_.id)                              must_== Nil
 
-    db.fetch(Q(ThriftVenueClaim).where(_.status eqs ThriftClaimStatus.approved)).map(_.id)   must_== List(vc.id)
-    db.fetch(Q(ThriftVenueClaim).where(_.venueId eqs v.id)).map(_.id)                        must_== List(vc.id)
+    db.fetch(Q(ThriftVenueClaim).where(_.status eqs ThriftClaimStatus.approved)).map(_.id)   must_== Vector(vc.id)
+    db.fetch(Q(ThriftVenueClaim).where(_.venueId eqs v.id)).map(_.id)                        must_== Vector(vc.id)
     //TODO(rogue-foreign-key-support)
-    //db.fetch(Q(ThriftVenueClaim).where(_.venueId eqs v)).map(_.id)                         must_== List(vc.id)
+    //db.fetch(Q(ThriftVenueClaim).where(_.venueId eqs v)).map(_.id)                         must_== Vector(vc.id)
   }
 
   @Test
@@ -100,18 +100,18 @@ class EndToEndTest extends JUnitMustMatchers {
 
     // neq,lt,gt, where the lone Venue has mayor_count=3, and the only
     // VenueClaim has status approved.
-    db.fetch(Q(ThriftVenue).where(_.mayor_count neqs 5)).map(_.id)                     must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.mayor_count < 5)).map(_.id)                        must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.mayor_count lt 5)).map(_.id)                       must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.mayor_count <= 5)).map(_.id)                       must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.mayor_count lte 5)).map(_.id)                      must_== List(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor_count neqs 5)).map(_.id)                     must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor_count < 5)).map(_.id)                        must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor_count lt 5)).map(_.id)                       must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor_count <= 5)).map(_.id)                       must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor_count lte 5)).map(_.id)                      must_== Vector(v.id)
     db.fetch(Q(ThriftVenue).where(_.mayor_count > 5)).map(_.id)                        must_== Nil
     db.fetch(Q(ThriftVenue).where(_.mayor_count gt 5)).map(_.id)                       must_== Nil
     db.fetch(Q(ThriftVenue).where(_.mayor_count >= 5)).map(_.id)                       must_== Nil
     db.fetch(Q(ThriftVenue).where(_.mayor_count gte 5)).map(_.id)                      must_== Nil
-    db.fetch(Q(ThriftVenue).where(_.mayor_count between (3, 5))).map(_.id)             must_== List(v.id)
+    db.fetch(Q(ThriftVenue).where(_.mayor_count between (3, 5))).map(_.id)             must_== Vector(v.id)
     db.fetch(Q(ThriftVenueClaim).where (_.status neqs ThriftClaimStatus.approved)).map(_.id) must_== Nil
-    db.fetch(Q(ThriftVenueClaim).where (_.status neqs ThriftClaimStatus.pending)).map(_.id)  must_== List(vc.id)
+    db.fetch(Q(ThriftVenueClaim).where (_.status neqs ThriftClaimStatus.pending)).map(_.id)  must_== Vector(vc.id)
   }
 
   @Test
@@ -119,18 +119,18 @@ class EndToEndTest extends JUnitMustMatchers {
     val v = db.insert(baseTestVenue())
 
     val base = Q(ThriftVenue).where(_.id eqs v.id)
-    db.fetch(base.select(_.legacyid)) must_== List(v.legacyidOption)
-    db.fetch(base.select(_.legacyid, _.userid)) must_== List((v.legacyidOption, v.useridOption))
-    db.fetch(base.select(_.legacyid, _.userid, _.mayor)) must_== List((v.legacyidOption, v.useridOption, v.mayorOption))
-    db.fetch(base.select(_.legacyid, _.userid, _.mayor, _.mayor_count)) must_== List((v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption))
-    db.fetch(base.select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed)) must_== List((v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption))
-    db.fetch(base.select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags)) must_== List((v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption, v.tagsOption))
+    db.fetch(base.select(_.legacyid)) must_== Vector(v.legacyidOption)
+    db.fetch(base.select(_.legacyid, _.userid)) must_== Vector((v.legacyidOption, v.useridOption))
+    db.fetch(base.select(_.legacyid, _.userid, _.mayor)) must_== Vector((v.legacyidOption, v.useridOption, v.mayorOption))
+    db.fetch(base.select(_.legacyid, _.userid, _.mayor, _.mayor_count)) must_== Vector((v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption))
+    db.fetch(base.select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed)) must_== Vector((v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption))
+    db.fetch(base.select(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags)) must_== Vector((v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption, v.tagsOption))
   }
 
   @Test
   def selectEnum: Unit = {
     val v = db.insert(baseTestVenue())
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.status)) must_== List(Some(ThriftVenueStatus.open))
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.status)) must_== Vector(Some(ThriftVenueStatus.open))
   }
 
   @Test
@@ -138,12 +138,12 @@ class EndToEndTest extends JUnitMustMatchers {
     val v = db.insert(baseTestVenue())
 
     val base = Q(ThriftVenue).where(_.id eqs v.id)
-    db.fetch(base.selectCase(_.legacyid, V1)) must_== List(V1(v.legacyidOption))
-    db.fetch(base.selectCase(_.legacyid, _.userid, V2)) must_== List(V2(v.legacyidOption, v.useridOption))
-    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, V3)) must_== List(V3(v.legacyidOption, v.useridOption, v.mayorOption))
-    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, V4)) must_== List(V4(v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption))
-    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, V5)) must_== List(V5(v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption))
-    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags, V6)) must_== List(V6(v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption, v.tagsOption))
+    db.fetch(base.selectCase(_.legacyid, V1)) must_== Vector(V1(v.legacyidOption))
+    db.fetch(base.selectCase(_.legacyid, _.userid, V2)) must_== Vector(V2(v.legacyidOption, v.useridOption))
+    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, V3)) must_== Vector(V3(v.legacyidOption, v.useridOption, v.mayorOption))
+    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, V4)) must_== Vector(V4(v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption))
+    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, V5)) must_== Vector(V5(v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption))
+    db.fetch(base.selectCase(_.legacyid, _.userid, _.mayor, _.mayor_count, _.closed, _.tags, V6)) must_== Vector(V6(v.legacyidOption, v.useridOption, v.mayorOption, v.mayor_countOption, v.closedOption, v.tagsOption))
   }
 
   @Test
@@ -152,15 +152,15 @@ class EndToEndTest extends JUnitMustMatchers {
     val t = db.insert(baseTestTip())
 
     // Sub-select on map
-    db.fetch(Q(ThriftTip).where(_.id eqs t.id).select(_.counts at "foo")) must_== List(Some(1))
+    db.fetch(Q(ThriftTip).where(_.id eqs t.id).select(_.counts at "foo")) must_== Vector(Some(1))
     // Sub-select on embedded record
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.lastClaim.sub.select(_.status))) must_== List(Some(ThriftClaimStatus.approved))
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.lastClaim.unsafeField[ThriftClaimStatus]("status"))) must_== List(Some(ThriftClaimStatus.approved))
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.lastClaim.sub.select(_.status))) must_== Vector(Some(ThriftClaimStatus.approved))
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.lastClaim.unsafeField[ThriftClaimStatus]("status"))) must_== Vector(Some(ThriftClaimStatus.approved))
     // Sub-select on embedded record
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.claims.sub.select(_.status))) must_== List(Some(List(Some(ThriftClaimStatus.pending), Some(ThriftClaimStatus.approved))))
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.claims.sub.select(_.status))) must_== Vector(Some(Vector(Some(ThriftClaimStatus.pending), Some(ThriftClaimStatus.approved))))
 
     /* TODO(rogue-latlng)
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.geolatlng.unsafeField[Double]("lat"))) must_== List(Some(40.73))
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.geolatlng.unsafeField[Double]("lat"))) must_== Vector(Some(40.73))
     */
 
     /* TODO(rogue-sub-on-listfield)
@@ -184,12 +184,12 @@ class EndToEndTest extends JUnitMustMatchers {
     // that point we only have a DummyField for the subfield, and that doesn't
     // know how to convert the String to an Enum.
 
-    val statuses: List[Option[ThriftClaimStatus]] =
+    val statuses: Seq[Option[ThriftClaimStatus]] =
       db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.lastClaim.sub.select(_.status)))
     // This assertion works.
-    statuses must_== List(Some("Approved"))
+    statuses must_== Vector(Some("Approved"))
     // This assertion is what we want, and it fails.
-    // statuses must_== List(Some(ThriftClaimStatus.approved))
+    // statuses must_== Vector(Some(ThriftClaimStatus.approved))
 
     /* TODO(rogue-sub-on-listfield)
     val subuseridsAndStatuses: List[(Option[List[Long]], Option[List[ThriftClaimStatus]])] =
@@ -211,9 +211,9 @@ class EndToEndTest extends JUnitMustMatchers {
     val v = db.insert(baseTestVenue())
 
     // eqs
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id)).map(_.id)                                               must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).setReadPreference(ReadPreference.secondary)).map(_.id)   must_== List(v.id)
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).setReadPreference(ReadPreference.primary)).map(_.id)     must_== List(v.id)
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id)).map(_.id)                                               must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).setReadPreference(ReadPreference.secondary)).map(_.id)   must_== Vector(v.id)
+    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).setReadPreference(ReadPreference.primary)).map(_.id)     must_== Vector(v.id)
   }
 
   @Test
@@ -262,13 +262,13 @@ class EndToEndTest extends JUnitMustMatchers {
     }
     val ids = vs.map(_.id)
 
-    val emptyVenueList: List[ThriftVenue] = Nil
-    val items1 = db.iterate(Q(ThriftVenue).where(_.id in ids), emptyVenueList) { case (accum, event) => {
+    val empty: Seq[ThriftVenue] = Nil
+    val items1 = db.iterate(Q(ThriftVenue).where(_.id in ids), empty) { case (accum, event) => {
       if (accum.length >= 3) {
         Iter.Return(accum)
       } else {
         event match {
-          case Iter.Item(i) if i.legacyid % 2 == 0 => Iter.Continue(i :: accum)
+          case Iter.Item(i) if i.legacyid % 2 == 0 => Iter.Continue(i +: accum)
           case Iter.Item(_) => Iter.Continue(accum)
           case Iter.EOF => Iter.Return(accum)
           case Iter.Error(e) => Iter.Return(accum)
@@ -278,7 +278,7 @@ class EndToEndTest extends JUnitMustMatchers {
 
     items1.map(_.legacyid) must_== List(6, 4, 2)
 
-    val items2 = db.iterateBatch(Q(ThriftVenue).where(_.id in ids), 2, emptyVenueList) { case (accum, event) => {
+    val items2 = db.iterateBatch(Q(ThriftVenue).where(_.id in ids), 2, empty) { case (accum, event) => {
       if (accum.length >= 3) {
         Iter.Return(accum)
       } else {
@@ -351,9 +351,9 @@ class EndToEndTest extends JUnitMustMatchers {
     val q = Q(ThriftVenue).orderAsc(_.id).select(_.id)
     db.fetch(q.limit(10)).length must_== 10
     db.fetch(q.limit(-10)).length must_== 10
-    db.fetchBatch(q, 20)(x => List(x.length)) must_== List(20, 20, 10)
-    db.fetchBatch(q.limit(35), 20)(x => List(x.length)) must_== List(20, 15)
-    db.fetchBatch(q.limit(-35), 20)(x => List(x.length)) must_== List(20, 15)
+    db.fetchBatch(q, 20)(x => Vector(x.length)) must_== Vector(20, 20, 10)
+    db.fetchBatch(q.limit(35), 20)(x => Vector(x.length)) must_== Vector(20, 15)
+    db.fetchBatch(q.limit(-35), 20)(x => Vector(x.length)) must_== Vector(20, 15)
   }
 
   @Test
@@ -373,9 +373,9 @@ class EndToEndTest extends JUnitMustMatchers {
   def testSlice {
     db.insert(baseTestVenue().toBuilder.tags(List("1", "2", "3", "4")).result())
     /* TODO(rogue-select-option-option): This should probably not return an option[option[list]] */
-    db.fetchOne(Q(ThriftVenue).select(_.tags.slice(2))) must_== Some(Some(List("1", "2")))
-    db.fetchOne(Q(ThriftVenue).select(_.tags.slice(-2))) must_== Some(Some(List("3", "4")))
-    db.fetchOne(Q(ThriftVenue).select(_.tags.slice(1, 2))) must_== Some(Some(List("2", "3")))
+    db.fetchOne(Q(ThriftVenue).select(_.tags.slice(2))) must_== Some(Some(Vector("1", "2")))
+    db.fetchOne(Q(ThriftVenue).select(_.tags.slice(-2))) must_== Some(Some(Vector("3", "4")))
+    db.fetchOne(Q(ThriftVenue).select(_.tags.slice(1, 2))) must_== Some(Some(Vector("2", "3")))
   }
 
   @Test
@@ -399,6 +399,19 @@ class EndToEndTest extends JUnitMustMatchers {
 
     db.insertAll((1 to 10).map(i => baseTestVenue().toBuilder.userid(222).venuename("test " + (i%3)).result()))
     val names = db.distinct(Q(ThriftVenue).where(_.userid eqs 222))(_.venuename)
-    names.sorted must_== List("test 0", "test 1", "test 2")
+    names.sorted must_== Vector("test 0", "test 1", "test 2")
+  }
+
+  @Test
+  def testListMethods: Unit = {
+    db.insertAll((1 to 5).map(_ => baseTestVenue().toBuilder.userid(1).result()))
+    db.insertAll((1 to 5).map(_ => baseTestVenue().toBuilder.userid(2).result()))
+    db.insertAll((1 to 5).map(_ => baseTestVenue().toBuilder.userid(3).result()))
+
+    val vs: Seq[ThriftVenue] = db.fetchList(Q(ThriftVenue).where(_.mayor eqs 789))
+    vs.size must_== 15
+
+    val ids: Seq[VenueId] = db.fetchBatchList(Q(ThriftVenue).where(_.mayor eqs 789), 3)(b => b.map(_.id))
+    ids.size must_== 15
   }
 }

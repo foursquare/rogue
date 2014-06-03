@@ -32,7 +32,7 @@ case class ExecutableQuery[MB, M <: MB, RB, R, State](
    * Returns a list of distinct values returned by a query. The query must not have
    * limit or skip clauses.
    */
-  def distinct[V](field: M => Field[V, _]): List[V] =
+  def distinct[V](field: M => Field[V, _]): Seq[V] =
     db.distinct(query)(field.asInstanceOf[M => Field[V, M]])
 
   /**
@@ -56,7 +56,7 @@ case class ExecutableQuery[MB, M <: MB, RB, R, State](
    * @return a list containing the records that match the query
    */
   def fetch(): List[R] =
-    db.fetch(query)
+    db.fetchList(query)
 
   /**
    * Execute a query, returning no more than a specified number of result records. The
@@ -64,7 +64,7 @@ case class ExecutableQuery[MB, M <: MB, RB, R, State](
    * @param limit the maximum number of records to return.
    */
   def fetch[S2](limit: Int)(implicit ev1: AddLimit[State, S2], ev2: ShardingOk[M, S2]): List[R] =
-    db.fetch(query.limit(limit))
+    db.fetchList(query.limit(limit))
 
   /**
    * fetch a batch of results, and execute a function on each element of the list.
@@ -72,7 +72,7 @@ case class ExecutableQuery[MB, M <: MB, RB, R, State](
    * @return a list containing the results of invoking the function on each record.
    */
   def fetchBatch[T](batchSize: Int)(f: List[R] => List[T]): List[T] =
-    db.fetchBatch(query, batchSize)(f).toList
+    db.fetchBatchList(query, batchSize)(f).toList
 
 
   /**
@@ -129,7 +129,7 @@ case class ExecutableQuery[MB, M <: MB, RB, R, State](
   def iterate[S](state: S)(handler: (S, Iter.Event[R]) => Iter.Command[S]): S =
     db.iterate(query, state)(handler)
 
-  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Iter.Event[List[R]]) => Iter.Command[S]): S =
+  def iterateBatch[S](batchSize: Int, state: S)(handler: (S, Iter.Event[Seq[R]]) => Iter.Command[S]): S =
     db.iterateBatch(query, batchSize, state)(handler)
 }
 
@@ -180,7 +180,7 @@ class PaginatedQuery[MB, M <: MB, RB, R, +State <: Unlimited with Unskipped](
   lazy val countAll: Long = db.count(q)
 
   def fetch(): List[R] = {
-    db.fetch(q.skip(countPerPage * (pageNum - 1)).limit(countPerPage))
+    db.fetchList(q.skip(countPerPage * (pageNum - 1)).limit(countPerPage))
   }
 
   def numPages = math.ceil(countAll.toDouble / countPerPage.toDouble).toInt max 1
