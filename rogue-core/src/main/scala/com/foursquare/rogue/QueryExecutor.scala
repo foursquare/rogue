@@ -55,7 +55,9 @@ trait QueryExecutor[MB, RB] extends Rogue {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
-      adapter.distinct(query, field(query.meta).name)
+      val rv = new ListBuffer[V]
+      adapter.distinct[M, V](query, field(query.meta).name)(s => rv += s)
+      rv.toList
     }
   }
 
