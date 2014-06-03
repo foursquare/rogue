@@ -388,4 +388,17 @@ class EndToEndTest extends JUnitMustMatchers {
 
     db.count(Q(ThriftVenue).where(_.tags contains "bbbb")) must_== 1
   }
+
+  @Test
+  def testDistinct {
+    db.insertAll((1 to 5).map(_ => baseTestVenue().toBuilder.userid(1).result()))
+    db.insertAll((1 to 5).map(_ => baseTestVenue().toBuilder.userid(2).result()))
+    db.insertAll((1 to 5).map(_ => baseTestVenue().toBuilder.userid(3).result()))
+    db.distinct(Q(ThriftVenue).where(_.mayor eqs 789))(_.userid).length must_== 3
+    db.countDistinct(Q(ThriftVenue).where(_.mayor eqs 789))(_.userid) must_== 3
+
+    db.insertAll((1 to 10).map(i => baseTestVenue().toBuilder.userid(222).venuename("test " + (i%3)).result()))
+    val names = db.distinct(Q(ThriftVenue).where(_.userid eqs 222))(_.venuename)
+    names.sorted must_== List("test 0", "test 1", "test 2")
+  }
 }

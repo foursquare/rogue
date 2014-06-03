@@ -93,7 +93,8 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
   }
 
   def distinct[M <: MB, R](query: Query[M, _, _],
-                           key: String): List[R] = {
+                           key: String)
+                          (f: R => Unit): Unit = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val cnd = buildCondition(queryClause.condition)
@@ -103,10 +104,10 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
 
     runCommand(description, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
-      val rv = new ListBuffer[R]
       val rj = coll.distinct(key, cnd)
-      for (i <- 0 until rj.size) rv += rj.get(i).asInstanceOf[R]
-      rv.toList
+      for (i <- 0 until rj.size) {
+        f(rj.get(i).asInstanceOf[R])
+      }
     }
   }
 
