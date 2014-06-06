@@ -85,7 +85,7 @@ object TrivialORM {
   object Implicits extends Rogue {
     implicit def meta2Query[M <: Meta[R], R](meta: M with Meta[R]): Query[M, R, InitialState] = {
       Query[M, R, InitialState](
-        meta, meta.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+        meta, meta.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None, None)
     }
   }
 }

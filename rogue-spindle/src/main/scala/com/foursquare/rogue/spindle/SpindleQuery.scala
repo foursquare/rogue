@@ -14,6 +14,6 @@ object SpindleQuery {
       throw new Exception("Add a mongo_collection annotation to the Thrift definition for this class.")
     }
     RogueQuery[M, R, InitialState](
-      model, collection, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+      model, collection, None, None, None, None, None, AndCondition(Nil, None), None, None, None, None)
   }
 }

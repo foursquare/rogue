@@ -297,6 +297,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       val coll = dbCollectionFactory.getDBCollection(query)
       try {
         val cursor = coll.find(cnd, sel)
+        queryClause.batchSize.foreach(cursor.batchSize _)
         queryClause.lim.foreach(cursor.limit _)
         queryClause.sk.foreach(cursor.skip _)
         ord.foreach(cursor.sort _)

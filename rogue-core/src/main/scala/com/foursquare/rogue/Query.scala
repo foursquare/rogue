@@ -52,7 +52,8 @@ case class Query[M, R, +State](
     condition: AndCondition,
     order: Option[MongoOrder],
     select: Option[MongoSelect[M, R]],
-    readPreference: Option[ReadPreference]
+    readPreference: Option[ReadPreference],
+    batchSize: Option[Int]
 ) {
 
   private def addClause[F](clause: M => QueryClause[F],
@@ -148,7 +149,8 @@ case class Query[M, R, +State](
         condition = AndCondition(Nil, None),
         order = None,
         select = None,
-        readPreference = None)
+        readPreference = None,
+        batchSize = None)
     val queries = subqueries.toList.map(q => q(queryBuilder))
     val orCondition = QueryHelpers.orConditionFromQueries(queries)
     this.copy(condition = condition.copy(orCondition = Some(orCondition)))
@@ -272,6 +274,16 @@ case class Query[M, R, +State](
    */
   def setReadPreference(r: ReadPreference): Query[M, R, State] = this.copy(readPreference = Some(r))
 
+  /**
+   * Set the batch size for the underlying cursor. Most of the time you do not need to specify this.
+   * See http://docs.mongodb.org/manual/core/cursors/#cursor-batches for more info about cursor batches.
+  */
+  def batchSize(b: Int): Query[M, R, State] = this.copy(batchSize = Some(b))
+
+
+  /**
+   * Gives MongoDB a hint about what index to use.
+   */
   def hint(index: MongoIndex[M]): Query[M, R, State] = this.copy(hint = Some(index.asListMap))
 
   /**
