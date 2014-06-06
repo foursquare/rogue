@@ -67,7 +67,7 @@ trait QueryExecutor[MB, RB] extends Rogue {
     } else {
       val s = readSerializer[M, R](query.meta, query.select)
       val rv = new ListBuffer[R]
-      adapter.query(query, None, readPreference)(dbo => rv += s.fromDBObject(dbo))
+      adapter.query(query, readPreference)(dbo => rv += s.fromDBObject(dbo))
       rv.toList
     }
   }
@@ -86,7 +86,7 @@ trait QueryExecutor[MB, RB] extends Rogue {
       ()
     } else {
       val s = readSerializer[M, R](query.meta, query.select)
-      adapter.query(query, None, readPreference)(dbo => f(s.fromDBObject(dbo)))
+      adapter.query(query, readPreference)(dbo => f(s.fromDBObject(dbo)))
     }
   }
 
@@ -115,7 +115,7 @@ trait QueryExecutor[MB, RB] extends Rogue {
       val rv = new ListBuffer[T]
       val buf = new ListBuffer[R]
 
-      adapter.query(query, Some(batchSize), readPreference) { dbo =>
+      adapter.query(query, readPreference) { dbo =>
         buf += s.fromDBObject(dbo)
         drainBuffer(buf, rv, f, batchSize)
       }

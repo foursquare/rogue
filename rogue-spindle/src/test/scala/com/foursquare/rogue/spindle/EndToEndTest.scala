@@ -348,7 +348,7 @@ class EndToEndTest extends JUnitMustMatchers {
   def testLimitAndBatch {
     db.insertAll(List.fill(50)(baseTestVenue()))
 
-    val q = Q(ThriftVenue).select(_.id)
+    val q = Q(ThriftVenue).orderAsc(_.id).select(_.id)
     db.fetch(q.limit(10)).length must_== 10
     db.fetch(q.limit(-10)).length must_== 10
     db.fetchBatch(q, 20)(x => List(x.length)) must_== List(20, 20, 10)
