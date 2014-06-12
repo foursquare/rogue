@@ -15,7 +15,7 @@ object RogueBuild extends Build {
   lazy val spindle = Project("rogue-spindle", file("rogue-spindle/")) dependsOn(core % "compile;test->test;runtime->runtime")
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
-    version := "3.0.0-beta5",
+    version := "3.0.0-beta6",
     organization := "com.foursquare",
     crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.3"),
     publishMavenStyle := true,
