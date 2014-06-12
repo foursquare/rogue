@@ -7,7 +7,7 @@ import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.Iter._
 import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, CommandResult, DBCollection,
   DBCursor, DBObject, ReadPreference, WriteConcern}
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 trait DBCollectionFactory[MB, RB] {
   def getDBCollection[M <: MB](query: Query[M, _, _]): DBCollection
@@ -234,17 +234,17 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
                                   initialState: S,
                                   f: DBObject => R,
                                   readPreference: Option[ReadPreference] = None)
-                                 (handler: (S, Event[List[R]]) => Command[S]): S = {
-    val buf = new ListBuffer[R]
+                                 (handler: (S, Event[IndexedSeq[R]]) => Command[S]): S = {
+    val buf = new ArrayBuffer[R]
 
-    def getBatch(cursor: DBCursor): Either[Exception, List[R]] = {
+    def getBatch(cursor: DBCursor): Either[Exception, IndexedSeq[R]] = {
       try {
         buf.clear()
         // ListBuffer#length is O(1) vs ListBuffer#size is O(N) (true in 2.9.x, fixed in 2.10.x)
         while (cursor.hasNext && buf.length < batchSize) {
           buf += f(cursor.next)
         }
-        Right(buf.toList)
+        Right(buf.toIndexedSeq)
       } catch {
         case e: Exception => Left(e)
       }
@@ -255,7 +255,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       if (cursor.hasNext) {
         getBatch(cursor) match {
           case Left(e) => handler(curState, Error(e)).state
-          case Right(Nil) => handler(curState, EOF).state
+          case Right(rs) if rs.isEmpty => handler(curState, EOF).state
           case Right(rs) => handler(curState, Item(rs)) match {
             case Continue(s) => iter(cursor, s)
             case Return(s) => s

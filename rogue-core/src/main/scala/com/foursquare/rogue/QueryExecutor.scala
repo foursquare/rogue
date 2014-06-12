@@ -5,7 +5,7 @@ package com.foursquare.rogue
 import com.foursquare.field.Field
 import com.foursquare.rogue.MongoHelpers.{MongoModify, MongoSelect}
 import com.mongodb.{DBObject, ReadPreference, WriteConcern}
-import scala.collection.mutable.{Builder, ListBuffer}
+import scala.collection.mutable.{ArrayBuffer, Builder, ListBuffer}
 
 trait RogueReadSerializer[R] {
   def fromDBObject(dbo: DBObject): R
@@ -51,9 +51,9 @@ trait QueryExecutor[MB, RB] extends Rogue {
 
   def distinct[M <: MB, V, State](query: Query[M, _, State])
                                  (field: M => Field[V, M])
-                                 (implicit ev: ShardingOk[M, State]): Seq[V] = {
+                                 (implicit ev: ShardingOk[M, State]): IndexedSeq[V] = {
     if (optimizer.isEmptyQuery(query)) {
-      Nil
+      Vector.empty
     } else {
       val rv = Vector.newBuilder[V]
       adapter.distinct[M, V](query, field(query.meta).name)(s => rv += s)
@@ -76,9 +76,9 @@ trait QueryExecutor[MB, RB] extends Rogue {
 
   def fetch[M <: MB, R, State](query: Query[M, R, State],
                                readPreference: Option[ReadPreference] = None)
-                              (implicit ev: ShardingOk[M, State]): Seq[R] = {
+                              (implicit ev: ShardingOk[M, State]): IndexedSeq[R] = {
     if (optimizer.isEmptyQuery(query)) {
-      Nil
+      Vector.empty
     } else {
       val s = readSerializer[M, R](query.meta, query.select)
       val rv = Vector.newBuilder[R]
@@ -145,14 +145,14 @@ trait QueryExecutor[MB, RB] extends Rogue {
   }
 
   private def drainBufferSeq[A, B](
-      from: ListBuffer[A],
+      from: ArrayBuffer[A],
       to: Builder[B, Vector[B]],
-      f: Seq[A] => Seq[B],
+      f: IndexedSeq[A] => IndexedSeq[B],
       size: Int
   ): Unit = {
     // ListBuffer#length is O(1) vs ListBuffer#size is O(N) (true in 2.9.x, fixed in 2.10.x)
     if (from.length >= size) {
-      to ++= f(from.toList)
+      to ++= f(from.toIndexedSeq)
       from.clear
     }
   }
@@ -162,16 +162,16 @@ trait QueryExecutor[MB, RB] extends Rogue {
     batchSize: Int,
     readPreference: Option[ReadPreference] = None
   )(
-    f: Seq[R] => Seq[T]
+    f: IndexedSeq[R] => IndexedSeq[T]
   )(
     implicit ev: ShardingOk[M, State]
-  ): Seq[T] = {
+  ): IndexedSeq[T] = {
     if (optimizer.isEmptyQuery(query)) {
-      Nil
+      Vector.empty
     } else {
       val s = readSerializer[M, R](query.meta, query.select)
       val rv = Vector.newBuilder[T]
-      val buf = new ListBuffer[R]
+      val buf = new ArrayBuffer[R]
 
       adapter.query(query, readPreference) { dbo =>
         buf += s.fromDBObject(dbo)
@@ -287,7 +287,7 @@ trait QueryExecutor[MB, RB] extends Rogue {
                                          batchSize: Int,
                                          state: S,
                                          readPreference: Option[ReadPreference] = None)
-                                        (handler: (S, Iter.Event[Seq[R]]) => Iter.Command[S])
+                                        (handler: (S, Iter.Event[IndexedSeq[R]]) => Iter.Command[S])
                                         (implicit ev: ShardingOk[M, State]): S = {
     if (optimizer.isEmptyQuery(query)) {
       handler(state, Iter.EOF).state
