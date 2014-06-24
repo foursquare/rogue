@@ -71,10 +71,18 @@ object QueryHelpers {
 
   trait QueryConfig {
     def defaultWriteConcern: WriteConcern
+    def cursorBatchSize: Option[Option[Int]]
   }
 
   class DefaultQueryConfig extends QueryConfig {
-    override def defaultWriteConcern = WriteConcern.SAFE
+    override def defaultWriteConcern: WriteConcern = WriteConcern.SAFE
+    /**
+     * Batch size to set on the underlying DBCursor.
+     * None = take value from the query if specified
+     * Some(None) = never set batch size on the cursor
+     * Some(Some(n)) = always set batch size to n
+     */
+    override def cursorBatchSize: Option[Option[Int]] = None
   }
 
   object DefaultQueryConfig extends DefaultQueryConfig

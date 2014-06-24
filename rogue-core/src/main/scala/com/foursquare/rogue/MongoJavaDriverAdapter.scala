@@ -300,12 +300,26 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       val coll = dbCollectionFactory.getDBCollection(query)
       try {
         val cursor = coll.find(cnd, sel)
+
         // Always apply batchSize *before* limit. If the caller passes a negative value to limit(),
         // the driver applies it instead to batchSize. (A negative batchSize means, return one batch
         // and close the cursor.) Then if we set batchSize, the negative "limit" is overwritten, and
         // the query executes without a limit.
         // http://api.mongodb.org/java/2.7.3/com/mongodb/DBCursor.html#limit(int)
-        batchSize.foreach(cursor batchSize _)
+        config.cursorBatchSize match {
+          case None => {
+            // Apply the batch size from the query
+            batchSize.foreach(cursor.batchSize _)
+          }
+          case Some(None) => {
+            // don't set batch size
+          }
+          case Some(Some(n)) => {
+            // Use the configured default batch size
+            cursor.batchSize(n)
+          }
+        }
+
         queryClause.lim.foreach(cursor.limit _)
         queryClause.sk.foreach(cursor.skip _)
         ord.foreach(cursor.sort _)
