@@ -187,9 +187,10 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
   }
 
   def query[M <: MB](query: Query[M, _, _],
+                     batchSize: Option[Int],
                      readPreference: Option[ReadPreference])
                     (f: DBObject => Unit): Unit = {
-    doQuery("find", query, readPreference){cursor =>
+    doQuery("find", query, batchSize, readPreference){cursor =>
       while (cursor.hasNext)
         f(cursor.next)
     }
@@ -223,7 +224,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       }
     }
 
-    doQuery("find", query, readPreference)(cursor =>
+    doQuery("find", query, None, readPreference)(cursor =>
       iter(cursor, initialState)
     )
   }
@@ -265,14 +266,14 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       }
     }
 
-    doQuery("find", query, readPreference)(cursor => {
+    doQuery("find", query, Some(batchSize), readPreference)(cursor => {
       iter(cursor, initialState)
     })
   }
 
 
   def explain[M <: MB](query: Query[M, _, _]): String = {
-    doQuery("find", query, None){cursor =>
+    doQuery("find", query, None, None){cursor =>
       cursor.explain.toString
     }
   }
@@ -280,6 +281,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
   private def doQuery[M <: MB, T](
       operation: String,
       query: Query[M, _, _],
+      batchSize: Option[Int],
       readPreference: Option[ReadPreference]
   )(
       f: DBCursor => T
@@ -297,6 +299,12 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       val coll = dbCollectionFactory.getDBCollection(query)
       try {
         val cursor = coll.find(cnd, sel)
+        // Always apply batchSize *before* limit. If the caller passes a negative value to limit(),
+        // the driver applies it instead to batchSize. (A negative batchSize means, return one batch
+        // and close the cursor.) Then if we set batchSize, the negative "limit" is overwritten, and
+        // the query executes without a limit.
+        // http://api.mongodb.org/java/2.7.3/com/mongodb/DBCursor.html#limit(int)
+        batchSize.foreach(cursor batchSize _)
         queryClause.lim.foreach(cursor.limit _)
         queryClause.sk.foreach(cursor.skip _)
         ord.foreach(cursor.sort _)
