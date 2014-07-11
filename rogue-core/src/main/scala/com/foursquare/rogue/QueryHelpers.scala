@@ -4,8 +4,6 @@ package com.foursquare.rogue
 
 import com.foursquare.index.UntypedMongoIndex
 import com.mongodb.{DBObject, WriteConcern}
-import org.bson.types.ObjectId
-import org.joda.time.DateTime
 
 case class Degrees(value: Double)
 case class Radians(value: Double)
@@ -88,10 +86,6 @@ object QueryHelpers {
   object DefaultQueryConfig extends DefaultQueryConfig
 
   var config: QueryConfig = DefaultQueryConfig
-
-  def objectIdFromDate(d: DateTime): ObjectId = {
-    ObjectId.createFromLegacyFormat((d.toDate.getTime / 1000).toInt, 0, 0)
-  }
 
   def makeJavaList[T](sl: Traversable[T]): java.util.List[T] = {
     val list = new java.util.ArrayList[T]()

@@ -62,7 +62,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       // 4sq dynamically throttles ReadPreference via an override of
       // DBCursor creation.  We don't want to override for the whole
       // DBCollection because those are cached for the life of the DB
-      val result: CommandResult = db.command(cmd, coll.find().getReadPreference)
+      val result: CommandResult = db.command(cmd, coll.getOptions, coll.find().getReadPreference)
       if (!result.ok) {
         result.getErrorMessage match {
           // pretend count is zero craziness from the mongo-java-driver

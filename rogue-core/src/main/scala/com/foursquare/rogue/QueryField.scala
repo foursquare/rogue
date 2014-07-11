@@ -207,18 +207,17 @@ class NumericQueryField[V, M](field: Field[V, M])
 
 class ObjectIdQueryField[F <: ObjectId, M](override val field: Field[F, M])
     extends NumericQueryField(field) {
-
   def before(d: DateTime) =
-    new LtQueryClause(field.name, QueryHelpers.objectIdFromDate(d))
+    new LtQueryClause(field.name, new ObjectId(d.toDate, 0, 0))
 
   def after(d: DateTime) =
-    new GtQueryClause(field.name, QueryHelpers.objectIdFromDate(d))
+    new GtQueryClause(field.name, new ObjectId(d.toDate, 0, 0))
 
   def between(d1: DateTime, d2: DateTime) =
-    new StrictBetweenQueryClause(field.name, QueryHelpers.objectIdFromDate(d1), QueryHelpers.objectIdFromDate(d2))
+    new StrictBetweenQueryClause(field.name, new ObjectId(d1.toDate, 0, 0), new ObjectId(d2.toDate, 0, 0))
 
   def between(range: (DateTime, DateTime)) =
-    new StrictBetweenQueryClause(field.name, QueryHelpers.objectIdFromDate(range._1), QueryHelpers.objectIdFromDate(range._2))
+    new StrictBetweenQueryClause(field.name, new ObjectId(range._1.toDate, 0, 0), new ObjectId(range._2.toDate, 0, 0))
 }
 
 class ForeignObjectIdQueryField[F <: ObjectId, M, T](
