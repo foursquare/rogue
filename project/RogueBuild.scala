@@ -13,6 +13,7 @@ object RogueBuild extends Build {
   lazy val core = Project("rogue-core", file("rogue-core/")) dependsOn(index % "compile;test->test;runtime->runtime")
   lazy val lift = Project("rogue-lift", file("rogue-lift/")) dependsOn(core % "compile;test->test;runtime->runtime")
   lazy val spindle = Project("rogue-spindle", file("rogue-spindle/")) dependsOn(core % "compile;test->test;runtime->runtime")
+  lazy val IvyDefaultConfiguration = config("default") extend(Compile)
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
     version := "3.0.0-beta7a",
@@ -53,6 +54,7 @@ object RogueBuild extends Build {
         "Releases" at "http://oss.sonatype.org/content/repositories/releases",
         "Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"),
     retrieveManaged := true,
+    ivyConfigurations += IvyDefaultConfiguration,
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     scalacOptions <++= scalaVersion map { scalaVersion =>
         scalaVersion.split('.') match {
