@@ -8,7 +8,7 @@ MY_DIR=$(dirname $0)
 
 # download mongodb if necessary and place it inside the dependencies/ subdirectory.
 MONGO_DIR=osx
-MONGO_VERSION=1.8.4
+MONGO_VERSION=2.4.8
 MONGO=mongodb-osx-x86_64-$MONGO_VERSION
 
 if [ $(uname) = 'Linux' ]; then
