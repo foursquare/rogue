@@ -34,6 +34,11 @@ abstract class SpindleEmbeddedRecordQueryFieldHelper[C, F1, F2] {
   def select(subfield: C => F1): F2 = field(subfield)
 }
 
+abstract class SpindleEmbeddedRecordListQueryFieldHelper[C, F1, F2, F3] {
+  def field(subfield: C => F1): F2
+  def select(subfield: C => F1): F3
+}
+
 class SpindleEmbeddedRecordQueryField[
     R <: Record[_],
     MM <: MetaRecord[_]
@@ -100,14 +105,17 @@ class SpindleEmbeddedRecordListQueryField[
   ](implicit
       ev: R <:< Record[RR],
       d: CompanionProvider[RR]
-  ) = new SpindleEmbeddedRecordQueryFieldHelper[d.CompanionT, Field[V, d.CompanionT], SelectableDummyField[V, MM]] {
+  ) = new SpindleEmbeddedRecordListQueryFieldHelper[d.CompanionT, Field[V, d.CompanionT], SelectableDummyField[V, MM], SelectableDummyField[Seq[Option[V]], MM]] {
     override def field(subfield: d.CompanionT => Field[V, d.CompanionT]): SelectableDummyField[V, MM] = {
       new SelectableDummyField[V, MM](f.name + "." + subfield(d.provide).name, f.owner)
     }
+    override def select(subfield: d.CompanionT => Field[V, d.CompanionT]): SelectableDummyField[Seq[Option[V]], MM] = {
+      new SelectableDummyField[Seq[Option[V]], MM](f.name + "." + subfield(d.provide).name, f.owner)
+    }
   }
 
-  def unsafeField[V](name: String): SelectableDummyField[V, MM] = {
-    new SelectableDummyField[V, MM](f.name + "." + name, f.owner)
+  def unsafeField[V](name: String): SelectableDummyField[Seq[V], MM] = {
+    new SelectableDummyField[Seq[V], MM](f.name + "." + name, f.owner)
   }
 }
 

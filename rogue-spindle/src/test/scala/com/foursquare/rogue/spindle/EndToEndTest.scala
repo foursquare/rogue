@@ -159,20 +159,22 @@ class EndToEndTest extends JUnitMustMatchers {
     // Sub-select on embedded record
     db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.claims.sub.select(_.status))) must_== Vector(Some(Vector(Some(ThriftClaimStatus.pending), Some(ThriftClaimStatus.approved))))
 
-    /* TODO(rogue-latlng)
-    db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.geolatlng.unsafeField[Double]("lat"))) must_== Vector(Some(40.73))
-    */
+    val subuserids: Seq[Option[Seq[Option[Long]]]] = db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.claims.sub.select(_.userid)))
+    subuserids must_== Vector(Some(Vector(Some(1234), Some(5678))))
 
-    /* TODO(rogue-sub-on-listfield)
-    val subuserids: List[Option[List[Long]]] = db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.claims.sub.select(_.userid)))
-    subuserids must_== List(Some(List(1234, 5678)))
+    val subclaims: Seq[Option[Seq[ThriftVenueClaimBson]]] = db.fetch(Q(ThriftVenue).where(_.claims.sub.field(_.userid) eqs 1234).select(_.claims.$$))
+    subclaims.size must_== 1
+    subclaims.head.isEmpty must_== false
+    subclaims.head.get.size must_== 1
+    subclaims.head.get.head.userid must_== 1234
+    subclaims.head.get.head.statusOption must_== Some(ThriftClaimStatus.pending)
+
     // selecting a claims.userid when there is no top-level claims list should
     // have one element in the List for the one Venue, but an Empty for that
     // Venue since there's no list of claims there.
-    Q(ThriftVenue).where(_.id eqs v.id).modify(_.claims unset).and(_.lastClaim unset).updateOne()
+    db.updateOne(Q(ThriftVenue).where(_.id eqs v.id).modify(_.claims unset).and(_.lastClaim unset))
     db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.lastClaim.sub.select(_.userid))) must_== List(None)
     db.fetch(Q(ThriftVenue).where(_.id eqs v.id).select(_.claims.sub.select(_.userid))) must_== List(None)
-    */
   }
 
   /* TODO(rogue-named-enums) */

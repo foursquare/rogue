@@ -200,7 +200,7 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.legacyid eqs 1).select(_.tags.slice(4, 7)).toString() must_== """db.venues.find({ "legid" : 1}, { "tags" : { "$slice" : [ 4 , 7]}})"""
 
     // select $
-    Venue.where(_.legacyid eqs 1).select(_.tags.$).toString() must_== """db.venues.find({ "legid" : 1}, { "tags.$" : 1})"""
+    Venue.where(_.legacyid eqs 1).select(_.tags.$$).toString() must_== """db.venues.find({ "legid" : 1}, { "tags.$" : 1})"""
 
     Venue.where(_.legacyid eqs 1)
          .and(_.claims elemMatch (_.status eqs ClaimStatus.approved,
@@ -517,7 +517,7 @@ class QueryTest extends JUnitMustMatchers {
 
     Venue.where(_.legacyid eqs 1)
          .and(_.tags contains "sometag")
-         .select(_.tags.$)
+         .select(_.tags.$$)
          .toString() must_== """db.venues.find({ "legid" : 1 , "tags" : "sometag"}, { "tags.$" : 1})"""
   }
 

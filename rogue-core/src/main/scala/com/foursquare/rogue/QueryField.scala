@@ -308,10 +308,6 @@ abstract class AbstractListQueryField[F, V, DB, M, CC[X] <: Seq[X]](field: Field
     new DummyField[V, M](field.name + "." + i.toString, field.owner)
 
   def idx(i: Int): DummyField[V, M] = at(i)
-
-  def $: SelectableDummyField[V, M] = {
-    new SelectableDummyField[V, M](field.name + ".$", field.owner)
-  }
 }
 
 class ListQueryField[V: BSONType, M](field: Field[List[V], M])
@@ -503,6 +499,10 @@ abstract class AbstractListModifyField[V, DB, M, CC[X] <: Seq[X]](val field: Fie
       field.name,
       clauseFuncs.map(cf => cf(new DummyField[V, M](field.name, field.owner)))
     )
+
+  def $: Field[V, M] = {
+    new SelectableDummyField[V, M](field.name + ".$", field.owner)
+  }
 }
 
 class SeqModifyField[V: BSONType, M](field: Field[Seq[V], M])
@@ -553,6 +553,7 @@ sealed abstract class SelectField[V, M](val field: Field[_, M], val slc: Option[
   def valueOrDefault(v: Option[_]): Any
   def slice(s: Int): SelectField[V, M]
   def slice(s: Int, e: Int): SelectField[V, M]
+  def $$: SelectField[V, M]
 }
 
 final class MandatorySelectField[V, M](override val field: RequiredField[V, M],
@@ -565,6 +566,10 @@ final class MandatorySelectField[V, M](override val field: RequiredField[V, M],
   override def slice(s: Int, e: Int): MandatorySelectField[V, M] = {
     new MandatorySelectField(field, Some((s, Some(e))))
   }
+  def $$: MandatorySelectField[V, M] = {
+    val fld = new RequiredDummyField[V, M](field.name + ".$", field.owner, field.defaultValue)
+    new MandatorySelectField(fld, slc)
+  }
 }
 
 final class OptionalSelectField[V, M](override val field: OptionalField[V, M],
@@ -576,6 +581,10 @@ final class OptionalSelectField[V, M](override val field: OptionalField[V, M],
   }
   override def slice(s: Int, e: Int): OptionalSelectField[V, M] = {
     new OptionalSelectField(field, Some((s, Some(e))))
+  }
+  def $$: OptionalSelectField[V, M] = {
+    val fld = new SelectableDummyField[V, M](field.name + ".$", field.owner)
+    new OptionalSelectField(fld, slc)
   }
 }
 

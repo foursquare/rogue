@@ -47,7 +47,7 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
             fld.valueOrDefault(valueOpt)
           } else {
             // We need to handle a request for a subrecord, such as foo.x.y
-            val (rootFieldName :: subPath) = fld.field.name.split('.').toList
+            val (rootFieldName :: subPath) = fld.field.name.split('.').toList.filter(_ != "$")
             val rootValueOpt = getValueFromRecord(fld.field.owner.asInstanceOf[UntypedMetaRecord], record, rootFieldName)
             val valueOpt = subPath.foldLeft(rootValueOpt)(getValueFromAny)
             fld.valueOrDefault(valueOpt)

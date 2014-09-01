@@ -139,7 +139,7 @@ object LiftQueryExecutorHelpers {
   def setInstanceFieldFromDbo(instance: MongoRecord[_], dbo: DBObject, fieldName: String): Option[_] = {
     fieldName.contains(".") match {
       case true =>
-        val names = fieldName.split("\\.").toList
+        val names = fieldName.split("\\.").toList.filter(_ != "$")
         setInstanceFieldFromDboList(instance, dbo, names)
       case false =>
         val fld: Box[LField[_, _]] = instance.fieldByName(fieldName)

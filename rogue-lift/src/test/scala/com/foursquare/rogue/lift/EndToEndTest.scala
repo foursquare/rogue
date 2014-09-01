@@ -151,6 +151,12 @@ class EndToEndTest extends JUnitMustMatchers {
     val subuserids: List[Option[List[Long]]] = Venue.where(_._id eqs v.id).select(_.claims.subselect(_.userid)).fetch()
     subuserids must_== List(Some(List(1234, 5678)))
 
+    val subclaims: List[List[VenueClaimBson]] = Venue.where(_.claims.subfield(_.userid) eqs 1234).select(_.claims.$$).fetch()
+    subclaims.size must_== 1
+    subclaims.head.size must_== 1
+    subclaims.head.head.userid.value must_== 1234
+    subclaims.head.head.status.value must_== ClaimStatus.pending
+
     // selecting a claims.userid when there is no top-level claims list should
     // have one element in the List for the one Venue, but an Empty for that
     // Venue since there's no list of claims there.
