@@ -30,33 +30,36 @@ trait QueryExecutor[MB, RB] extends Rogue {
 
   protected def writeSerializer(record: RB): RogueWriteSerializer[RB]
 
-  def count[M <: MB, State](query: Query[M, _, State])
+  def count[M <: MB, State](query: Query[M, _, State],
+                            readPreference: Option[ReadPreference] = None)
                            (implicit ev: ShardingOk[M, State]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
-      adapter.count(query)
+      adapter.count(query, readPreference)
     }
   }
 
-  def countDistinct[M <: MB, V, State](query: Query[M, _, State])
+  def countDistinct[M <: MB, V, State](query: Query[M, _, State],
+                                       readPreference: Option[ReadPreference] = None)
                                       (field: M => Field[V, M])
                                       (implicit ev: ShardingOk[M, State]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
-      adapter.countDistinct(query, field(query.meta).name)
+      adapter.countDistinct(query, field(query.meta).name, readPreference)
     }
   }
 
-  def distinct[M <: MB, V, State](query: Query[M, _, State])
+  def distinct[M <: MB, V, State](query: Query[M, _, State],
+                                  readPreference: Option[ReadPreference] = None)
                                  (field: M => Field[V, M])
                                  (implicit ev: ShardingOk[M, State]): Seq[V] = {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
       val rv = Vector.newBuilder[V]
-      adapter.distinct[M, V](query, field(query.meta).name)(s => rv += s)
+      adapter.distinct[M, V](query, field(query.meta).name, readPreference)(s => rv += s)
       rv.result
     }
   }
