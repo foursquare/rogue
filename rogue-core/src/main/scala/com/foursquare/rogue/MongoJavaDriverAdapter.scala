@@ -37,15 +37,13 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     }
   }
 
-  def count[M <: MB](query: Query[M, _, _]): Long = {
+  def count[M <: MB](query: Query[M, _, _], readPreference: Option[ReadPreference]): Long = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
     val condition: DBObject = buildCondition(queryClause.condition)
     val description: String = buildConditionString("count", query.collectionName, queryClause)
 
     runCommand(description, queryClause) {
-      // there's a bug in mongo-java-driver 2.7.0 - 2.8.0 that
-      // doesn't set the ReadPreference into commands correctly
       val coll = dbCollectionFactory.getDBCollection(query)
       val db = coll.getDB
       val cmd = new BasicDBObject()
@@ -58,7 +56,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
       // 4sq dynamically throttles ReadPreference via an override of
       // DBCursor creation.  We don't want to override for the whole
       // DBCollection because those are cached for the life of the DB
-      val result: CommandResult = db.command(cmd, coll.getOptions, coll.find().getReadPreference)
+      val result: CommandResult = db.command(cmd, coll.getOptions, readPreference.getOrElse(coll.find().getReadPreference))
       if (!result.ok) {
         result.getErrorMessage match {
           // pretend count is zero craziness from the mongo-java-driver
@@ -74,7 +72,8 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
   }
 
   def countDistinct[M <: MB](query: Query[M, _, _],
-                             key: String): Long = {
+                             key: String,
+                             readPreference: Option[ReadPreference]): Long = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
     val cnd = buildCondition(queryClause.condition)
@@ -84,12 +83,13 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
 
     runCommand(description, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
-      coll.distinct(key, cnd).size()
+      coll.distinct(key, cnd, readPreference.getOrElse(coll.find().getReadPreference)).size()
     }
   }
 
   def distinct[M <: MB, R](query: Query[M, _, _],
-                           key: String): List[R] = {
+                           key: String,
+                           readPreference: Option[ReadPreference]): List[R] = {
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause)
     val cnd = buildCondition(queryClause.condition)
@@ -100,7 +100,7 @@ class MongoJavaDriverAdapter[MB](dbCollectionFactory: DBCollectionFactory[MB]) {
     runCommand(description, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
       val rv = new ListBuffer[R]
-      val rj = coll.distinct(key, cnd)
+      val rj = coll.distinct(key, cnd, readPreference.getOrElse(coll.find().getReadPreference))
       for (i <- 0 until rj.size) rv += rj.get(i).asInstanceOf[R]
       rv.toList
     }

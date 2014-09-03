@@ -22,32 +22,35 @@ trait QueryExecutor[MB] extends Rogue {
       select: Option[MongoSelect[M, R]]
   ): RogueSerializer[R]
 
-  def count[M <: MB, State](query: Query[M, _, State])
+  def count[M <: MB, State](query: Query[M, _, State],
+                            readPreference: Option[ReadPreference] = None)
                            (implicit ev: ShardingOk[M, State]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
-      adapter.count(query)
+      adapter.count(query, readPreference)
     }
   }
 
-  def countDistinct[M <: MB, V, State](query: Query[M, _, State])
+  def countDistinct[M <: MB, V, State](query: Query[M, _, State],
+                                       readPreference: Option[ReadPreference] = None)
                                       (field: M => Field[V, M])
                                       (implicit ev: ShardingOk[M, State]): Long = {
     if (optimizer.isEmptyQuery(query)) {
       0L
     } else {
-      adapter.countDistinct(query, field(query.meta).name)
+      adapter.countDistinct(query, field(query.meta).name, readPreference)
     }
   }
 
-  def distinct[M <: MB, V, State](query: Query[M, _, State])
+  def distinct[M <: MB, V, State](query: Query[M, _, State],
+                                  readPreference: Option[ReadPreference] = None)
                                  (field: M => Field[V, M])
                                  (implicit ev: ShardingOk[M, State]): List[V] = {
     if (optimizer.isEmptyQuery(query)) {
       Nil
     } else {
-      adapter.distinct(query, field(query.meta).name)
+      adapter.distinct(query, field(query.meta).name, readPreference)
     }
   }
 
