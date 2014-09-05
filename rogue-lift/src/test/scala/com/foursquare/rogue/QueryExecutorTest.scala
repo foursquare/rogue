@@ -1,24 +1,17 @@
 // Copyright 2011 Foursquare Labs Inc. All Rights Reserved.
 package com.foursquare.rogue
 
+import com.foursquare.rogue.LiftRogue._
+import com.foursquare.rogue.MongoHelpers.AndCondition
 import org.junit._
 import org.specs2.matcher.JUnitMustMatchers
-import com.foursquare.rogue.MongoHelpers.AndCondition
-import net.liftweb.mongodb.record.{MongoRecord, MongoMetaRecord}
+import net.liftweb.mongodb.record.{MongoMetaRecord, MongoRecord}
 
 class LegacyQueryExecutorTest extends JUnitMustMatchers {
 
-  class Dummy extends MongoRecord[Dummy] with ObjectIdKey[Dummy] {
-    def meta = Dummy
-  }
-
-  object Dummy extends Dummy with MongoMetaRecord[Dummy] {
-  }
-
   @Test
   def testExeptionInRunCommandIsDecorated {
-    val query = Query[Dummy.type, Dummy, InitialState](
-      Dummy, "Dummy", None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+    val query = Venue.where(_.tags contains "test").asInstanceOf[Query[MongoRecord[_] with MongoMetaRecord[_], _, _]]
     (LiftAdapter.runCommand("hello", query){
       throw new RuntimeException("bang")
       "hi"
