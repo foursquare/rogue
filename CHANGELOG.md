@@ -1,5 +1,12 @@
 ## Release Notes
 
+# 2.4.0
+
+- REPL-friendly rendering of ObjectIds in .toString
+- support for $ projection operator (as $$)
+- support for ReadPreference on count()
+- scala 2.11 support
+
 # 2.3.0
 
 - $setOnInsert support (thanks Konrad!)
