@@ -1,5 +1,5 @@
 libraryDependencies <++= (scalaVersion) { scalaVersion =>
-  val spindleVersion = "1.7.0"
+  val spindleVersion = "3.0.0-M1.2"
   Seq(
     "com.foursquare"          %  "common-thrift-bson"   % spindleVersion
   )
