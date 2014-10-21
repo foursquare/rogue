@@ -12,7 +12,7 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
     extends RogueReadSerializer[R] {
 
   private def getValueFromRecord(metaRecord: UntypedMetaRecord, record: Any, fieldName: String): Option[Any] = {
-    val fieldList: List[UntypedFieldDescriptor] = metaRecord.fields.toList
+    val fieldList: List[UntypedFieldDescriptor] = metaRecord.untypedFields.toList
     val fieldDescriptor = fieldList.find(fd => fd.name == fieldName).getOrElse(
       throw new Exception("The meta record does not have a definition for field %s".format(fieldName))
     )
@@ -34,7 +34,7 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
       transformer(null)
     }
     case Some(MongoSelect(fields, transformer)) => {
-      val record = meta.createRawRecord
+      val record = meta.createUntypedRawRecord
       val protocolFactory = new TBSONObjectProtocol.ReaderFactory
       val protocol = protocolFactory.getProtocol
       protocol.setSource(dbo)
@@ -57,7 +57,7 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
       transformer(values)
     }
     case None => {
-      val record = meta.createRawRecord
+      val record = meta.createUntypedRawRecord
       val protocolFactory = new TBSONObjectProtocol.ReaderFactory
       val protocol = protocolFactory.getProtocol
       protocol.setSource(dbo)
