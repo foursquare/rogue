@@ -153,7 +153,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     if (!modClause.mod.clauses.isEmpty) {
       val q = buildCondition(modClause.query.condition)
       val m = buildModify(modClause.mod)
-      lazy val description = buildModifyString(mod.query.collectionName, modClause, upsert = upsert, multi = multi)
+      val description = buildModifyString(mod.query.collectionName, modClause, upsert = upsert, multi = multi)
 
       runCommand(description, modClause.query) {
         val coll = dbCollectionFactory.getPrimaryDBCollection(modClause.query)
@@ -175,7 +175,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       val ord = query.order.map(buildOrder)
       val sel = query.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)
       val m = buildModify(modClause.mod)
-      lazy val description = buildFindAndModifyString(mod.query.collectionName, modClause, returnNew, upsert, remove)
+      val description = buildFindAndModifyString(mod.query.collectionName, modClause, returnNew, upsert, remove)
 
       runCommand(description, modClause.query) {
         val coll = dbCollectionFactory.getPrimaryDBCollection(query)
@@ -294,7 +294,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     val sel = queryClause.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)
     val hnt = queryClause.hint.map(buildHint)
 
-    lazy val description = buildQueryString(operation, query.collectionName, queryClause)
+    val description = buildQueryString(operation, query.collectionName, queryClause)
 
     runCommand(description, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
