@@ -41,7 +41,7 @@ abstract class SpindleEmbeddedRecordListQueryFieldHelper[C, F1, F2, F3] {
 
 class SpindleEmbeddedRecordQueryField[
     R <: Record[_],
-    MM <: MetaRecord[_]
+    MM <: MetaRecord[_, _]
 ](
     f: Field[R, MM]
 ) extends AbstractQueryField[R, R, BSONObject, MM](f) {
@@ -72,7 +72,7 @@ class SpindleEmbeddedRecordQueryField[
 
 class SpindleEmbeddedRecordModifyField[
     R <: Record[_],
-    MM <: MetaRecord[_]
+    MM <: MetaRecord[_, _]
 ](
     f: Field[R, MM]
 ) extends AbstractModifyField[R, BSONObject, MM](f) {
@@ -88,7 +88,7 @@ class SpindleEmbeddedRecordModifyField[
 
 class SpindleEmbeddedRecordListQueryField[
     R <: Record[_],
-    MM <: MetaRecord[_]
+    MM <: MetaRecord[_, _]
 ](
     f: Field[Seq[R], MM]
 ) extends AbstractListQueryField[R, R, BSONObject, MM, Seq](f) {
@@ -121,7 +121,7 @@ class SpindleEmbeddedRecordListQueryField[
 
 class SpindleEmbeddedRecordListModifyField[
     R <: Record[_],
-    MM <: MetaRecord[_]
+    MM <: MetaRecord[_, _]
 ](
     f: Field[Seq[R], MM]
 ) extends AbstractListModifyField[R, BSONObject, MM, Seq](f) {
