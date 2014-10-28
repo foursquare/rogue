@@ -71,6 +71,19 @@ class EndToEndTest extends JUnitMustMatchers {
   }
 
   @Test
+  def testInsertAll {
+    val v1 = baseTestVenue
+    val vs = List(baseTestVenue, v1, baseTestVenue, baseTestVenue)
+    db.insert(v1)
+    try {
+      db.insertAll(vs)
+    } catch {
+      case e =>
+    }
+    db.count(Q(ThriftVenue)) must_== 2
+  }
+
+  @Test
   def eqsTests: Unit = {
     val v = baseTestVenue()
     db.insert(v)
