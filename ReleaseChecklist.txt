@@ -30,3 +30,27 @@ Post-release checklist:
   [ ] Commit these changes
   [ ] Push both commits to Github
   [ ] Push tags to Github with "git push origin --tags"
+
+
+New contributor setup guide:
+
+  - Set up your Sonatype account
+    - Read the Sonatype setup guide: http://central.sonatype.org/pages/ossrh-guide.html
+    - Create an account on the Sonatype JIRA: https://issues.sonatype.org/secure/Signup!default.jspa
+    - Create a ticket to get added to the com.foursquare project: https://issues.sonatype.org/secure/CreateIssue.jspa?issuetype=21&pid=10134
+      - Use https://issues.sonatype.org/browse/OSSRH-11150 as a template
+    - Create a file at ~/.ivy2/.credentials with the following contents:
+
+        realm=Sonatype Nexus Repository Manager
+        host=oss.sonatype.org
+        user=<your sonatype username>
+        password=<your sonatype password>
+
+  - Set up pgp keys
+    - Read http://www.scala-sbt.org/sbt-pgp/usage.html
+    - The instructions there are a little confusing, but the most common method is to do:
+      $ gpg --gen-key
+      $ gpg --send-key <key id> hkp://keyserver.ubuntu.com
+    - If you already have pgp keys, you can retrieve them via `gpg --recv-key <key id> <server>` instead of steps 1 and 2.
+
+  - As soon as your Sonatype ticket is resolved, you should be able to `publish` in the steps above
