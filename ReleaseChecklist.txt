@@ -50,7 +50,8 @@ New contributor setup guide:
     - Read http://www.scala-sbt.org/sbt-pgp/usage.html
     - The instructions there are a little confusing, but the most common method is to do:
       $ gpg --gen-key
-      $ gpg --send-key <key id> hkp://keyserver.ubuntu.com
+      $ gpg --send-key --keyserver hkp://keyserver.ubuntu.com <key id>
+    - NOTE: You can find your <key id> in this message (that got printed when you generated your key): "gpg: key <key id> marked as ultimately trusted"
     - If you already have pgp keys, you can retrieve them via `gpg --recv-key <key id> <server>` instead of steps 1 and 2.
 
   - As soon as your Sonatype ticket is resolved, you should be able to `publish` in the steps above
