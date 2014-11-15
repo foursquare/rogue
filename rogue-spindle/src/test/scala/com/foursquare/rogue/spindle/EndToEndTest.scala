@@ -398,7 +398,7 @@ class EndToEndTest extends JUnitMustMatchers {
     val v = baseTestVenue()
     db.insert(v)
     val mutable = v.mutable
-    mutable.tags = List("a", "bbbb")
+    mutable.tags_=(List("a", "bbbb"))
     db.save(mutable)
 
     db.count(Q(ThriftVenue).where(_.tags contains "bbbb")) must_== 1
