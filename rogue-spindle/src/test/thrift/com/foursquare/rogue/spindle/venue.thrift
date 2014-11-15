@@ -29,6 +29,10 @@ struct ThriftVenueClaimBson {
   3: optional ThriftSourceBson source (wire_name="source")
 }
 
+struct ThriftCheckin {
+  1: optional ObjectId id (wire_name="_id")
+  2: optional DateTime date
+}
 
 struct ThriftVenue {
   1: optional ThriftMetadata metadata
@@ -47,6 +51,7 @@ struct ThriftVenue {
   14: optional ThriftVenueStatus status (wire_name="status")
   15: optional list<ThriftVenueClaimBson> claims (wire_name="claims")
   16: optional ThriftVenueClaimBson lastClaim (wire_name="last_claim")
+  17: optional map<string, ThriftCheckin> lastCheckins
 } (
    primary_key="id"
    index="id:asc"

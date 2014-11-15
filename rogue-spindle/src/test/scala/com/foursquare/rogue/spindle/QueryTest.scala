@@ -121,6 +121,7 @@ class QueryTest extends JUnitMustMatchers {
 
     // maps
     Q(ThriftTip).where(_.counts at "foo" eqs 3).toString() must_== """db.tips.find({ "counts.foo" : 3})"""
+    Q(ThriftVenue).where(_.lastCheckins.at("123").sub.field(_.id) eqs oid).toString must_== """db.venues.find({ "lastCheckins.123._id" : ObjectId("%s")})""".format(oid.toString)
 
     /* TODO(rogue-latlng)
     // near
