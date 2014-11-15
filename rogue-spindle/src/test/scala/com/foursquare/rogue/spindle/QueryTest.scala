@@ -4,7 +4,7 @@ package com.foursquare.rogue.spindle
 
 import com.foursquare.rogue.spindle.gen.{ThriftClaimStatus, ThriftComment, ThriftConsumerPrivilege, ThriftLike,
     ThriftOAuthConsumer, ThriftRejectReason, ThriftSourceBson, ThriftTip, ThriftVenue, ThriftVenueClaim,
-    ThriftVenueClaimBson, ThriftVenueStatus}
+    ThriftVenueClaimBson, ThriftVenueMeta, ThriftVenueStatus}
 import com.foursquare.field.Field
 import com.foursquare.rogue.{BSONType, MongoType, Query, QueryField, QueryOptimizer}
 import com.foursquare.rogue.spindle.gen.IdsTypedefs.VenueId
@@ -68,10 +68,10 @@ class QueryTest extends JUnitMustMatchers {
     // Comparison operators on arbitrary fields.
     // Warning: arbitraryFieldToQueryField is dangerous if T is not a serializable type by DBObject
     def arbitraryFieldToQueryField[T: BSONType, M](f: Field[T, M]): QueryField[T, M] = new QueryField(f)
-    def doLessThan[R <: Record[R], M <: MetaRecord[R], T: BSONType](meta: M, f: M => Field[T, M], otherVal: T) = {
+    def doLessThan[R <: Record[R], M <: MetaRecord[R, M], T: BSONType](meta: M, f: M => Field[T, M], otherVal: T) = {
       Q(meta).where(r => arbitraryFieldToQueryField(f(r)) < otherVal)
     }
-    doLessThan[ThriftVenue, ThriftVenue.type, Int](ThriftVenue, _.mayor_count, 5).toString() must_== """db.venues.find({ "mayor_count" : { "$lt" : 5}})"""
+    doLessThan[ThriftVenue, ThriftVenueMeta, Int](ThriftVenue, _.mayor_count, 5).toString() must_== """db.venues.find({ "mayor_count" : { "$lt" : 5}})"""
 
     // in,nin
     Q(ThriftVenue).where(_.legacyid in List(123L, 456L)).toString() must_== """db.venues.find({ "legid" : { "$in" : [ 123 , 456]}})"""
