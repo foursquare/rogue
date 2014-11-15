@@ -2,16 +2,17 @@
 
 package com.foursquare.rogue.spindle
 
+import com.foursquare.index.{IndexedRecord, MongoIndexChecker}
+import com.foursquare.rogue.Query
+import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.spindle.gen.IdsTypedefs.IndexTestId
 import com.foursquare.rogue.spindle.gen.ThriftIndexTestModel
-import com.foursquare.index.{IndexedRecord, MongoIndexChecker}
-import com.foursquare.rogue.Rogue._
-import com.foursquare.rogue.Query
 import com.foursquare.spindle.UntypedMetaRecord
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import org.junit._
 import org.specs2.matcher.JUnitMustMatchers
+import scala.collection.immutable.ListMap
 
 /**
  * Test spindle index annotations.
@@ -20,6 +21,29 @@ class MongoIndexCheckerTest extends JUnitMustMatchers {
   type IndexModelType = ThriftIndexTestModel
   val db = new TestDatabaseService
   val Q = SpindleQuery
+
+  @Test
+  def testGetIndexes {
+    val indexesOpt = db.dbCollectionFactory.getIndexes(Q(ThriftIndexTestModel))
+
+    indexesOpt.map(_.map(_.asListMap)) must_== Some(List(
+      ListMap("_id" -> "1"),
+      ListMap("a" -> "1", "b" -> "1", "c" -> "1"),
+      ListMap("m" -> "1", "a" -> "1"),
+      ListMap("l" -> "1"),
+      ListMap("ll" -> "2d", "b" -> "1"),
+      ListMap("e.i" -> "-1")
+    ))
+
+    indexesOpt.map(_.map(_.toString)) must_== Some(List(
+      "_id:1",
+      "a:1, b:1, c:1",
+      "m:1, a:1",
+      "l:1",
+      "ll:2d, b:1",
+      "e.i:-1"
+    ))
+  }
 
   @Test
   def testIndexExpectations {

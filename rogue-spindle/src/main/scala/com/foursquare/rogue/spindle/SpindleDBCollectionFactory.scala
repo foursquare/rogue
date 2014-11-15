@@ -4,7 +4,7 @@ package com.foursquare.rogue.spindle
 
 import com.foursquare.index.UntypedMongoIndex
 import com.foursquare.rogue.{DBCollectionFactory, Query => RogueQuery}
-import com.foursquare.spindle.{IndexParser, UntypedMetaRecord, UntypedRecord}
+import com.foursquare.spindle.{IndexParser, UntypedMetaRecord, UntypedRecord, StructFieldDescriptor}
 import com.mongodb.{DB, DBCollection}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.{Map => MutableMap}
@@ -65,10 +65,22 @@ trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord, 
       cachedIndexes
     } else {
       val rv = {
-        val fieldNameToWireName = query.meta.untypedFields.map(f => f.longName -> f.name).toMap
+        def fieldNameToWireName(meta: UntypedMetaRecord): List[(String, String)] = {
+          meta.untypedFields.toList.flatMap(f => {
+            val subfields = f match {
+               case s: StructFieldDescriptor[_, _, _, _] => fieldNameToWireName(s.structMeta)
+               case _ => Nil
+            }
+            val fullyQualifiedSubfields = for {
+              (longName, name) <- subfields
+            } yield (f.longName + "." + longName, f.name + "." + name)
+            (f.longName -> f.name) :: fullyQualifiedSubfields
+          })
+        }
+        val fieldNameToWireNameMap = fieldNameToWireName(query.meta).toMap
         for (indexes <- IndexParser.parse(query.meta.annotations).right.toOption.filter(_.nonEmpty)) yield {
           for (index <- indexes.toList) yield {
-            val entries = index.map(entry => (fieldNameToWireName(entry.fieldName), entry.indexType))
+            val entries = index.map(entry => (fieldNameToWireNameMap(entry.fieldName), entry.indexType))
             new SpindleMongoIndex(ListMap(entries: _*))
           }
         }

@@ -20,6 +20,7 @@ struct ThriftIndexTestModel {
   8: optional map<string, i32> n (wire_name="n")
   9: optional ThriftLatLng ll (wire_name="ll")
   10: optional list<i32> l (wire_name="l")
+  11: optional Embedded embedded (wire_name="e")
 } (
    primary_key="id"
    index="id:asc"
@@ -27,6 +28,12 @@ struct ThriftIndexTestModel {
    index="m:asc, a:asc"
    index="l:asc"
    index="ll:2d, b:asc"
+   index="embedded.intField:desc"
    mongo_identifier="rogue_mongo"
    mongo_collection="indextestmodel"
 )
+
+struct Embedded {
+  1: optional i32 intField (wire_name="i")
+  2: optional string stringField (wire_name="s")
+}
