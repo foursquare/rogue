@@ -65,26 +65,40 @@ trait SpindleDBCollectionFactory extends DBCollectionFactory[UntypedMetaRecord, 
       cachedIndexes
     } else {
       val rv = {
-        def fieldNameToWireName(meta: UntypedMetaRecord): List[(String, String)] = {
-          meta.untypedFields.toList.flatMap(f => {
-            val subfields = f match {
-               case s: StructFieldDescriptor[_, _, _, _] => fieldNameToWireName(s.structMeta)
-               case _ => Nil
+
+        def fieldNameToWireName(meta: UntypedMetaRecord, parts: List[String]): Option[String] = {
+          parts match {
+            case Nil => None
+            case fieldName :: rest => {
+              val fieldOpt = meta.untypedFields.find(_.longName == fieldName)
+              rest match {
+                case Nil => fieldOpt.map(_.name)
+                case rest => {
+                  val structFieldOpt = fieldOpt.collect{ case s: StructFieldDescriptor[_, _, _, _] => s }
+                  for {
+                    wireName <- fieldOpt.map(_.name)
+                    structField <- structFieldOpt
+                    restWireName <- fieldNameToWireName(structField.structMeta, rest)
+                  } yield wireName + "." + restWireName
+                }
+              }
             }
-            val fullyQualifiedSubfields = for {
-              (longName, name) <- subfields
-            } yield (f.longName + "." + longName, f.name + "." + name)
-            (f.longName -> f.name) :: fullyQualifiedSubfields
-          })
+          }
         }
-        val fieldNameToWireNameMap = fieldNameToWireName(query.meta).toMap
+
         for (indexes <- IndexParser.parse(query.meta.annotations).right.toOption.filter(_.nonEmpty)) yield {
           for (index <- indexes.toList) yield {
-            val entries = index.map(entry => (fieldNameToWireNameMap(entry.fieldName), entry.indexType))
+            val entries = index.map(entry => {
+              val wireName = fieldNameToWireName(query.meta, entry.fieldName.split('.').toList).getOrElse {
+                throw new Exception("Struct %s declares an index on non-existent field %s".format(query.meta, entry.fieldName))
+              }
+              (wireName, entry.indexType)
+            })
             new SpindleMongoIndex(ListMap(entries: _*))
           }
         }
       }
+
       // Update the cache
       for {
         indexes <- rv

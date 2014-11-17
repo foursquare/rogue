@@ -6,7 +6,7 @@ import com.foursquare.index.{IndexedRecord, MongoIndexChecker}
 import com.foursquare.rogue.Query
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.spindle.gen.IdsTypedefs.IndexTestId
-import com.foursquare.rogue.spindle.gen.ThriftIndexTestModel
+import com.foursquare.rogue.spindle.gen.{ThriftIndexTestModel, MutuallyRecursive1}
 import com.foursquare.spindle.UntypedMetaRecord
 import org.bson.types.ObjectId
 import org.joda.time.DateTime
@@ -42,6 +42,15 @@ class MongoIndexCheckerTest extends JUnitMustMatchers {
       "l:1",
       "ll:2d, b:1",
       "e.i:-1"
+    ))
+  }
+
+  @Test
+  def testGetIndexesWithMutuallyRecursiveStructs {
+    val indexesOpt = db.dbCollectionFactory.getIndexes(Q(MutuallyRecursive1))
+    indexesOpt.map(_.map(_.toString)) must_== Some(List(
+      "_id:1",
+      "m2.m1:1"
     ))
   }
 

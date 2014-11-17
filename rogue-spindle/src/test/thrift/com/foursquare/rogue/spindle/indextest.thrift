@@ -37,3 +37,19 @@ struct Embedded {
   1: optional i32 intField (wire_name="i")
   2: optional string stringField (wire_name="s")
 }
+
+struct MutuallyRecursive1 {
+  1: optional ids.IndexTestId id (wire_name="_id")
+  2: optional MutuallyRecursive2 m2
+} (
+   primary_key="id"
+   index="id:asc"
+   index="m2.m1:1"
+   mongo_identifier="rogue_mongo"
+   mongo_collection="mutually_recursive"
+)
+
+struct MutuallyRecursive2 {
+  1: optional MutuallyRecursive1 m1
+  2: optional i32 i
+}
