@@ -14,17 +14,17 @@ import net.liftweb.record.Record
 
 object LiftDBCollectionFactory extends DBCollectionFactory[MongoRecord[_] with MongoMetaRecord[_]] {
   override def getDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
-    MongoDB.useSession(query.meta.mongoIdentifier){ db =>
+    MongoDB.useSession(query.meta.connectionIdentifier){ db =>
       db.getCollection(query.collectionName)
     }
   }
   override def getPrimaryDBCollection[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): DBCollection = {
-    MongoDB.useSession(query.meta/* TODO: .master*/.mongoIdentifier){ db =>
+    MongoDB.useSession(query.meta/* TODO: .master*/.connectionIdentifier){ db =>
       db.getCollection(query.collectionName)
     }
   }
   override def getInstanceName[M <: MongoRecord[_] with MongoMetaRecord[_]](query: Query[M, _, _]): String = {
-    query.meta.mongoIdentifier.toString
+    query.meta.connectionIdentifier.toString
   }
 }
 
