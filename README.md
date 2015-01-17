@@ -37,15 +37,14 @@ Because Rogue is designed to work with several versions of lift-mongodb-record,
 you'll want to declare your dependency on Rogue as `intransitive` and declare an explicit dependency
 on the version of Lift you want to target. In sbt, that would look like the following: 
 
-    val rogueField      = "com.foursquare" %% "rogue-field"         % "2.4.0" intransitive()
-    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.4.0" intransitive()
-    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.4.0" intransitive()
-    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.4.0" intransitive()
-    val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.4"
+    val rogueField      = "com.foursquare" %% "rogue-field"         % "2.5.0" intransitive()
+    val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.5.0" intransitive()
+    val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.5.0" intransitive()
+    val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.5.0" intransitive()
+    val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.6-RC1"
 
-You can substitute "2.5.1" for whatever version of Lift you are using. Rogue has been used in
-production against Lift 2.4, 2.5.1 and the 2.6 milestones. If you encounter problems using Rogue with other versions
-of Lift, please let us know.
+Rogue 2.5.0 requires Lift 2.6-RC1 or later. For support for earlier versions of Lift, use Rogue 2.4.0 or earlier.
+If you encounter problems using Rogue with other versions of Lift, please let us know.
 
 Join the [rogue-users google group](http://groups.google.com/group/rogue-users) for help, bug reports,
 feature requests, and general discussion on Rogue.
@@ -103,12 +102,7 @@ for "findAndModify" query objects
 
 ## Releases
 
-The latest release is 2.4.0. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
-
-Major changes in 2.0.0:
-
-- separated the query execution logic from the query builder
-- removed dependency on Lift for ORM, although Lift is still the default
+The latest release is 2.5.0. See the [changelog](https://github.com/foursquare/rogue/blob/master/CHANGELOG.md) for more details.
 
 ## Dependencies
 

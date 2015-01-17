@@ -1,5 +1,11 @@
 ## Release Notes
 
+# 2.5.0
+
+- dropped support for scala-2.9.x
+- bumped scala-2.10 and 2.11 minor versions to latest
+- mongo-java-driver 2.12.5
+
 # 2.4.0
 
 - REPL-friendly rendering of ObjectIds in .toString
