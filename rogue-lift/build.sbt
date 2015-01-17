@@ -17,7 +17,7 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     "net.liftweb"              % sv("lift-json")           % liftVersion  % "compile",
     "joda-time"                % "joda-time"               % "2.1"        % "compile",
     "org.joda"                 % "joda-convert"            % "1.2"        % "compile",
-    "org.mongodb"              % "mongo-java-driver"       % "2.11.3"     % "compile")
+    "org.mongodb"              % "mongo-java-driver"       % "2.12.5"     % "compile")
 }
 
 Seq(RogueBuild.defaultSettings: _*)
