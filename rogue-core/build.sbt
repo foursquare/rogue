@@ -5,7 +5,7 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     case _       => "1.5"
   }
   val liftVersion = scalaVersion match {
-    case "2.11.2"          => "2.6-M4"
+    case "2.11.2"          => "2.6-RC1"
     case "2.10.2"          => "2.5.1"
     case "2.9.1" | "2.9.2" => "2.4"
     case _                 => "2.4-M2"
