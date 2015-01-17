@@ -1,18 +1,15 @@
 libraryDependencies <++= (scalaVersion) { scalaVersion =>
   val specsVersion = scalaVersion match {
-    case "2.9.1" | "2.9.2" | "2.10.2" => "1.12.3"
-    case "2.9.0" => "1.6.1"
-    case _       => "1.5"
+    case "2.11.5" => "2.4.2"
+    case "2.10.4" => "1.12.3"
   }
   val liftVersion = scalaVersion match {
-    case "2.10.2"          => "2.5.1"
-    case "2.9.1" | "2.9.2" => "2.4"
-    case _                 => "2.4-M2"
+    case "2.11.5"          => "2.6-RC1"
+    case "2.10.4"          => "2.6-RC1"
   }
   def sv(s: String) = s + "_" + (scalaVersion match {
-      case "2.10.2" => "2.10"
-      case "2.9.2"  => "2.9.1"
-      case v => v
+      case "2.11.5" => "2.11"
+      case "2.10.4" => "2.10"
   })
   Seq(
     "com.foursquare"           % sv("rogue-field")     % "2.2.1"      % "compile",
@@ -22,7 +19,7 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     "net.liftweb"              % sv("lift-util")       % liftVersion  % "compile",
     "joda-time"                % "joda-time"           % "2.1"        % "provided",
     "org.joda"                 % "joda-convert"        % "1.2"        % "provided",
-    "org.mongodb"              % "mongo-java-driver"   % "2.9.3"      % "compile",
+    "org.mongodb"              % "mongo-java-driver"   % "2.12.5"     % "compile",
     "junit"                    % "junit"               % "4.5"        % "test",
     "com.novocode"             % "junit-interface"     % "0.6"        % "test",
     "ch.qos.logback"           % "logback-classic"     % "0.9.26"     % "provided",

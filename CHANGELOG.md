@@ -1,5 +1,27 @@
 ## Release Notes
 
+# 2.5.0
+
+- dropped support for scala-2.9.x
+- bumped scala-2.10 and 2.11 minor versions to latest
+- mongo-java-driver 2.12.5
+
+# 2.4.0
+
+- REPL-friendly rendering of ObjectIds in .toString
+- support for $ projection operator (as $$)
+- support for ReadPreference on count()
+- scala 2.11 support
+
+# 2.3.0
+
+- $setOnInsert support (thanks Konrad!)
+- support for eqs on list fields
+- support for $push: { $each: [...], $slice: }
+- joda.DateTime is a BSONType
+- string subtypes are BSONTypes
+- support for $not operator expression modifiers
+
 # 2.2.0
 
 - ObjectIdKey trait to replace deprecated ObjectId

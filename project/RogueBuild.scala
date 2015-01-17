@@ -4,20 +4,21 @@ import Keys._
 
 object RogueBuild extends Build {
   override lazy val projects =
-    Seq(all, index, core, lift, spindle)
+    Seq(all, index, core, lift)
 
   lazy val all: Project = Project("all", file(".")) aggregate(
-    index, core, lift, spindle)
+    index, core, lift)
 
   lazy val index = Project("rogue-index", file("rogue-index/")) dependsOn()
   lazy val core = Project("rogue-core", file("rogue-core/")) dependsOn(index % "compile;test->test;runtime->runtime")
   lazy val lift = Project("rogue-lift", file("rogue-lift/")) dependsOn(core % "compile;test->test;runtime->runtime")
-  lazy val spindle = Project("rogue-spindle", file("rogue-spindle/")) dependsOn(core % "compile;test->test;runtime->runtime")
+  lazy val IvyDefaultConfiguration = config("default") extend(Compile)
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
-    version := "2.3.0-SNAPSHOT",
+    version := "2.5.1-SNAPSHOT",
     organization := "com.foursquare",
-    crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.2"),
+    scalaVersion := "2.10.4",
+    crossScalaVersions := Seq("2.10.4", "2.11.5"),
     publishMavenStyle := true,
     publishArtifact in Test := false,
     pomIncludeRepository := { _ => false },
@@ -53,6 +54,7 @@ object RogueBuild extends Build {
         "Releases" at "http://oss.sonatype.org/content/repositories/releases",
         "Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"),
     retrieveManaged := true,
+    ivyConfigurations += IvyDefaultConfiguration,
     scalacOptions ++= Seq("-deprecation", "-unchecked"),
     scalacOptions <++= scalaVersion map { scalaVersion =>
         scalaVersion.split('.') match {
