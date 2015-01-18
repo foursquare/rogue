@@ -1,5 +1,9 @@
 ## Release Notes
 
+# 2.5.1
+
+- bumped default lift version to 2.6-final
+
 # 2.5.0
 
 - dropped support for scala-2.9.x

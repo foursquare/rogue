@@ -15,7 +15,7 @@ object RogueBuild extends Build {
   lazy val IvyDefaultConfiguration = config("default") extend(Compile)
 
   lazy val defaultSettings: Seq[Setting[_]] = Seq(
-    version := "2.5.1-SNAPSHOT",
+    version := "2.5.1",
     organization := "com.foursquare",
     scalaVersion := "2.10.4",
     crossScalaVersions := Seq("2.10.4", "2.11.5"),
