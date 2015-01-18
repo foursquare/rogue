@@ -41,7 +41,7 @@ on the version of Lift you want to target. In sbt, that would look like the foll
     val rogueCore       = "com.foursquare" %% "rogue-core"          % "2.5.0" intransitive()
     val rogueLift       = "com.foursquare" %% "rogue-lift"          % "2.5.0" intransitive()
     val rogueIndex      = "com.foursquare" %% "rogue-index"         % "2.5.0" intransitive()
-    val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.6-RC1"
+    val liftMongoRecord = "net.liftweb"    %% "lift-mongodb-record" % "2.6"
 
 Rogue 2.5.0 requires Lift 2.6-RC1 or later. For support for earlier versions of Lift, use Rogue 2.4.0 or earlier.
 If you encounter problems using Rogue with other versions of Lift, please let us know.

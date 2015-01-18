@@ -3,10 +3,7 @@ libraryDependencies <++= (scalaVersion) { scalaVersion =>
     case "2.11.5" => "2.4.2"
     case "2.10.4" => "1.12.3"
   }
-  val liftVersion = scalaVersion match {
-    case "2.11.5"          => "2.6-RC1"
-    case "2.10.4"          => "2.6-RC1"
-  }
+  val liftVersion = "2.6"
   def sv(s: String) = s + "_" + (scalaVersion match {
       case "2.11.5" => "2.11"
       case "2.10.4" => "2.10"
