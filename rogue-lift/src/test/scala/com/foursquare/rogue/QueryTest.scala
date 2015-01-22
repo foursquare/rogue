@@ -265,7 +265,10 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.legacyid eqs 1).modify(_.geolatlng setTo ll).toString() must_== query + """{ "$set" : { "latlng" : [ 37.4 , -73.9]}}""" + suffix
 
     // Lists
-    Venue.where(_.legacyid eqs 1).modify(_.popularity setTo List(5))      .toString() must_== query + """{ "$set" : { "popularity" : [ 5]}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.popularity setTo List(5L))     .toString() must_== query + """{ "$set" : { "popularity" : [ 5]}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.popularity unset)              .toString() must_== query + """{ "$unset" : { "popularity" : 1}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.popularity setTo Some(List(5L))).toString() must_== query + """{ "$set" : { "popularity" : [ 5]}}""" + suffix
+    Venue.where(_.legacyid eqs 1).modify(_.popularity setTo None)         .toString() must_== query + """{ "$unset" : { "popularity" : 1}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.popularity push 5)             .toString() must_== query + """{ "$push" : { "popularity" : 5}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.tags pushAll List("a", "b"))   .toString() must_== query + """{ "$pushAll" : { "tags" : [ "a" , "b"]}}""" + suffix
     Venue.where(_.legacyid eqs 1).modify(_.tags addToSet "a")             .toString() must_== query + """{ "$addToSet" : { "tags" : "a"}}""" + suffix

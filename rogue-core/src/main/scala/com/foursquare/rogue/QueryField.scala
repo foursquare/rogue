@@ -445,6 +445,18 @@ abstract class AbstractListModifyField[V, DB, M, CC[X] <: Seq[X]](val field: Fie
     new ModifyClause(ModOps.Set,
                      field.name -> QueryHelpers.list(valuesToDB(vs)))
 
+  def setTo(vsOpt: Option[Traversable[V]]) = {
+    vsOpt match {
+      case Some(vs) => {
+        new ModifyClause(ModOps.Set,
+                         field.name -> QueryHelpers.list(valuesToDB(vs)))
+      }
+      case None => {
+        new SafeModifyField(field).unset
+      }
+    }
+  }
+
   def push(v: V) =
     new ModifyClause(ModOps.Push,
                      field.name -> valueToDB(v))
