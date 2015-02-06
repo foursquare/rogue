@@ -6,17 +6,35 @@ import com.mongodb.{BasicDBObjectBuilder, DBObject}
 import scala.collection.immutable.ListMap
 
 object MongoHelpers extends Rogue {
-  case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition]) {
+  case class AndCondition(clauses: List[QueryClause[_]], orCondition: Option[OrCondition], searchCondition: Option[SearchCondition]) {
     def isEmpty: Boolean = clauses.isEmpty && orCondition.isEmpty
   }
 
   case class OrCondition(conditions: List[AndCondition])
 
-  sealed case class MongoOrder(terms: List[(String, Boolean)])
+  case class SearchCondition(search: String, language: Option[String])
+
+  sealed trait MongoOrderTerm {
+    def extend(builder: BasicDBObjectBuilder): Unit
+  }
+  case class FieldOrderTerm(field: String, ascending: Boolean) extends MongoOrderTerm {
+    def extend(builder: BasicDBObjectBuilder): Unit =
+      builder.add(field, if (ascending) 1 else -1)
+  }
+  case class NaturalOrderTerm(ascending: Boolean) extends MongoOrderTerm {
+    def extend(builder: BasicDBObjectBuilder): Unit =
+      builder.add("$natural", if (ascending) 1 else -1)
+  }
+  case class ScoreOrderTerm(name: String) extends MongoOrderTerm {
+    def extend(builder: BasicDBObjectBuilder): Unit =
+      builder.push(name).add("$meta", "textScore").pop
+  }
+
+  sealed case class MongoOrder(terms: List[MongoOrderTerm])
 
   sealed case class MongoModify(clauses: List[ModifyClause])
 
-  sealed case class MongoSelect[M, R](fields: List[SelectField[_, M]], transformer: List[Any] => R)
+  sealed case class MongoSelect[M, R](fields: List[SelectField[_, M]], transformer: List[Any] => R, isExists: Boolean, scoreName: Option[String])
 
   object MongoBuilder {
     def buildCondition(cond: AndCondition, signature: Boolean = false): DBObject = {
@@ -63,12 +81,20 @@ object MongoHelpers extends Rogue {
             .filterNot(_.keySet.isEmpty)
         builder.add("$or", QueryHelpers.list(subclauses))
       })
+
+      // Optional $text clause
+      cond.searchCondition.foreach(txt => {
+        builder.push("$text").add("$search", txt.search)
+        txt.language.foreach { lang => builder.add("$language", lang) }
+        builder.pop
+      })
+
       builder.get
     }
 
     def buildOrder(o: MongoOrder): DBObject = {
       val builder = BasicDBObjectBuilder.start
-      o.terms.reverse.foreach { case (field, ascending) => builder.add(field, if (ascending) 1 else -1) }
+      o.terms.reverse.foreach(_.extend(builder))
       builder.get
     }
 
@@ -84,20 +110,23 @@ object MongoHelpers extends Rogue {
 
     def buildSelect[M, R](select: MongoSelect[M, R]): DBObject = {
       val builder = BasicDBObjectBuilder.start
-      // If select.fields is empty, then a MongoSelect clause exists, but has an empty
-      // list of fields. In this case (used for .exists()), we select just the
-      // _id field.
-      if (select.fields.isEmpty) {
+      // If select.isExists is true, then a MongoSelect clause exists,
+      // and we select just the _id field.
+      if (select.isExists) {
         builder.add("_id", 1)
       } else {
         select.fields.foreach(f => {
           f.slc match {
             case None => builder.add(f.field.name, 1)
-            case Some((s, None)) => builder.push(f.field.name).add("$slice", s).pop()
-            case Some((s, Some(e))) => builder.push(f.field.name).add("$slice", QueryHelpers.makeJavaList(List(s, e))).pop()
+            case Some((s, None)) => builder.push(f.field.name).add("$slice", s).pop
+            case Some((s, Some(e))) => builder.push(f.field.name).add("$slice", QueryHelpers.makeJavaList(List(s, e))).pop
           }
         })
       }
+
+      // add score "field"
+      select.scoreName.foreach(name => builder.push(name).add("$meta", "textScore").pop)
+
       builder.get
     }
 

@@ -1,0 +1,5 @@
+mongo:
+  image: dockerfile/mongodb
+  command: "/usr/bin/mongod --noprealloc --smallfiles"
+  ports:
+    - "37648:27017"

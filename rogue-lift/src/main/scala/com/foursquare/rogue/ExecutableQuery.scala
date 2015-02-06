@@ -37,7 +37,7 @@ case class ExecutableQuery[MB, M <: MB, R, State](
    * Checks if there are any records that match this query.
    */
   def exists()(implicit ev: State <:< Unlimited with Unskipped): Boolean = {
-    val q = query.copy(select = Some(MongoSelect[M, Null](Nil, _ => null)))
+    val q = query.copy(select = Some(MongoSelect[M, Null](Nil, _ => null, true, query.select.flatMap(_.scoreName))))
     db.fetch(q.limit(1)).size > 0
   }
 
