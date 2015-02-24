@@ -439,6 +439,7 @@ class QueryTest extends JUnitMustMatchers {
     Venue.where(_.mayor eqs 1).search("Starbucks").signature() must_== """db.venues.find({ "mayor" : 0 , "$text" : { "$search" : "Starbucks"}})"""
     Venue.search("Starbucks", None).signature() must_== """db.venues.find({ "$text" : { "$search" : "Starbucks"}})"""
     Venue.search("Starbucks", Some("es")).signature() must_== """db.venues.find({ "$text" : { "$search" : "Starbucks" , "$language" : "es"}})"""
+    Venue.where(_.mayor eqs 1).or(_.where(_._id eqs oid), _.search("Starbucks")).signature() must_== """db.venues.find({ "mayor" : 0 , "$or" : [ { "_id" : 0} , { "$text" : { "$search" : "Starbucks"}}]})"""
   }
 
   @Test

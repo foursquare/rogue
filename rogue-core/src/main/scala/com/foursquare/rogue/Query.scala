@@ -144,10 +144,10 @@ case class Query[M, R, +State](
    * you can see that the "MaybeHasOrClause" type parameter is changed, and is now specifically
    * bound to "HasOrClause", rather than to a type variable.</p>
    */
-  def or[S2](subqueries: (Query[M, R, Ordered with Selected with Limited with Skipped with HasNoOrClause] => Query[M, R, _])*)
+  def or[S2](subqueries: (Query[M, R, Ordered with Selected with Limited with Skipped with HasNoOrClause with HasNoSearchClause] => Query[M, R, _])*)
             (implicit ev: AddOrClause[State, S2]): Query[M, R, S2] = {
     val queryBuilder =
-      this.copy[M, R, Ordered with Selected with Limited with Skipped with HasNoOrClause](
+      this.copy[M, R, Ordered with Selected with Limited with Skipped with HasNoOrClause with HasNoSearchClause](
         lim = None,
         sk = None,
         maxScan = None,
