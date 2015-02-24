@@ -52,13 +52,13 @@ object TrivialORM {
       select: Option[MongoSelect[M, R]]
     ): RogueSerializer[R] = new RogueSerializer[R] {
       override def fromDBObject(dbo: DBObject): R = select match {
-        case Some(MongoSelect(Nil, transformer)) =>
+        case Some(MongoSelect(Nil, transformer, true, _)) =>
           // A MongoSelect clause exists, but has empty fields. Return null.
           // This is used for .exists(), where we just want to check the number
           // of returned results is > 0.
           transformer(null)
 
-        case Some(MongoSelect(fields, transformer)) =>
+        case Some(MongoSelect(fields, transformer, _, _)) =>
           transformer(fields.map(f => f.valueOrDefault(Option(dbo.get(f.field.name)))))
 
         case None =>
@@ -70,7 +70,7 @@ object TrivialORM {
   object Implicits extends Rogue {
     implicit def meta2Query[M <: Meta[R], R](meta: M with Meta[R]): Query[M, R, InitialState] = {
       Query[M, R, InitialState](
-        meta, meta.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+        meta, meta.collectionName, None, None, None, None, None, AndCondition(Nil, None, None), None, None, None)
     }
   }
 }

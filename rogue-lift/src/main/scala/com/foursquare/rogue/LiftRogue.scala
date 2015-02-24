@@ -6,7 +6,7 @@ import com.foursquare.field.{
     Field => RField,
     OptionalField => ROptionalField,
     RequiredField => RRequiredField}
-import com.foursquare.index.IndexBuilder
+import com.foursquare.index.{IndexBuilder, TextIndexBuilder}
 import com.foursquare.rogue.MongoHelpers.{AndCondition, MongoModify}
 import java.util.Date
 import net.liftweb.json.JsonAST.{JArray, JInt}
@@ -28,7 +28,7 @@ trait LiftRogue extends Rogue {
         val orCondition = QueryHelpers.orConditionFromQueries(q :: qs)
         Query[M, R, Unordered with Unselected with Unlimited with Unskipped with HasOrClause](
           q.meta, q.collectionName, None, None, None, None, None,
-          AndCondition(Nil, Some(orCondition)), None, None, None)
+          AndCondition(Nil, Some(orCondition), None), None, None, None)
       }
     }
   }
@@ -39,10 +39,13 @@ trait LiftRogue extends Rogue {
   implicit def metaRecordToQueryBuilder[M <: MongoRecord[M]]
       (rec: M with MongoMetaRecord[M]): Query[M, M, InitialState] =
     Query[M, M, InitialState](
-      rec, rec.collectionName, None, None, None, None, None, AndCondition(Nil, None), None, None, None)
+      rec, rec.collectionName, None, None, None, None, None, AndCondition(Nil, None, None), None, None, None)
 
   implicit def metaRecordToIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): IndexBuilder[M] =
       IndexBuilder(rec)
+
+  implicit def metaRecordToTextIndexBuilder[M <: MongoRecord[M]](rec: M with MongoMetaRecord[M]): TextIndexBuilder[M] =
+      TextIndexBuilder(rec)
 
   implicit def queryToLiftQuery[M <: MongoRecord[_], R, State]
     (query: Query[M, R, State])

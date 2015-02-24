@@ -116,7 +116,7 @@ case class IndexBuilder[M](rec: M) {
       m1: IndexModifier,
       f2: M => Field[_, M],
       m2: IndexModifier
-  ): MongoIndex2[M] = 
+  ): MongoIndex2[M] =
     MongoIndex2[M](f1(rec), m1, f2(rec), m2)
 
   def index(
@@ -170,4 +170,111 @@ case class IndexBuilder[M](rec: M) {
       m6: IndexModifier
   ): MongoIndex6[M] =
     MongoIndex6[M](f1(rec), m1, f2(rec), m2, f3(rec), m3, f4(rec), m4, f5(rec), m5, f6(rec), m6)
+}
+
+trait MongoTextIndex[R] extends UntypedMongoIndex
+
+case class MongoTextIndexAll[R]() extends MongoTextIndex[R] {
+  def asListMap = ListMap(("$**", "text"))
+}
+
+case class MongoTextIndex1[R](
+    f1: Field[_, R]
+) extends MongoTextIndex[R] {
+  def asListMap = ListMap((f1.name, "text"))
+}
+
+case class MongoTextIndex2[R](
+    f1: Field[_, R],
+    f2: Field[_, R]
+) extends MongoTextIndex[R] {
+  def asListMap = ListMap((f1.name, "text"), (f2.name, "text"))
+}
+
+case class MongoTextIndex3[R](
+    f1: Field[_, R],
+    f2: Field[_, R],
+    f3: Field[_, R]
+) extends MongoTextIndex[R] {
+  def asListMap = ListMap((f1.name, "text"), (f2.name, "text"), (f3.name, "text"))
+}
+
+case class MongoTextIndex4[R](
+    f1: Field[_, R],
+    f2: Field[_, R],
+    f3: Field[_, R],
+    f4: Field[_, R]
+) extends MongoTextIndex[R] {
+  def asListMap = ListMap((f1.name, "text"), (f2.name, "text"), (f3.name, "text"), (f4.name, "text"))
+}
+
+case class MongoTextIndex5[R](
+    f1: Field[_, R],
+    f2: Field[_, R],
+    f3: Field[_, R],
+    f4: Field[_, R],
+    f5: Field[_, R]
+) extends MongoTextIndex[R] {
+  def asListMap = ListMap((f1.name, "text"), (f2.name, "text"), (f3.name, "text"), (f4.name, "text"), (f5.name, "text"))
+}
+
+case class MongoTextIndex6[R](
+    f1: Field[_, R],
+    f2: Field[_, R],
+    f3: Field[_, R],
+    f4: Field[_, R],
+    f5: Field[_, R],
+    f6: Field[_, R]
+) extends MongoTextIndex[R] {
+  def asListMap = ListMap((f1.name, "text"), (f2.name, "text"), (f3.name, "text"), (f4.name, "text"), (f5.name, "text"), (f6.name, "text"))
+}
+
+case class TextIndexBuilder[M](rec: M) {
+  def textIndex(): MongoTextIndexAll[M] =
+    MongoTextIndexAll[M]()
+
+  def textIndex(
+      f1: M => Field[_, M]
+  ): MongoTextIndex1[M] =
+    MongoTextIndex1[M](f1(rec))
+
+  def textIndex(
+      f1: M => Field[_, M],
+      f2: M => Field[_, M]
+  ): MongoTextIndex2[M] =
+    MongoTextIndex2[M](f1(rec), f2(rec))
+
+  def textIndex(
+      f1: M => Field[_, M],
+      f2: M => Field[_, M],
+      f3: M => Field[_, M]
+  ): MongoTextIndex3[M] =
+    MongoTextIndex3[M](f1(rec), f2(rec), f3(rec))
+
+  def textIndex(
+      f1: M => Field[_, M],
+      f2: M => Field[_, M],
+      f3: M => Field[_, M],
+      f4: M => Field[_, M]
+  ): MongoTextIndex4[M] =
+    MongoTextIndex4[M](f1(rec), f2(rec), f3(rec), f4(rec))
+
+  def textIndex(
+      f1: M => Field[_, M],
+      f2: M => Field[_, M],
+      f3: M => Field[_, M],
+      f4: M => Field[_, M],
+      f5: M => Field[_, M]
+  ): MongoTextIndex5[M] =
+    MongoTextIndex5[M](f1(rec), f2(rec), f3(rec), f4(rec), f5(rec))
+
+  def textIndex(
+      f1: M => Field[_, M],
+      f2: M => Field[_, M],
+      f3: M => Field[_, M],
+      f4: M => Field[_, M],
+      f5: M => Field[_, M],
+      f6: M => Field[_, M]
+  ): MongoTextIndex6[M] =
+    MongoTextIndex6[M](f1(rec), f2(rec), f3(rec), f4(rec), f5(rec), f6(rec))
 }

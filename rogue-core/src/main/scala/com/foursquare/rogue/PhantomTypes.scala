@@ -35,39 +35,61 @@ sealed trait ShardKeySpecified extends ShardAware
 sealed trait AllShardsOk extends ShardAware
 sealed trait Sh extends ShardKeyNotSpecified with ShardKeySpecified with AllShardsOk
 
+sealed trait HasSearchClause
+sealed trait HasNoSearchClause
+sealed trait Sr extends HasSearchClause with HasNoSearchClause
+
 @implicitNotFound(msg = "Query must be Unordered, but it's actually ${In}")
 trait AddOrder[-In, +Out] extends Required[In, Unordered]
 object AddOrder {
-  implicit def addOrder[Rest >: Sel with Lim with Sk with Or with Sh]: AddOrder[Rest with Unordered, Rest with Ordered] = null
+  implicit def addOrder[Rest >: Sel with Lim with Sk with Or with Sh with Sr]: AddOrder[Rest with Unordered, Rest with Ordered] = null
+}
+
+@implicitNotFound(msg = "Query must be Unordered with HasNoSearchClause, but it's actually ${In}")
+trait AddNaturalOrder[-In, +Out] extends Required[In, Unordered with HasNoSearchClause]
+object AddNaturalOrder {
+  implicit def addOrder[Rest >: Sel with Lim with Sk with Or with Sh with Sr]: AddNaturalOrder[Rest with Unordered with HasNoSearchClause, Rest with Ordered with HasNoSearchClause] = null
+}
+
+@implicitNotFound(msg = "Query must be Unordered with HasSearchClause, but it's actually ${In}")
+trait AddScoreOrder[-In, +Out] extends Required[In, Unordered with HasSearchClause]
+object AddScoreOrder {
+  implicit def addScoreOrder[Rest >: Sel with Lim with Sk with Or with Sh with Sr]: AddScoreOrder[Rest with Unordered with HasSearchClause, Rest with Ordered with HasSearchClause] = null
 }
 
 @implicitNotFound(msg = "Query must be Unselected, but it's actually ${In}")
 trait AddSelect[-In, +Out, +One] extends Required[In, Unselected]
 object AddSelect {
-  implicit def addSelect[Rest >: Ord with Lim with Sk with Or with Sh]: AddSelect[Rest with Unselected, Rest with Selected, Rest with SelectedOne] = null
+  implicit def addSelect[Rest >: Ord with Lim with Sk with Or with Sh with Sr]: AddSelect[Rest with Unselected, Rest with Selected, Rest with SelectedOne] = null
 }
 
 @implicitNotFound(msg = "Query must be Unlimited, but it's actually ${In}")
 trait AddLimit[-In, +Out] extends Required[In, Unlimited]
 object AddLimit {
-  implicit def addLimit[Rest >: Ord with Sel with Sk with Or with Sh]: AddLimit[Rest with Unlimited, Rest with Limited] = null
+  implicit def addLimit[Rest >: Ord with Sel with Sk with Or with Sh with Sr]: AddLimit[Rest with Unlimited, Rest with Limited] = null
 }
 
 @implicitNotFound(msg = "Query must be Unskipped, but it's actually ${In}")
 trait AddSkip[-In, +Out] extends Required[In, Unskipped]
 object AddSkip {
-  implicit def addSkip[Rest >: Ord with Sel with Lim with Or with Sh]: AddSkip[Rest with Unskipped, Rest with Skipped] = null
+  implicit def addSkip[Rest >: Ord with Sel with Lim with Or with Sh with Sr]: AddSkip[Rest with Unskipped, Rest with Skipped] = null
+}
+
+@implicitNotFound(msg = "Query must be HasNoSearchClause, but it's actually ${In}")
+trait AddText[-In, +Out] extends Required[In, HasNoSearchClause]
+object AddText {
+  implicit def addText[Rest >: Ord with Sel with Lim with Sk with Or with Sh]: AddText[Rest with HasNoSearchClause, Rest with HasSearchClause] = null
 }
 
 @implicitNotFound(msg = "Query must be HasNoOrClause, but it's actually ${In}")
 trait AddOrClause[-In, +Out] extends Required[In, HasNoOrClause]
 object AddOrClause {
-  implicit def addOrClause[Rest >: Ord with Sel with Lim with Sk with Sh]: AddOrClause[Rest with HasNoOrClause, Rest with HasOrClause] = null
+  implicit def addOrClause[Rest >: Ord with Sel with Lim with Sk with Sh with Sr]: AddOrClause[Rest with HasNoOrClause, Rest with HasOrClause] = null
 }
 
 trait AddShardAware[-In, +Specified, +AllOk] extends Required[In, ShardKeyNotSpecified]
 object AddShardAware {
-  implicit def addShardAware[Rest >: Ord with Sel with Lim with Sk with Or]: AddShardAware[Rest with ShardKeyNotSpecified, Rest with ShardKeySpecified, Rest with AllShardsOk] = null
+  implicit def addShardAware[Rest >: Ord with Sel with Lim with Sk with Or with Sr]: AddShardAware[Rest with ShardKeyNotSpecified, Rest with ShardKeySpecified, Rest with AllShardsOk] = null
 }
 
 @implicitNotFound(msg = "In order to call this method, ${A} must NOT be a subclass of ${B}.")
@@ -111,12 +133,14 @@ sealed trait Index extends Indexable with IndexScannable
 sealed trait PartialIndexScan extends IndexScannable
 sealed trait IndexScan extends IndexScannable
 sealed trait DocumentScan extends MaybeIndexed
+sealed trait TextIndex extends Indexable
 
 case object NoIndexInfo extends NoIndexInfo
 case object Index extends Index
 case object PartialIndexScan extends PartialIndexScan
 case object IndexScan extends IndexScan
 case object DocumentScan extends DocumentScan
+case object TextIndex extends TextIndex
 
 sealed trait MaybeUsedIndex
 sealed trait UsedIndex extends MaybeUsedIndex
