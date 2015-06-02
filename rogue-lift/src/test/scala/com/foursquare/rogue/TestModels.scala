@@ -69,6 +69,9 @@ object Venue extends Venue with MongoMetaRecord[Venue] {
   val geoCustomIdx = Venue.index(_.geolatlng, CustomIndex, _.tags, Asc)
   override val mongoIndexList = List(idIdx, mayorIdIdx, mayorIdClosedIdx, legIdx, geoIdx, geoCustomIdx)
 
+  val textIdx = Venue.textIndex(_.venuename)
+  override val mongoTextIndex = Some(textIdx)
+
   trait FK[T <: FK[T]] extends MongoRecord[T] {
     self: T=>
     object venueid extends ObjectIdField[T](this) with HasMongoForeignObjectId[Venue] {

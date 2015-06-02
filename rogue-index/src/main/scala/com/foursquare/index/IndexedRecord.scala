@@ -8,4 +8,5 @@ package com.foursquare.index
  */
 trait IndexedRecord[M] {
   val mongoIndexList: List[MongoIndex[_]] = List()
+  val mongoTextIndex: Option[MongoTextIndex[_]] = None
 }

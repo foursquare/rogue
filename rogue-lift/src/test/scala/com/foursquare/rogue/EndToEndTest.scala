@@ -388,4 +388,26 @@ class EndToEndTest extends JUnitMustMatchers {
     Venue.select(_.tags.slice(-2)).get() must_== Some(List("3", "4"))
     Venue.select(_.tags.slice(1, 2)).get() must_== Some(List("2", "3"))
   }
+
+  @Test
+  def testSearch {
+    import net.liftweb.json.JsonDSL._
+    Venue.createIndex(("venuename" -> "text"))
+    baseTestVenue().legacyid(99).save(true)
+    baseTestVenue().venuename("test venue two").save(true)
+    baseTestVenue().venuename("venue three").save(true)
+
+    Venue.search("venue").select(_.venuename).orderScore().count() must_== 3
+    Venue.search("venue -test").count() must_== 1
+    Venue.search(""" "test venue" """).count() must_== 2
+    Venue.search(""" "test venue" -two """).count() must_== 1
+    Venue.where(_.legacyid eqs 123).search("venue").count() must_== 2
+    Venue.search("aaa").count() must_== 0
+
+    Venue.search("venue").exists() must beTrue
+    Venue.search("aaa").exists() must beFalse
+
+    Venue.searchOpt(Some("venue")).exists() must beTrue
+    Venue.searchOpt(Some("aaa")).exists() must beFalse
+  }
 }
