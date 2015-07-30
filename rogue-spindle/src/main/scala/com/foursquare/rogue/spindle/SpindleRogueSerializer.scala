@@ -4,7 +4,7 @@ package com.foursquare.rogue.spindle
 
 import com.foursquare.common.thrift.bson.TBSONObjectProtocol
 import com.foursquare.rogue.MongoHelpers.MongoSelect
-import com.foursquare.rogue.{RogueReadSerializer, RogueWriteSerializer}
+import com.foursquare.rogue.{RogueReadSerializer, RogueWriteSerializer, SelectField}
 import com.foursquare.spindle.{UntypedFieldDescriptor, UntypedMetaRecord, UntypedRecord}
 import com.mongodb.DBObject
 
@@ -26,6 +26,19 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
     case _ => throw new Exception("Rogue bug: unepected object type")
   })
 
+  private def extractRecordFromDbo(dbo: DBObject): R = {
+    dbo match {
+      case sdbo:SpindleDBObject => sdbo.record.asInstanceOf[R]
+      case _ =>
+        val record = meta.createUntypedRawRecord
+        val protocolFactory = new TBSONObjectProtocol.ReaderFactory
+        val protocol = protocolFactory.getProtocol
+        protocol.setSource(dbo)
+        record.read(protocol)
+        record.asInstanceOf[R]
+    }
+  }
+
   override def fromDBObject(dbo: DBObject): R = select match {
     case Some(MongoSelect(Nil, transformer)) => {
       // A MongoSelect clause exists, but has empty fields. Return null.
@@ -34,11 +47,7 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
       transformer(null)
     }
     case Some(MongoSelect(fields, transformer)) => {
-      val record = meta.createUntypedRawRecord
-      val protocolFactory = new TBSONObjectProtocol.ReaderFactory
-      val protocol = protocolFactory.getProtocol
-      protocol.setSource(dbo)
-      record.read(protocol)
+      val record: R = extractRecordFromDbo(dbo)
 
       val values = {
         fields.map(fld => {
@@ -57,12 +66,7 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
       transformer(values)
     }
     case None => {
-      val record = meta.createUntypedRawRecord
-      val protocolFactory = new TBSONObjectProtocol.ReaderFactory
-      val protocol = protocolFactory.getProtocol
-      protocol.setSource(dbo)
-      record.read(protocol)
-      record.asInstanceOf[R]
+      extractRecordFromDbo(dbo)
     }
   }
 }

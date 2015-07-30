@@ -6,13 +6,13 @@ INTERNAL_OPTS="-Dfile.encoding=UTF-8 -Xss8M -Xmx1G -noverify -XX:+CMSClassUnload
 # Default options, if nothing is specified
 DEFAULT_OPTS=""
 
-SBT_VERSION="0.12.0"
+SBT_VERSION="0.12.4"
 SBT_LAUNCHER="$(dirname $0)/project/sbt-launch-$SBT_VERSION.jar"
 
 if [ ! -e "$SBT_LAUNCHER" ];
 then
-    URL="http://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/$SBT_VERSION/sbt-launch.jar"
-    curl -o $SBT_LAUNCHER $URL
+    URL="https://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/${SBT_VERSION}/sbt-launch.jar"
+    curl -L -o $SBT_LAUNCHER $URL
 fi
 
 # Call with INTERNAL_OPTS followed by SBT_OPTS (or DEFAULT_OPTS). java aways takes the last option when duplicate.

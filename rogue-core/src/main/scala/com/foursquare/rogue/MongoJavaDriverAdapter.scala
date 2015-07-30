@@ -6,7 +6,7 @@ import com.foursquare.index.UntypedMongoIndex
 import com.foursquare.rogue.Rogue._
 import com.foursquare.rogue.Iter._
 import com.mongodb.{BasicDBObject, BasicDBObjectBuilder, CommandResult, DBCollection,
-  DBCursor, DBObject, ReadPreference, WriteConcern}
+  DBCursor, DefaultDBDecoder, DBDecoderFactory, DBObject, ReadPreference, WriteConcern}
 import scala.collection.mutable.ListBuffer
 
 trait DBCollectionFactory[MB, RB] {
@@ -18,7 +18,10 @@ trait DBCollectionFactory[MB, RB] {
   def getIndexes[M <: MB](query: Query[M, _, _]): Option[List[UntypedMongoIndex]]
 }
 
-class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB, RB]) {
+class MongoJavaDriverAdapter[MB, RB](
+  dbCollectionFactory: DBCollectionFactory[MB, RB],
+  decoderFactoryFunc: (MB) => DBDecoderFactory = (m: MB) => DefaultDBDecoder.FACTORY
+) {
 
   import QueryHelpers._
   import MongoHelpers.MongoBuilder._
@@ -182,6 +185,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
                      readPreference: Option[ReadPreference])
                     (f: DBObject => Unit): Unit = {
     doQuery("find", query, batchSize, readPreference){cursor =>
+      cursor.setDecoderFactory(decoderFactoryFunc(query.meta))
       while (cursor.hasNext)
         f(cursor.next)
     }
@@ -215,9 +219,10 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       }
     }
 
-    doQuery("find", query, None, readPreference)(cursor =>
+    doQuery("find", query, None, readPreference)( cursor => {
+      cursor.setDecoderFactory(decoderFactoryFunc(query.meta))
       iter(cursor, initialState)
-    )
+    })
   }
 
   def iterateBatch[M <: MB, R, S](query: Query[M, R, _],
@@ -258,6 +263,7 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     }
 
     doQuery("find", query, Some(batchSize), readPreference)(cursor => {
+      cursor.setDecoderFactory(decoderFactoryFunc(query.meta))
       iter(cursor, initialState)
     })
   }
