@@ -3,6 +3,7 @@
 package com.foursquare.rogue
 
 import com.mongodb.{BasicDBObjectBuilder, DBObject}
+import java.util.regex.Pattern
 import scala.collection.immutable.ListMap
 
 object MongoHelpers extends Rogue {
@@ -109,10 +110,11 @@ object MongoHelpers extends Rogue {
       builder.get
     }
 
+    val OidPattern = Pattern.compile("""\{ "\$oid" : "([0-9a-f]{24})"\}""")
     def stringFromDBObject(dbo: DBObject): String = {
       // DBObject.toString renders ObjectIds like { $oid: "..."" }, but we want ObjectId("...")
       // because that's the format the Mongo REPL accepts.
-      dbo.toString.replaceAll("""\{ "\$oid" : "([0-9a-f]{24})"\}""", """ObjectId("$1")""")
+      OidPattern.matcher(dbo.toString).replaceAll("""ObjectId("$1")""")
     }
 
     def buildQueryString[R, M](operation: String, collectionName: String, query: Query[M, R, _]): String = {
