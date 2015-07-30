@@ -23,21 +23,23 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
   import QueryHelpers._
   import MongoHelpers.MongoBuilder._
 
-  private[rogue] def runCommand[M <: MB, T](description: => String,
+  private[rogue] def runCommand[M <: MB, T](descriptionFunc: () => String,
                                             query: Query[M, _, _])(f: => T): T = {
     // Use nanoTime instead of currentTimeMillis to time the query since
     // currentTimeMillis only has 10ms granularity on many systems.
     val start = System.nanoTime
     val instanceName: String = dbCollectionFactory.getInstanceName(query)
+    // Note that it's expensive to call descriptionFunc, it does toString on the Query
+    // the logger methods are call by name
     try {
-      logger.onExecuteQuery(query, instanceName, description, f)
+      logger.onExecuteQuery(query, instanceName, descriptionFunc(), f)
     } catch {
       case e: Exception =>
         throw new RogueException("Mongo query on %s [%s] failed after %d ms".
-                                 format(instanceName, description,
+                                 format(instanceName, descriptionFunc(),
           (System.nanoTime - start) / (1000 * 1000)), e)
     } finally {
-      logger.log(query, instanceName, description, (System.nanoTime - start) / (1000 * 1000))
+      logger.log(query, instanceName, descriptionFunc(), (System.nanoTime - start) / (1000 * 1000))
     }
   }
 
@@ -45,33 +47,17 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val condition: DBObject = buildCondition(queryClause.condition)
-    val description: String = buildConditionString("count", query.collectionName, queryClause)
+    val descriptionFunc: () => String = () => buildConditionString("count", query.collectionName, queryClause)
 
-    runCommand(description, queryClause) {
+    runCommand(descriptionFunc, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
-      val db = coll.getDB
-      val cmd = new BasicDBObject()
-      cmd.put("count", query.collectionName)
-      cmd.put("query", condition)
-
-      queryClause.lim.filter(_ > 0).foreach( cmd.put("limit", _) )
-      queryClause.sk.filter(_ > 0).foreach( cmd.put("skip", _) )
-
-      // 4sq dynamically throttles ReadPreference via an override of
-      // DBCursor creation.  We don't want to override for the whole
-      // DBCollection because those are cached for the life of the DB
-      val result: CommandResult = db.command(cmd, coll.getOptions, readPreference.getOrElse(coll.find().getReadPreference))
-      if (!result.ok) {
-        result.getErrorMessage match {
-          // pretend count is zero craziness from the mongo-java-driver
-          case "ns does not exist" | "ns missing" => 0L
-          case _ =>
-            result.throwOnError()
-            0L
-        }
-      } else {
-        result.getLong("n")
-      }
+      coll.getCount(
+        condition,
+        null, // fields
+        queryClause.lim.getOrElse(0).toLong,
+        queryClause.sk.getOrElse(0).toLong,
+        readPreference.getOrElse(coll.getReadPreference)
+      )
     }
   }
 
@@ -83,11 +69,11 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     val cnd = buildCondition(queryClause.condition)
 
     // TODO: fix this so it looks like the correct mongo shell command
-    val description = buildConditionString("distinct", query.collectionName, queryClause)
+    val descriptionFunc: () => String = () => buildConditionString("distinct", query.collectionName, queryClause)
 
-    runCommand(description, queryClause) {
+    runCommand(descriptionFunc, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
-      coll.distinct(key, cnd, readPreference.getOrElse(coll.find().getReadPreference)).size()
+      coll.distinct(key, cnd, readPreference.getOrElse(coll.getReadPreference)).size()
     }
   }
 
@@ -100,11 +86,11 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     val cnd = buildCondition(queryClause.condition)
 
     // TODO: fix this so it looks like the correct mongo shell command
-    val description = buildConditionString("distinct", query.collectionName, queryClause)
+    val descriptionFunc: () => String = () => buildConditionString("distinct", query.collectionName, queryClause)
 
-    runCommand(description, queryClause) {
+    runCommand(descriptionFunc, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
-      val rj = coll.distinct(key, cnd, readPreference.getOrElse(coll.find().getReadPreference))
+      val rj = coll.distinct(key, cnd, readPreference.getOrElse(coll.getReadPreference))
       for (i <- 0 until rj.size) {
         f(rj.get(i).asInstanceOf[R])
       }
@@ -116,9 +102,9 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     val queryClause = transformer.transformQuery(query)
     validator.validateQuery(queryClause, dbCollectionFactory.getIndexes(queryClause))
     val cnd = buildCondition(queryClause.condition)
-    val description = buildConditionString("remove", query.collectionName, queryClause)
+    val descriptionFunc: () => String = () => buildConditionString("remove", query.collectionName, queryClause)
 
-    runCommand(description, queryClause) {
+    runCommand(descriptionFunc, queryClause) {
       val coll = dbCollectionFactory.getPrimaryDBCollection(query)
       coll.remove(cnd, writeConcern)
     }
@@ -153,9 +139,11 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     if (!modClause.mod.clauses.isEmpty) {
       val q = buildCondition(modClause.query.condition)
       val m = buildModify(modClause.mod)
-      val description = buildModifyString(mod.query.collectionName, modClause, upsert = upsert, multi = multi)
+      val descriptionFunc: () => String = {
+        () => buildModifyString(mod.query.collectionName, modClause, upsert = upsert, multi = multi)
+      }
 
-      runCommand(description, modClause.query) {
+      runCommand(descriptionFunc, modClause.query) {
         val coll = dbCollectionFactory.getPrimaryDBCollection(modClause.query)
         coll.update(q, m, upsert, multi, writeConcern)
       }
@@ -175,9 +163,11 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
       val ord = query.order.map(buildOrder)
       val sel = query.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)
       val m = buildModify(modClause.mod)
-      val description = buildFindAndModifyString(mod.query.collectionName, modClause, returnNew, upsert, remove)
+      val descriptionFunc: () => String = {
+        () => buildFindAndModifyString(mod.query.collectionName, modClause, returnNew, upsert, remove)
+      }
 
-      runCommand(description, modClause.query) {
+      runCommand(descriptionFunc, modClause.query) {
         val coll = dbCollectionFactory.getPrimaryDBCollection(query)
         val dbObj = coll.findAndModify(cnd, sel, ord.getOrElse(null), remove, m, returnNew, upsert)
         if (dbObj == null || dbObj.keySet.isEmpty) None
@@ -294,47 +284,41 @@ class MongoJavaDriverAdapter[MB, RB](dbCollectionFactory: DBCollectionFactory[MB
     val sel = queryClause.select.map(buildSelect).getOrElse(BasicDBObjectBuilder.start.get)
     val hnt = queryClause.hint.map(buildHint)
 
-    val description = buildQueryString(operation, query.collectionName, queryClause)
+    val descriptionFunc: () => String = () => buildQueryString(operation, query.collectionName, queryClause)
 
-    runCommand(description, queryClause) {
+    runCommand(descriptionFunc, queryClause) {
       val coll = dbCollectionFactory.getDBCollection(query)
-      try {
-        val cursor = coll.find(cnd, sel)
+      val cursor = coll.find(cnd, sel)
 
-        // Always apply batchSize *before* limit. If the caller passes a negative value to limit(),
-        // the driver applies it instead to batchSize. (A negative batchSize means, return one batch
-        // and close the cursor.) Then if we set batchSize, the negative "limit" is overwritten, and
-        // the query executes without a limit.
-        // http://api.mongodb.org/java/2.7.3/com/mongodb/DBCursor.html#limit(int)
-        config.cursorBatchSize match {
-          case None => {
-            // Apply the batch size from the query
-            batchSize.foreach(cursor.batchSize _)
-          }
-          case Some(None) => {
-            // don't set batch size
-          }
-          case Some(Some(n)) => {
-            // Use the configured default batch size
-            cursor.batchSize(n)
-          }
+      // Always apply batchSize *before* limit. If the caller passes a negative value to limit(),
+      // the driver applies it instead to batchSize. (A negative batchSize means, return one batch
+      // and close the cursor.) Then if we set batchSize, the negative "limit" is overwritten, and
+      // the query executes without a limit.
+      // http://api.mongodb.org/java/2.7.3/com/mongodb/DBCursor.html#limit(int)
+      config.cursorBatchSize match {
+        case None => {
+          // Apply the batch size from the query
+          batchSize.foreach(cursor.batchSize _)
         }
-
-        queryClause.lim.foreach(cursor.limit _)
-        queryClause.sk.foreach(cursor.skip _)
-        ord.foreach(cursor.sort _)
-        readPreference.orElse(queryClause.readPreference).foreach(cursor.setReadPreference _)
-        queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
-        queryClause.comment.foreach(cursor addSpecial("$comment", _))
-        hnt.foreach(cursor hint _)
-        val ret = f(cursor)
-        cursor.close()
-        ret
-      } catch {
-        case e: Exception =>
-          throw new RogueException("Mongo query on %s [%s] failed".format(
-            coll.getDB().getMongo().toString(), description), e)
+        case Some(None) => {
+          // don't set batch size
+        }
+        case Some(Some(n)) => {
+          // Use the configured default batch size
+          cursor.batchSize(n)
+        }
       }
+
+      queryClause.lim.foreach(cursor.limit _)
+      queryClause.sk.foreach(cursor.skip _)
+      ord.foreach(cursor.sort _)
+      readPreference.orElse(queryClause.readPreference).foreach(cursor.setReadPreference _)
+      queryClause.maxScan.foreach(cursor addSpecial("$maxScan", _))
+      queryClause.comment.foreach(cursor addSpecial("$comment", _))
+      hnt.foreach(cursor hint _)
+      val ret = f(cursor)
+      cursor.close()
+      ret
     }
   }
 }

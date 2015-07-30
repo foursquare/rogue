@@ -20,7 +20,7 @@ class LegacyQueryExecutorTest extends JUnitMustMatchers {
   def testExeptionInRunCommandIsDecorated {
     val query = Query[Dummy.type, Dummy, InitialState](
       Dummy, "Dummy", None, None, None, None, None, AndCondition(Nil, None), None, None, None)
-    (LiftAdapter.runCommand("hello", query){
+    (LiftAdapter.runCommand(() => "hello", query){
       throw new RuntimeException("bang")
       "hi"
     }) must throwA[RogueException]
