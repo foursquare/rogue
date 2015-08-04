@@ -1,5 +1,13 @@
 ## Release Notes
 
+# 3.0.0-beta14
+ - don't do query.toString in the MongoJavaDriverAdapter
+
+# 2.2.0
+
+- ObjectIdKey trait to replace deprecated ObjectId
+- overload inc method to take a Double (jdonmez)
+
 # 2.2.0
 
 - ObjectIdKey trait to replace deprecated ObjectId
