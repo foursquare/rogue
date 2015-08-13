@@ -1,5 +1,8 @@
 ## Release Notes
 
+# 3.0.0-beta15
+ - Support for alternative bson binary to spindle object deserializer
+
 # 3.0.0-beta14
  - don't do query.toString in the MongoJavaDriverAdapter
 
