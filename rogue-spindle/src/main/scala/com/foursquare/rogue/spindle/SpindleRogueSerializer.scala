@@ -28,7 +28,7 @@ class SpindleRogueReadSerializer[M <: UntypedMetaRecord, R](meta: M, select: Opt
 
   private def extractRecordFromDbo(dbo: DBObject): R = {
     dbo match {
-      case sdbo:SpindleDBObject => sdbo.record.asInstanceOf[R]
+      case sdbo: SpindleDBObject => sdbo.record.asInstanceOf[R]
       case _ =>
         val record = meta.createUntypedRawRecord
         val protocolFactory = new TBSONObjectProtocol.ReaderFactory
