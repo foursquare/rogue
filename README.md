@@ -1,3 +1,12 @@
+## NOTICE - This project has moved.
+
+It is now part of Foursquare's open source monorepo [Fsq.io](https://github.com/foursquare/fsqio) and all
+future work will be published there.
+
+The project lives on but this Github repo is deprecated.
+
+
+
 # Rogue
 
 Rogue is a type-safe internal Scala DSL for constructing and executing find and modify commands against
